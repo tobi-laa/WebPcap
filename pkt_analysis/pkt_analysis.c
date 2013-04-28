@@ -22,6 +22,7 @@
 void printPacket(u_char *userarg, const struct pcap_pkthdr *pkthdr, const u_char *packet);
 void printIPv4Packet(u_char *userarg, const struct pcap_pkthdr *pkthdr, const u_char *packet);
 void printTCPPacket(u_char *userarg, const struct pcap_pkthdr *pkthdr, const u_char *packet, int plen);
+void printUDPPacket(u_char *userarg, const struct pcap_pkthdr *pkthdr, const u_char *packet, int plen);
 void printPayload(u_char *userarg, const struct pcap_pkthdr *pkthdr, const u_char *packet, int plen);
 
 char *errbuf;
@@ -55,24 +56,24 @@ void printPacket(u_char *userarg, const struct pcap_pkthdr *pkthdr, const u_char
 }
 
 void printIPv4Packet(u_char *userarg, const struct pcap_pkthdr *pkthdr, const u_char *packet) {
-    ipv4h *ipv4_header = (ipv4h*) packet;
+    ipv4h *header = (ipv4h*) packet;
     
     // FIXME: check the checksum
     int hlen, plen; // header & payload length
-    if((hlen = get_ipv4_hlen(ipv4_header)) < 20) {
+    if((hlen = get_ipv4_hlen(header)) < 20) {
         fprintf(stderr, "Malformed IPv4 packet.");
         return;
     }
-    if((plen = ntohs(ipv4_header->tlen)) < hlen) {
+    if((plen = ntohs(header->tlen)) < hlen) {
         fprintf(stderr, "Malformed IPv4 packet.");
         return;
     }
     plen -= hlen;
         
-    fprintf(stdout, "SRC: %s\n", inet_ntoa(ipv4_header->src));
-    fprintf(stdout, "DST: %s\n", inet_ntoa(ipv4_header->dst));
+    fprintf(stdout, "SRC: %s\n", inet_ntoa(header->src));
+    fprintf(stdout, "DST: %s\n", inet_ntoa(header->dst));
     
-    switch(ipv4_header->prot) {
+    switch(header->prot) {
         case 0x01:
             fprintf(stdout, "Transport layer: ICMP\n");
             break;
@@ -82,6 +83,7 @@ void printIPv4Packet(u_char *userarg, const struct pcap_pkthdr *pkthdr, const u_
             break;
         case 0x11:
             fprintf(stdout, "Transport layer: UDP\n");
+            printUDPPacket(userarg, pkthdr, packet + hlen, plen);
             break;
         default:
             fprintf(stdout, "Transport layer: unknown\n");
@@ -90,24 +92,40 @@ void printIPv4Packet(u_char *userarg, const struct pcap_pkthdr *pkthdr, const u_
 }
 
 void printTCPPacket(u_char *userarg, const struct pcap_pkthdr *pkthdr, const u_char *packet, int plen) {
-    tcph *tcp_header = (tcph*) packet;
+    tcph *header = (tcph*) packet;
     
     // FIXME: check the checksum
     int hlen;
-    if(((hlen = get_tcp_hlen(tcp_header)) < 20) || plen < hlen) {
-        fprintf(stderr, "Malformed TCP packet %d.",hlen);
+    if(((hlen = get_tcp_hlen(header)) < 20) || plen < hlen) {
+        fprintf(stderr, "Malformed TCP packet.");
         return;
     }      
     plen-=hlen;
     
-    fprintf(stdout, "SRC Port: %u\n", ntohs(tcp_header->sport));
-    fprintf(stdout, "DST Port: %u\n", ntohs(tcp_header->dport));  
+    fprintf(stdout, "SRC Port: %u\n", ntohs(header->sport));
+    fprintf(stdout, "DST Port: %u\n", ntohs(header->dport));  
     
     // FIXME
-    // fprintf(stdout, "Seqnum: %u\n", tcp_header->seqn);
-    // fprintf(stdout, "Acknum: %d\n", ntohl(tcp_header->ackn));
+    // fprintf(stdout, "Seqnum: %u\n", header->seqn);
+    // fprintf(stdout, "Acknum: %d\n", ntohl(header->ackn));
     
     printPayload(userarg, pkthdr, packet + hlen, plen);
+}
+
+void printUDPPacket(u_char *userarg, const struct pcap_pkthdr *pkthdr, const u_char *packet, int plen) {
+    udph *header = (udph*) packet;
+    
+    // FIXME: check the checksum
+    if(plen < UDP_HLEN) {
+        fprintf(stderr, "Malformed UDP packet.");
+        return;
+    }      
+    plen-=UDP_HLEN;
+    
+    // fprintf(stdout, "SRC Port: %u\n", ntohs(header->sport));
+    fprintf(stdout, "DST Port: %u\n", ntohs(header->dport));  
+    
+    printPayload(userarg, pkthdr, packet + UDP_HLEN, plen);
 }
 
 void printPayload(u_char *userarg, const struct pcap_pkthdr *pkthdr, const u_char *packet, int plen) {
