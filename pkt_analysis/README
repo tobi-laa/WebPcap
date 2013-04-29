@@ -1,0 +1,16 @@
+Requirements:
+
+- gcc
+- libpcap
+- make
+
+For instance, if you're using Debian or Ubuntu, run the following command (as root):
+
+# apt-get install build-essential libpcap
+
+Build instructions:
+
+Just execute the following command and you should have a working binary:
+
+$ make
+
