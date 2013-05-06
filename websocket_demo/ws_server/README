@@ -1,0 +1,11 @@
+Requirements:
+
+- gcc
+- make
+
+Build instructions:
+
+Just execute the following command and you should have a working binary:
+
+$ make
+

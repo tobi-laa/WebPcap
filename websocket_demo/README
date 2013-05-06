@@ -1,0 +1,71 @@
+Within this folder you will find a very basic WebSocket demo.
+It consists of three components, namely;
+
+- the webserver (lighttpd-1.4.32 with mod_websocket)
+- the server handling the data eventually (ws_server)
+- the HTML/JavaScript client (index.html)
+
+The communication basically goes like this:
+
+----------------            ----------------            ----------------      
+|              | (3 nums)   |              | (3 nums)   |              |
+|    client    | ========>  |   webserver  | ========>  |    server    |
+| (index.html) | <========  |  (lighttpd)  | <========  |  (ws_server) |
+|              |  (3 nums)  |              |  (3 nums)  |              |
+----------------            ----------------            ----------------
+
+
+
+------------ Requirements:
+
+For lighttpd, mod_websocket and ws_server:
+- gcc
+- make
+
+
+For lighttpd and mod_websocket:
+- bison
+- autoconf
+- automake
+- libtool
+- libev3
+- libcunit
+- libicu
+- libpcre
+- zlib
+- bzip2
+
+NOTE: Please compare this to the requirements named by lighttpd and mod_websocket
+themselves; this list might still be incomplete.
+
+
+For the client:
+- WebSocket-able browser, i.e. Firefox, Chrome, Opera
+
+
+
+------------ Build instructions:
+
+For ws_server:
+
+Change to the ws_server directory and execute
+$ make
+
+
+For lighttpd and mod_websocket:
+
+If you have installed all dependencies, running
+$ ./auto_install.sh
+should do the trick for you. If you don't use sudo, comment out the last line and do 
+it manually.
+
+
+
+------------ How to use this:
+1. Start ws_server
+
+2. Start lighttpd by changing to this directory and running
+$ lighttpd -D -f ./lighttpd.conf
+
+3. Open the following link in a WebSocket-able browser:
+http://127.0.0.1:8080/index.html
