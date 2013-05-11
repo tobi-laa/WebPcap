@@ -1,0 +1,79 @@
+body { 
+    background-color: lightgrey; 
+}
+.output {
+    width: 98%;
+    padding-left: 4px;
+    border: 0.2em solid black;
+    color: black;
+    background-color: white;
+}
+#output {
+    margin-top: 4px;
+    height: 48em;
+    overflow-y: scroll;
+}
+.otable {
+    table-layout:fixed;
+}
+#input {
+    width: 98%;
+    padding: 1%;
+    color: black;
+}
+#explanation {
+    margin-top: 0.5em;
+    margin-left: 0.5em;
+    float: left;
+    width: 42.1em;
+    padding: 1em;
+    border: 0.2em solid #ffba68;
+    color: black;
+    background-color: #fff6a6;
+}
+.tcp {
+    margin-bottom: 0.1em;
+    color: black;
+    background-color: #E7E5FF;
+    display: table-row;
+}
+.udp {
+    margin-bottom: 0.1em;
+    color: black;
+    background-color: #70DFFF;
+    display: table-row;
+}
+.http {
+    margin-bottom: 0.1em;
+    color: black;
+    background-color: #8CFF7F;
+    display: table-row;
+}
+.arp {
+    margin-bottom: 0.1em;
+    color: black;
+    background-color: #D6E7FF; 
+    display: table-row;
+}
+.icmp {
+    margin-bottom: 0.1em;
+    color: black;
+    background-color: #C1C2FF;
+    display: table-row;
+}
+.eth {
+    margin-bottom: 0.1em;
+    color: black;
+    background-color: white;
+    display: table-row;
+}
+.conn {
+    background-color: #5ece32;
+    border:2px solid;
+    border-radius:15px;
+}
+.disconn {
+    background-color: #ac0000;
+    border:2px solid;
+    border-radius:15px;
+}

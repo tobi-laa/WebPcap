@@ -1,0 +1,52 @@
+<!doctype html>
+<html>
+    <head>
+        <title>WebPcap</title>
+        <link rel="stylesheet" type="text/css" href="pcap.css" />
+    </head>
+    <body>
+    
+        <div id="input">
+    
+            <button title="Start a new live capture" type="button" id="connect" class="conn" onClick="switchConnection()">
+                <img src="img/start_cap.png" alt="Start capture">
+            </button>
+            
+            <button title="Clear screen" type="button" onClick="clearOutputTable()">
+                ClrScr
+            </button>
+
+        </div>
+    
+        <div class="output">
+            <table class="otable">
+                <colgroup>
+                    <col width="400">
+                    <col width="400">
+                    <col width="100">
+                    <col width="800">
+                </colgroup>
+                <tr>
+                    <td>Source</td>
+                    <td>Destination</td>
+                    <td>Protocol</td>
+                    <td>Info</td>
+                </tr>
+            </table>
+        </div>
+        <div id="output" class="output">
+            <table id="otable" class="otable">
+                <colgroup>
+                    <col width="400">
+                    <col width="400">
+                    <col width="100">
+                    <col width="800">
+                </colgroup>
+            </table>
+        </div>
+        
+        <script src="./pkt_headers.js"></script>
+        <script src="./pkt_analysis.js"></script>
+        
+    </body>
+</html>

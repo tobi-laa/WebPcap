@@ -172,7 +172,7 @@
         
         function switchConnection() {
             if(ws == null) {
-                ws = new WebSocket("ws://127.0.0.1:8080/binary");
+                ws = new WebSocket("ws://sparrowprince.dyndns-remote.com:8080/binary");
                 ws.binaryType = "arraybuffer";
                 ws.onopen = onWSOpen;
                 ws.onclose = onWSClose;
