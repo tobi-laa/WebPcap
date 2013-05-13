@@ -3,9 +3,10 @@
 #include <string.h>
 #include <stdlib.h>
 #include <sys/socket.h>
-#include <netinet/in.h>
+#include <netdb.h>
 #include <arpa/inet.h>
 #include <errno.h>
+#include <ifaddrs.h>
 
 #define SNAP_LEN 65535  // should be enough to hold any packet
 #define PROMISC 0       // capture in promiscuous mode or not? 
@@ -14,15 +15,15 @@
 #define PORT 1337
 #define BUFSIZE 1024
 
+#define DEF_FIL "not (tcp port 8080 and ("
+
 int setSocketUp();
 void sendPacket(u_char *user, struct pcap_pkthdr *h, u_char *sp);
+char *createDefaultFilter();
 
 // FIXME: check if first buffer is actually needed...
 char *buffer;   // arbitrary buffer
 char *errbuf;   // pcap error buffer
-
-// FIXME: remove this..
-int counter = 0;
 
 // FIXME: redirect stdout & stderr to a logfile
 
@@ -67,25 +68,25 @@ int main() {
     //FIXME: might want to make this global
     pcap_t *sdescr; // session descriptor 
     pcap_t *clientdescr; // handle for sending packets to client    
-    pcap_dumper_t *cl_dumper;
-    FILE *cl_file;
-    
-    cl_file = fdopen(client,"w");
+//     pcap_dumper_t *cl_dumper;
+//     FILE *cl_file;
+//     
+//     cl_file = fdopen(client,"w");
 
     if ((sdescr = pcap_open_live(dev, SNAP_LEN, PROMISC, TO_MS, errbuf)) == NULL) {
         fprintf(stderr, "ERROR: Unable to open %s for capturing: %s\n", dev, errbuf);
         return -1;
     }
     
-    if ((clientdescr = pcap_open_dead(DLT_EN10MB, SNAP_LEN)) == NULL) {
-        fprintf(stderr, "ERROR: Unable to open fake handle: %s\n", errbuf);
-        return -1;
-    }   
-    
-    if((cl_dumper = pcap_dump_fopen(clientdescr, cl_file)) == NULL) {
-        fprintf(stderr, "ERROR: Unable to write packets to client: %s.\n", errbuf);
-        return -1;
-    }
+//     if ((clientdescr = pcap_open_dead(DLT_EN10MB, SNAP_LEN)) == NULL) {
+//         fprintf(stderr, "ERROR: Unable to open fake handle: %s\n", errbuf);
+//         return -1;
+//     }   
+//     
+//     if((cl_dumper = pcap_dump_fopen(clientdescr, cl_file)) == NULL) {
+//         fprintf(stderr, "ERROR: Unable to write packets to client: %s.\n", errbuf);
+//         return -1;
+//     }
     
     fprintf(stdout,"Successfully opened interface %s for capturing.\n",dev);
     fflush(stdout);
@@ -96,7 +97,9 @@ int main() {
         return -1;
     }
     
-    filter = "not (tcp port 8080 and host 192.168.178.53)";
+    filter = createDefaultFilter();
+    // fprintf(stdout, filter);
+    // fflush(stdout);
     
     // FIXME: very ugly...
     if(1) { // we need to compile and install a filter
@@ -122,7 +125,7 @@ int main() {
     }
     
     // FIXME: this is basically an infinte loop atm
-    pcap_loop(sdescr, -1, sendPacket, cl_dumper);    
+    pcap_loop(sdescr, -1, sendPacket, NULL);    
     
     pcap_close(sdescr);
     
@@ -139,7 +142,7 @@ int main() {
  *  returned, -1 otherwise. */
 int setSocketUp() {
     //creates a TCP socket
-    int server_sock = socket(AF_INET,SOCK_STREAM,0);
+    int server_sock = socket(AF_INET, SOCK_STREAM, 0);
     if (server_sock < 0){
         fprintf(stderr, "ERROR: Socket could not be created. %s\n",strerror(errno));
         return -1;        
@@ -148,7 +151,7 @@ int setSocketUp() {
     // IPv4-address
     server->sin_family = AF_INET;
     //convert IP and port-no to network format
-    server->sin_addr.s_addr = htonl(INADDR_ANY);//any network interface is okay
+    server->sin_addr.s_addr = htonl(INADDR_ANY); //any network interface is okay
     server->sin_port = htons(PORT);
     if(bind(server_sock, (struct sockaddr*)server, sizeof(*server))<0){
         free(server);
@@ -164,9 +167,53 @@ int setSocketUp() {
     return server_sock;    
 }
 
+// FIXME: send pcap_pkthdr as well
 void sendPacket(u_char *user, struct pcap_pkthdr *h, u_char *sp) {
-    fprintf(stdout,"%d\n",counter++);
-    fflush(stdout);
     // pcap_dump(user, h, sp);
     write(client, sp, h->caplen);
+}
+
+char *createDefaultFilter() {
+    char *filter = malloc(sizeof(char) * BUFSIZE);
+    strncpy(filter, DEF_FIL, sizeof(DEF_FIL));
+    
+    struct ifaddrs *ifaddr, *ifa;
+    int family, s;
+    char host[NI_MAXHOST];
+
+    if (getifaddrs(&ifaddr) == -1) 
+    {
+        fprintf(stderr, "ERROR: Could not determine interface addresses. %s\n", strerror(errno));
+        exit(EXIT_FAILURE);
+    }
+
+    int counter = 0;    
+
+    for (ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next) 
+    {
+        if (ifa->ifa_addr == NULL)
+            continue;  
+
+        s = getnameinfo(ifa->ifa_addr, sizeof(struct sockaddr_in), host, NI_MAXHOST, NULL, 0, NI_NUMERICHOST);
+
+        if (ifa->ifa_addr->sa_family==AF_INET)
+        {
+            if (s != 0)
+            {
+                printf("getnameinfo() failed: %s\n", gai_strerror(s));
+                exit(EXIT_FAILURE);
+            }
+            if (counter)
+                strncat(filter, " or ", BUFSIZE - strlen(filter));
+            strncat(filter, "host ", BUFSIZE - strlen(filter));
+            strncat(filter, host, BUFSIZE - strlen(filter));
+            counter++;
+        }
+    }
+    
+    strncat(filter, "))", BUFSIZE - strlen(filter));
+
+    freeifaddrs(ifaddr);
+    
+    return filter;
 }
