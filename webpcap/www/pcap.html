@@ -9,11 +9,15 @@
         <div id="input">
     
             <button title="Start a new live capture" type="button" id="connect" class="conn" onClick="switchConnection()">
-                <img src="img/start_cap.png" alt="Start capture">
+                <img src="img/ksniffer.svgz" alt="Start capture">
             </button>
             
             <button title="Clear screen" type="button" onClick="clearOutputTable()">
-                ClrScr
+                <img src="img/edit-clear.svgz" alt="Clear screen">
+            </button>
+            
+            <button title="Save capture" type="button" onClick="saveCapture()">
+                <img src="img/document-save.svgz" alt="Save capture">
             </button>
 
         </div>
@@ -46,6 +50,7 @@
         </div>
         
         <script src="./pkt_headers.js"></script>
+        <script src="./gistfile1.js"></script>
         <script src="./pkt_analysis.js"></script>
         
     </body>

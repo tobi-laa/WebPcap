@@ -1,5 +1,23 @@
 /*
  ******************************************************************
+ ************************* PCAP HEADER ****************************
+ ******************************************************************
+ */
+
+//note: this is basically copied over from the wireshark wiki
+function Pcaph(data, offset) {
+    data = data.slice(offset);
+    var intView  = new Uint32Array(data, 0, Pcaph.HLEN / 4);
+    
+    this.ts_sec   = intView[0];  // timestamp seconds
+    this.ts_usec  = intView[1];  // timestamp microseconds
+    this.incl_len = intView[2];  // number of octets of packet saved in file
+    this.orig_len = intView[3];  // actual length of packet
+}
+
+Pcaph.HLEN = 16; // pcap header length in bytes
+/*
+ ******************************************************************
  ****************** LINK-LAYER HEADER TYPES ***********************
  ******************************************************************
  */
@@ -122,7 +140,7 @@ ARPh.prototype = {
     toString: function() {
         if (this.op == 1) { // ARP query
             if (this.ptype == 0x0800)
-                return "Who has "+IPv4.printIP(this.tpa)+"? Tell "+IPv4h.printIP(this.spa);
+                return "Who has "+IPv4h.printIP(this.tpa)+"? Tell "+IPv4h.printIP(this.spa);
             else
                 return "ARP Query";
         }

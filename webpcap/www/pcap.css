@@ -4,7 +4,6 @@ body {
 .output {
     width: 98%;
     padding-left: 4px;
-    border: 0.2em solid black;
     color: black;
     background-color: white;
 }
@@ -14,7 +13,7 @@ body {
     overflow-y: scroll;
 }
 .otable {
-    table-layout:fixed;
+    table-layout: fixed;
 }
 #input {
     width: 98%;
@@ -69,11 +68,11 @@ body {
 }
 .conn {
     background-color: #5ece32;
-    border:2px solid;
-    border-radius:15px;
 }
 .disconn {
     background-color: #ac0000;
-    border:2px solid;
-    border-radius:15px;
+}
+button > img {
+    width: 6em;
+    height: 6em;
 }
