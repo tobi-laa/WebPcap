@@ -13,6 +13,8 @@ function Pcaph(data, offset) {
     this.ts_usec  = intView[1];  // timestamp microseconds
     this.incl_len = intView[2];  // number of octets of packet saved in file
     this.orig_len = intView[3];  // actual length of packet
+    
+    this.next_header = null;
 }
 
 Pcaph.HLEN = 16; // pcap header length in bytes
@@ -30,6 +32,8 @@ function Ethh(data, offset) {
     this.dst  = byteView.subarray(0, 6);  // destination MAC address
     this.src  = byteView.subarray(6, 12); // source MAC address    
     this.prot = ntohs(shortView[0]);      // protocol (i.e. IPv4)
+    
+    this.next_header = null;    
 }
 
 Ethh.prototype = {
@@ -76,6 +80,8 @@ function IPv4h(data, offset) {
     this.dst  = byteView.subarray(16, 20); // destination IPv4 address
     /* various options may follow; it is virtually impossible
      * though to specify them within this struct */
+        
+    this.next_header = null;
 }
 
 IPv4h.prototype = {
@@ -83,8 +89,7 @@ IPv4h.prototype = {
         return 4 * (this.v_hl & 0x0F);
     },
     toString: function() {
-        return "From: "+this.src[0]+"."+this.src[1]+"."+this.src[2]+"."+this.src[3]+"  "+
-               "To: "+this.dst[0]+"."+this.dst[1]+"."+this.dst[2]+"."+this.dst[3];
+        return "";
     }
 };
 
@@ -110,10 +115,26 @@ function IPv6h(data, offset) {
     this.hlim = byteView[7];                // hop limit
     this.src = shortView.subarray(4, 12);   // source IPv6 address
     this.dst = shortView.subarray(12, 20);  // destination IPv6 address
+        
+    this.next_header = null;
 }
+
+IPv6h.prototype = {
+    toString: function() {
+        return "";
+    }
+};
 
 IPv6h.HLEN = 40; // IPv6 header length in bytes
 IPv6h.ALEN = 8;  // IPv6 address length in shorts
+
+// FIXME: check params for consistency
+IPv6h.printIP = function(ip) {
+    var output = ip[0].toString(16);
+    for (i = 1; i < ip.length; i++)
+        output += ":"+ip[i].toString(16);
+    return output;
+};
 
 function ARPh(data, offset) {
     data = data.slice(offset);
@@ -126,14 +147,16 @@ function ARPh(data, offset) {
     this.plen  = byteView[5];
     this.op    = ntohs(shortView[3]);
     
-    offset =  ARPh.HLEN;
-    this.sha   = new Uint8Array(data, offset, this.hlen);
-    offset += this.hlen;
-    this.spa   = new Uint8Array(data, offset, this.plen);
-    offset += this.plen;
-    this.tha   = new Uint8Array(data, offset, this.hlen);
-    offset += this.hlen;
-    this.tpa   = new Uint8Array(data, offset, this.plen);
+    offset   = ARPh.HLEN;
+    this.sha = new Uint8Array(data, offset, this.hlen);
+    offset  += this.hlen;
+    this.spa = new Uint8Array(data, offset, this.plen);
+    offset  += this.plen;
+    this.tha = new Uint8Array(data, offset, this.hlen);
+    offset  += this.hlen;
+    this.tpa = new Uint8Array(data, offset, this.plen);
+        
+    this.next_header = null;
 }
 
 ARPh.prototype = {
@@ -179,6 +202,8 @@ function TCPh(data, offset) {
     this.urg      = shortView[9]; // urgent pointer
     /* various options may follow; it is virtually impossible
      * though to specify them within this struct */
+        
+    this.next_header = null;
 }
 
 TCPh.prototype = {
@@ -201,6 +226,8 @@ function UDPh(data, offset) {
     this.dport = ntohs(shortView[1]); // destination port
     this.len   = ntohs(shortView[2]); // length of payload incl. UDP header
     this.csum  = ntohs(shortView[3]); // header checksum
+        
+    this.next_header = null;
 }
 
 UDPh.prototype = {

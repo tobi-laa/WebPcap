@@ -40,6 +40,8 @@ int server, client; // server & client sockets
 
 int pkthdrsz;
 
+int count = 1;
+
 int main() {
     int forked;         // parent or child process?
     
@@ -169,7 +171,6 @@ int setSocketUp() {
     return server_sock;    
 }
 
-// FIXME: send pcap_pkthdr as well
 void sendPacket(u_char *user, struct pcap_pkthdr *h, u_char *sp) {
     pktbuff->ts_sec   = (u_int) h->ts.tv_sec;
     pktbuff->ts_usec  = (u_int) h->ts.tv_usec;
@@ -178,7 +179,10 @@ void sendPacket(u_char *user, struct pcap_pkthdr *h, u_char *sp) {
     
     memcpy(buffer, pktbuff, pkthdrsz);              // copy pcap header
     memcpy(buffer + pkthdrsz, sp, h->caplen);       // append actual captured packet
+    buffer[pkthdrsz+h->caplen] = EOF;
     write(client, buffer, h->caplen + pkthdrsz);    // send both
+    
+    fprintf(stdout, "%d\n", count++);
 }
 
 char *createDefaultFilter() {

@@ -2,13 +2,12 @@ body {
     background-color: lightgrey; 
 }
 .output {
-    width: 98%;
+    width: 100%;
     padding-left: 4px;
     color: black;
     background-color: white;
 }
 #output {
-    margin-top: 4px;
     height: 48em;
     overflow-y: scroll;
 }
@@ -20,58 +19,71 @@ body {
     padding: 1%;
     color: black;
 }
-#explanation {
-    margin-top: 0.5em;
-    margin-left: 0.5em;
-    float: left;
-    width: 42.1em;
-    padding: 1em;
-    border: 0.2em solid #ffba68;
-    color: black;
-    background-color: #fff6a6;
+
+.table {
+    display: table;
+    width: 100%;
 }
-.tcp {
-    margin-bottom: 0.1em;
-    color: black;
-    background-color: #E7E5FF;
+.row {
     display: table-row;
+    width: 100%;
+}
+
+.tcp {
+    background-color: #E7E5FF;
+}
+[class*="active"] {
+    background-color: pink;
 }
 .udp {
-    margin-bottom: 0.1em;
-    color: black;
     background-color: #70DFFF;
-    display: table-row;
 }
 .http {
-    margin-bottom: 0.1em;
-    color: black;
     background-color: #8CFF7F;
-    display: table-row;
 }
 .arp {
-    margin-bottom: 0.1em;
-    color: black;
-    background-color: #D6E7FF; 
-    display: table-row;
+    background-color: #D6E7FF;
 }
 .icmp {
-    margin-bottom: 0.1em;
-    color: black;
     background-color: #C1C2FF;
-    display: table-row;
 }
 .eth {
-    margin-bottom: 0.1em;
-    color: black;
     background-color: white;
-    display: table-row;
 }
+
 .conn {
     background-color: #5ece32;
 }
 .disconn {
     background-color: #ac0000;
 }
+
+.col5 {
+    float: left;
+    display: table-column;
+    width: 5%;
+}
+.col10 {
+    float: left;
+    display: table-column;
+    width: 10%;
+}
+.col20 {
+    float: left;
+    display: table-column;
+    width: 20%;
+}
+.col30 {
+    float: left;
+    display: table-column;
+    width: 30%;
+}
+.col50 {
+    float: left;
+    display: table-column;
+    width: 50%;
+}
+
 button > img {
     width: 6em;
     height: 6em;

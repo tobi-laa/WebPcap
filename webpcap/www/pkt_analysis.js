@@ -1,26 +1,12 @@
+var ws_url = "ws://"+window.location.host+"/binary";
 var ws = null;  
 var conn_button = document.getElementById("connect");
-var output = document.getElementById("otable");
-var output_div = document.getElementById("output");
-var pcap_file = document.getElementById("pcap_file");
-
-// 24 bytes for the global pcap header
-var pcap_global_header = new ArrayBuffer(24);
-// we need to fill it with integers and shorts
-var shortView = new Uint16Array(pcap_global_header);
-var intView   = new Uint32Array(pcap_global_header);
-
-intView[0]   = 0xa1b2c3d4; // magic number
-shortView[2] = 2;
-shortView[3] = 4;
-intView[2] = 0;
-intView[3] = 0;
-intView[4] = 65535; // snaplen
-intView[5] = 1; // Ethernet
-
-var cache = "data:application/x-download;base64,"+base64ArrayBuffer(pcap_global_header);
-
-var counter = 0;
+var output = document.getElementById("output");
+var otable = document.getElementById("otable");
+var counter = 1;
+var oldPacket = null;
+var selectedRow = null;
+var packets = new Array();
 
 function ntohl(num) {
     return ((num >> 24) & 0x000000FF) |
@@ -34,108 +20,189 @@ function ntohs(num) {
            ((num <<  8) & 0xFF00);
 }
 
-function saveCapture() {
-    var link = document.createElement("a");
-    link.download = "log.pcap";
-    link.href = cache;
-    link.click();
+function onWSMessage(msg) {    
+    appendToDataUrl(msg.data);
+    
+    dissect(msg.data);
+}   
+
+function dissect(packet) {
+    if (oldPacket != null) {
+        packet = appendBuffer(oldPacket, packet);
+        oldPacket = null;
+    }
+    if (packet.byteLength < 16) { // i.e. not enough for pcap header
+        oldPacket = packet;
+        return;
+    }
+    
+    var ph = new Pcaph(packet, 0);
+    packets[counter] = ph;
+    
+    if (packet.byteLength < (ph.incl_len + 16)) { // i.e. packet not complete
+        oldPacket = packet;
+        return;
+    }
+    
+    infos = new Array();
+    ph.next_header = dissectLinkLayer(packet, Pcaph.HLEN, infos);    
+
+    var row = document.createElement("div");
+    row.setAttribute("class","row "+infos[2]);
+    row.setAttribute("onclick","selectRow(this)");
+    row.innerHTML = '<div class="col5">'+(counter++)+"</div>"+
+                    '<div class="col10">'+infos[0]+"</div>"+
+                    '<div class="col10">'+infos[1]+"</div>"+
+                    '<div class="col5">'+infos[3]+"</div>"+
+                    '<div class="col5">'+ph.orig_len+"</div>"+
+                    '<div class="col50">'+infos[4]+"</div>";
+                
+    otable.appendChild(row);
+    output.scrollTop = output.scrollHeight;
+    
+    if (packet.byteLength > (ph.incl_len + 16) && ph.incl_len > 0)
+        dissect(packet.slice(ph.incl_len + 16));
 }
 
-function onWSMessage(msg) {
-    // append to cache
-    cache += base64ArrayBuffer(msg.data);
+function dissectLinkLayer(packet, offset, infos) {
+    // FIXME probably should be variable
+    var toReturn = new Ethh(packet, offset);   
     
-    var offset = 0;
-    var ph = new Pcaph(msg.data, offset);
-    offset += Pcaph.HLEN;
-    var ll = new Ethh(msg.data, offset);
-    offset += Ethh.HLEN;
-    var nl;
-    var tl;
-    var tr_class = "eth";
+    infos[0] = Ethh.printMAC(toReturn.src);
+    infos[1] = Ethh.printMAC(toReturn.dst);
+    infos[2] = "eth";
+    infos[3] = "Ethernet";
+    infos[4] = toReturn.toString();
     
-    var prot = "Ethernet";
-    var src, dst, info;
-    src = Ethh.printMAC(ll.src);
-    dst = Ethh.printMAC(ll.dst);
+    toReturn.next_header = dissectNetworkLayer(packet, offset + Ethh.HLEN, toReturn.prot, infos);
     
-    switch(ll.prot) {
-        case 0x0800:
-            tr_class = "ipv4";
-            nl = new IPv4h(msg.data, offset);
-            offset += nl.getHeaderLength();
-            prot = "IPv4";
-            src = IPv4h.printIP(nl.src);
-            dst = IPv4h.printIP(nl.dst);
-            
-            // FIXME FIXME ugly!!!
-            if(nl.prot == 6) { // TCP
-                tr_class = "tcp";
-                tl = new TCPh(msg.data, offset);
-                offset += tl.getHeaderLength();
-                prot = "TCP";
-                info = tl;
-/*                if (offset < ph.incl_len) {
-                    var buff = new Uint8Array(msg.data, offset);
-                    buff = String.fromCharCode.apply(String, buff);
-                    info += buff;
-                }
-                if (tl.sport == 6600 || tl.dport == 6600) {
-                    prot = "MPD";
-                    info += buff;
-                }
-                else if(buff == "GET " || buff =="HTTP") {
-                    prot = "HTTP";
-                    tr_class = "http";
-                }            */    
-            }     
-            else if(nl.prot == 17) { // UDP
-                tr_class = "udp";
-                tl = new UDPh(msg.data, offset);
-                prot = "UDP";
-                info = tl;
-            }
-            else if(nl.prot == 1) { // ICMP
-                tr_class = "icmp";
-                prot = "ICMP";
-                info = tl;
-            }
-            break;
-        case 0x86DD:
-            prot = "IPv6";
-            break;
-        case 0x0806:            
-            tr_class = "arp";
-            nl = new ARPh(msg.data, offset);
-            prot = "ARP";
-            info = nl;
-            break;
-        case 0x8035:
-            prot = "RARP";
-            break;
-         default:
-             info = "Unknown Ethtype "+ll.prot.toString(16);
-             break;
-    }  
+    return toReturn;
+}
 
-    var row = document.createElement("tr");
-    row.setAttribute("class",tr_class);
-    row.innerHTML = "<td>"+src+"</td>"+
-                    "<td>"+dst+"</td>"+
-                    "<td>"+prot+"</td>"+
-                    "<td>"+info+"</td>";
-                
-    output.appendChild(row);
-    output_div.scrollTop = output_div.scrollHeight;
-}       
+function dissectNetworkLayer(packet, offset, prot, infos) {
+    var toReturn;
+    switch(prot) {
+        case 0x0800: // IPv4
+            toReturn = new IPv4h(packet, offset);
+            
+            infos[0] = IPv4h.printIP(toReturn.src);
+            infos[1] = IPv4h.printIP(toReturn.dst);
+            infos[2] = "ipv4";
+            infos[3] = "IPv4";
+            infos[4] = toReturn.toString();
+            
+            toReturn.next_header = dissectTransportLayer(packet, offset + toReturn.getHeaderLength(), toReturn.prot, infos);
+               
+            break;
+        case 0x86DD: // IPv6
+            toReturn = new IPv6h(packet, offset);           
+            
+            infos[0] = IPv6h.printIP(toReturn.src);
+            infos[1] = IPv6h.printIP(toReturn.dst);
+            infos[2] = "ipv6";
+            infos[3] = "IPv6";
+            infos[4] = toReturn.toString();
+            
+            toReturn.next_header = dissectTransportLayer(packet, offset + IPv6h.HLEN, toReturn.nh, infos);
+    
+            break;
+        case 0x0806: // ARP    
+            toReturn = new ARPh(packet, offset);
+            
+            infos[2] = "arp";
+            infos[3] = "ARP";
+            infos[4] = toReturn.toString();
+            
+            break;
+        case 0x8035: // RARP
+            toReturn = null;
+                        
+            infos[2] = "arp"; // FIXME
+            infos[3] = "RARP";
+                       
+            break;
+        default: // "unknown" ethtype
+            toReturn = null;
+            
+            infos[4] = "unknown ethtype";
+            
+            break;
+    }
+    return toReturn;
+}
+
+function dissectTransportLayer(packet, offset, prot, infos) {
+    var toReturn;
+    switch(prot) {
+        case 1: // ICMP
+            toReturn = null;
+            
+            infos[2] = "icmp";
+            infos[3] = "ICMP";
+            
+            break;
+        case 6: // TCP
+            toReturn = new TCPh(packet, offset);            
+            
+            infos[2] = "tcp";
+            infos[3] = "TCP";
+            infos[4] = toReturn.toString();
+            
+            toReturn.next_header = dissectApplicationLayer(packet, offset + toReturn.getHeaderLength(), infos);
+            
+            break;
+        case 17: // UDP
+            toReturn = new UDPh(packet, offset);
+                        
+            infos[2] = "udp";
+            infos[3] = "UDP";
+            infos[4] = toReturn.toString();
+            
+            toReturn.next_header = dissectApplicationLayer(packet, offset + toReturn.getHeaderLength(), infos);
+            
+            break;
+        default:
+            toReturn = null;
+            break;
+    }  
+    return toReturn;
+}
+
+function dissectApplicationLayer(packet, offset, infos) {
+    return null;
+    /*            if (offset < ph.incl_len) {
+                var buff = new Uint8Array(msg.data, offset);
+                buff = String.fromCharCode.apply(String, buff);
+                info += buff;
+            }
+            if (tl.sport == 6600 || tl.dport == 6600) {
+                prot = "MPD";
+                info += buff;
+            }
+            else if(buff == "GET " || buff =="HTTP") {
+                prot = "HTTP";
+                tr_class = "http";
+            }*/    
+}
+
+function selectRow(row) {
+    deselectRow(selectedRow);
+    row.className += "active";
+    selectedRow = row;
+}
+
+function deselectRow(row) {
+    if (row != null)
+        row.className = row.className.replace("active","");
+}
 
 function clearOutputTable() {
-    output.innerHTML = '<colgroup><col width="400"><col width="400"><col width="100"><col width="800"></colgroup>';
+    otable.innerHTML = "";
 }
 
 function switchConnection() {
     if(ws == null) {
-        ws = new WebSocket("ws://sparrowprince.chickenkiller.com:8080/binary");
+        ws = new WebSocket(ws_url);
         ws.binaryType = "arraybuffer";
         ws.onopen = onWSOpen;
         ws.onclose = onWSClose;
