@@ -3,10 +3,12 @@ var ws = null;
 var conn_button = document.getElementById("connect");
 var output = document.getElementById("output");
 var otable = document.getElementById("otable");
+var details = document.getElementById("details");
 var counter = 1;
 var oldPacket = null;
 var selectedRow = null;
 var packets = new Array();
+var rawPackets = new Array();
 
 function ntohl(num) {
     return ((num >> 24) & 0x000000FF) |
@@ -38,6 +40,7 @@ function dissect(packet) {
     
     var ph = new Pcaph(packet, 0);
     packets[counter] = ph;
+    rawPackets[counter] = packet.slice(0, ph.incl_len + 16);
     
     if (packet.byteLength < (ph.incl_len + 16)) { // i.e. packet not complete
         oldPacket = packet;
@@ -49,7 +52,7 @@ function dissect(packet) {
 
     var row = document.createElement("div");
     row.setAttribute("class","row "+infos[2]);
-    row.setAttribute("onclick","selectRow(this)");
+    row.setAttribute("onclick","processClick(this, "+counter+")");
     row.innerHTML = '<div class="col5">'+(counter++)+"</div>"+
                     '<div class="col10">'+infos[0]+"</div>"+
                     '<div class="col10">'+infos[1]+"</div>"+
@@ -185,6 +188,11 @@ function dissectApplicationLayer(packet, offset, infos) {
             }*/    
 }
 
+function processClick(row, pkt_num) {
+    selectRow(row);
+    showDetails(pkt_num);
+}
+
 function selectRow(row) {
     deselectRow(selectedRow);
     row.className += "active";
@@ -194,6 +202,67 @@ function selectRow(row) {
 function deselectRow(row) {
     if (row != null)
         row.className = row.className.replace("active","");
+}
+
+function showDetails(pkt_num) {
+    var offset = 0;
+    var packet = packets[pkt_num];
+    
+    while (packet.next_header != null) { // go to payload
+        offset += packet.getHeaderLength();
+        packet = packet.next_header;        
+    }
+    offset += packet.getHeaderLength();
+    
+    // alert(offset);
+    
+    var payload = new Uint8Array(rawPackets[pkt_num].slice(offset));
+    
+    var output = "<pre>";
+        
+    var remainder = payload.byteLength % 16;
+    var row_num = (payload.byteLength - remainder)/16;
+    
+    var i, j;
+    
+    for (i = 0; i < row_num; i++) {
+        // output += "<p>"
+        for (j = 0; j < 16; j++) {
+            if (payload[16 * i + j] > 16)
+                output += payload[16 * i + j].toString(16)+" ";
+            else
+                output += "0"+payload[16 * i + j].toString(16)+" ";
+            if (j == 7)
+                output += " ";
+        }
+        output += "  ";
+        for (j = 0; j < 16; j++) {
+            if (payload[16 * i + j] != 10)
+                output += String.fromCharCode(payload[16 * i + j]);
+            else
+                output += ".";
+        }
+        output += "</br>";
+    }
+    for (j = 0; j < remainder; j++) {
+        if (payload[16 * i + j] > 16)
+            output += payload[16 * i + j].toString(16)+" ";
+        else
+            output += "0"+payload[16 * i + j].toString(16)+" ";
+        if (j == 7)
+            output += " ";
+    }
+    output += "  ";
+    for (j = 0; j < 16; j++) {
+        if (payload[16 * i + j] != 10)
+            output += String.fromCharCode(payload[16 * i + j]);
+        else
+            output += ".";
+    }
+    
+    output += "</pre>";
+    
+    details.innerHTML = output;
 }
 
 function clearOutputTable() {

@@ -17,6 +17,15 @@ function Pcaph(data, offset) {
     this.next_header = null;
 }
 
+Pcaph.prototype = {
+    getHeaderLength: function() {
+        return Pcaph.HLEN;
+    },
+    toString: function() {
+        return "";
+    }
+};
+
 Pcaph.HLEN = 16; // pcap header length in bytes
 /*
  ******************************************************************
@@ -37,10 +46,12 @@ function Ethh(data, offset) {
 }
 
 Ethh.prototype = {
+    getHeaderLength: function() {
+        return Ethh.HLEN;
+    },
     toString: function() {
-        return "From: "+this.dst[0].toString(16)+":"+this.dst[1].toString(16)
-        +":"+this.dst[2].toString(16)+":"+this.dst[3].toString(16)+":"
-        +this.dst[4].toString(16)+":"+this.dst[5].toString(16)+" To: ";
+        return "From: "+Ethh.printMAC(this.src)+
+               " To: " +Ethh.printMAC(this.dst);
     }
 };
 
@@ -120,6 +131,9 @@ function IPv6h(data, offset) {
 }
 
 IPv6h.prototype = {
+    getHeaderLength: function() {
+        return IPv6.HLEN;
+    },
     toString: function() {
         return "";
     }
@@ -160,6 +174,9 @@ function ARPh(data, offset) {
 }
 
 ARPh.prototype = {
+    getHeaderLength: function() {
+        return ARPh.HLEN + 2*this.hlen + 2*this.plen;
+    },
     toString: function() {
         if (this.op == 1) { // ARP query
             if (this.ptype == 0x0800)
@@ -231,6 +248,9 @@ function UDPh(data, offset) {
 }
 
 UDPh.prototype = {
+    getHeaderLength: function() {
+        return UDPh.HLEN;
+    },
     toString: function() {
         return "SRC Port: "+this.sport+
               " DST Port: "+this.dport;
