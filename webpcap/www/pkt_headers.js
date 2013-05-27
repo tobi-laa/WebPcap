@@ -21,7 +21,7 @@ Pcaph.prototype = {
     getHeaderLength: function() {
         return Pcaph.HLEN;
     },
-    printDetails: function() {
+    printDetails: function(pkt_num) {
         var details = document.createElement("div");
         details.setAttribute("class","pcap");
         var check = document.createElement("input");
@@ -72,7 +72,7 @@ Ethh.prototype = {
     getHeaderLength: function() {
         return Ethh.HLEN;
     },
-    printDetails: function() {
+    printDetails: function(pkt_num) {
         var details = document.createElement("div");
         details.setAttribute("class","eth");
         var check = document.createElement("input");
@@ -160,7 +160,7 @@ IPv4h.prototype = {
     getHeaderLength: function() {
         return 4 * this.hl;
     },
-    printDetails: function() {
+    printDetails: function(pkt_num) {
         var details = document.createElement("div");
         details.setAttribute("class","ip");
         var check = document.createElement("input");
@@ -229,7 +229,7 @@ IPv6h.prototype = {
     getHeaderLength: function() {
         return IPv6.HLEN;
     },
-    printDetails: function() {
+    printDetails: function(pkt_num) {
         var details = document.createElement("div");
         details.setAttribute("class","ip");
         var check = document.createElement("input");
@@ -299,7 +299,7 @@ ARPh.prototype = {
     getHeaderLength: function() {
         return ARPh.HLEN + 2*this.hlen + 2*this.plen;
     },
-    printDetails: function() {
+    printDetails: function(pkt_num) {
         var details = document.createElement("div");
         details.setAttribute("class","arp");
         var check = document.createElement("input");
@@ -379,7 +379,7 @@ TCPh.prototype = {
     getHeaderLength: function() {
         return 4 * ((ntohs(this.off_flag)) >> 12);
     },
-    printDetails: function() {
+    printDetails: function(pkt_num) {
         var details = document.createElement("div");
         details.setAttribute("class","tcp");
         var check = document.createElement("input");
@@ -404,7 +404,15 @@ TCPh.prototype = {
                          + "Window size value: " + this.wsize + "</br>"                         
                          + "Checksum: 0x" + printNum(this.csum, 16, 4) + "</br>";
                          // FIXME options
-
+                         
+        var follow = document.createElement("a");
+        follow.setAttribute("onclick","filterTCPConn(" + pkt_num + ")");
+        if (tcp_filter)
+            follow.innerHTML = "Unfollow";
+        else
+            follow.innerHTML = "Follow";
+        hidden.appendChild(follow);
+        
         details.appendChild(hidden);
         
         return details;
@@ -433,7 +441,7 @@ UDPh.prototype = {
     getHeaderLength: function() {
         return UDPh.HLEN;
     },
-    printDetails: function() {
+    printDetails: function(pkt_num) {
         var details = document.createElement("div");
         details.setAttribute("class","udp");
         var check = document.createElement("input");

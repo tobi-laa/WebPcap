@@ -11,6 +11,9 @@ var selectedRow = null;
 var packets = new Array();
 var rawPackets = new Array();
 var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+var tcp_filter = false;
+var tf_values = new Array();
+var infos = new Array();
 
 function ntohl(num) {
     return ((num & 0x000000FF) >>> 0) |
@@ -29,6 +32,22 @@ function onWSMessage(msg) {
     
     dissect(msg.data);
 }   
+
+function printRow() {
+    var row = document.createElement("div");
+    row.setAttribute("class","row "+infos[2]);
+    row.setAttribute("onclick","processClick(this, "+counter+")");
+    row.innerHTML = '<div class="col 5p">'+(counter++)+"</div>"+
+                    '<div class="col 25p">'+infos[0]+"</div>"+
+                    '<div class="col 25p">'+infos[1]+"</div>"+
+                    '<div class="col 5p">'+infos[3]+"</div>"+
+                    '<div class="col 5p">'+infos[4]+"</div>"+
+                    '<div class="col 30p">'+infos[5]+'</div>';
+                    
+                
+    otable.appendChild(row);
+    output.scrollTop = output.scrollHeight;
+}
 
 function dissect(packet) {
     if (oldPacket != null) {
@@ -49,22 +68,12 @@ function dissect(packet) {
         return;
     }
     
-    infos = new Array();
-    ph.next_header = dissectLinkLayer(packet, Pcaph.HLEN, infos);    
-
-    var row = document.createElement("div");
-    row.setAttribute("class","row "+infos[2]);
-    row.setAttribute("onclick","processClick(this, "+counter+")");
-    row.innerHTML = '<div class="col 5p">'+(counter++)+"</div>"+
-                    '<div class="col 25p">'+infos[0]+"</div>"+
-                    '<div class="col 25p">'+infos[1]+"</div>"+
-                    '<div class="col 5p">'+infos[3]+"</div>"+
-                    '<div class="col 5p">'+ph.orig_len+"</div>"+
-                    '<div class="col 30p">'+infos[4]+'</div>';
-                    
-                
-    otable.appendChild(row);
-    output.scrollTop = output.scrollHeight;
+    infos[4] = ph.orig_len;
+    ph.next_header = dissectLinkLayer(packet, Pcaph.HLEN, infos);   
+    
+    if (infos[6])
+        printRow();
+        
     
     if (packet.byteLength > (ph.incl_len + 16) && ph.incl_len > 0)
         dissect(packet.slice(ph.incl_len + 16));
@@ -78,7 +87,8 @@ function dissectLinkLayer(packet, offset, infos) {
     infos[1] = Ethh.printMAC(toReturn.dst);
     infos[2] = "eth";
     infos[3] = "Ethernet";
-    infos[4] = toReturn.toString();
+    infos[5] = toReturn.toString();
+    infos[6] = !tcp_filter; // relevant for TCP filtering
     
     toReturn.next_header = dissectNetworkLayer(packet, offset + Ethh.HLEN, toReturn.prot, infos);
     
@@ -95,9 +105,9 @@ function dissectNetworkLayer(packet, offset, prot, infos) {
             infos[1] = IPv4h.printIP(toReturn.dst);
             infos[2] = "ipv4";
             infos[3] = "IPv4";
-            infos[4] = toReturn.toString();
+            infos[5] = toReturn.toString();
             
-            toReturn.next_header = dissectTransportLayer(packet, offset + toReturn.getHeaderLength(), toReturn.prot, infos);
+            toReturn.next_header = dissectTransportLayer(packet, offset + toReturn.getHeaderLength(), toReturn, infos);
                
             break;
         case 0x86DD: // IPv6
@@ -107,9 +117,9 @@ function dissectNetworkLayer(packet, offset, prot, infos) {
             infos[1] = IPv6h.printIP(toReturn.dst);
             infos[2] = "ipv6";
             infos[3] = "IPv6";
-            infos[4] = toReturn.toString();
+            infos[5] = toReturn.toString();
             
-            toReturn.next_header = dissectTransportLayer(packet, offset + IPv6h.HLEN, toReturn.nh, infos);
+            toReturn.next_header = dissectTransportLayer(packet, offset + IPv6h.HLEN, toReturn, infos);
     
             break;
         case 0x0806: // ARP    
@@ -117,7 +127,7 @@ function dissectNetworkLayer(packet, offset, prot, infos) {
             
             infos[2] = "arp";
             infos[3] = "ARP";
-            infos[4] = toReturn.toString();
+            infos[5] = toReturn.toString();
             
             break;
         case 0x8035: // RARP
@@ -130,16 +140,16 @@ function dissectNetworkLayer(packet, offset, prot, infos) {
         default: // "unknown" ethtype
             toReturn = null;
             
-            infos[4] = "unknown ethtype";
+            infos[5] = "unknown ethtype";
             
             break;
     }
     return toReturn;
 }
 
-function dissectTransportLayer(packet, offset, prot, infos) {
+function dissectTransportLayer(packet, offset, parent, infos) {
     var toReturn;
-    switch(prot) {
+    switch(parent.prot) {
         case 1: // ICMP
             toReturn = null;
             
@@ -152,7 +162,17 @@ function dissectTransportLayer(packet, offset, prot, infos) {
             
             infos[2] = "tcp";
             infos[3] = "TCP";
-            infos[4] = toReturn.toString();
+            infos[5] = toReturn.toString();
+            infos[6] = (!tcp_filter ||
+                       (((new Uint32Array(parent.src)[0] == tf_values[0]) && 
+                         (new Uint32Array(parent.dst)[0] == tf_values[2]) &&
+                         (toReturn.sport == tf_values[1]) && 
+                         (toReturn.dport == tf_values[3]))
+                         ||
+                        ((new Uint32Array(parent.dst)[0] == tf_values[0]) && 
+                        (new Uint32Array(parent.src)[0] == tf_values[2]) &&
+                        (toReturn.dport == tf_values[1]) && 
+                        (toReturn.sport == tf_values[3]))));
             
             toReturn.next_header = dissectApplicationLayer(packet, offset + toReturn.getHeaderLength(), infos);
             
@@ -162,7 +182,7 @@ function dissectTransportLayer(packet, offset, prot, infos) {
                         
             infos[2] = "udp";
             infos[3] = "UDP";
-            infos[4] = toReturn.toString();
+            infos[5] = toReturn.toString();
             
             toReturn.next_header = dissectApplicationLayer(packet, offset + toReturn.getHeaderLength(), infos);
             
@@ -214,7 +234,7 @@ function printPacketDetails(pkt_num) {
     details_div.innerHTML = "";
     
     while (packet != null) { // go to payload
-        details_div.appendChild(packet.printDetails());
+        details_div.appendChild(packet.printDetails(pkt_num));
         packet = packet.next_header;        
     }
 }
@@ -321,4 +341,19 @@ function onWSClose() {
 
 function printDate(date) {
     return months[date.getMonth()]+" "+date.getDate()+", "+date.getFullYear()+" "+date.getHours()+":"+date.getMinutes()+":"+date.getSeconds();
+}
+
+function filterTCPConn(pkt_num) {
+    if (tcp_filter) {
+        tcp_filter = false;
+        return;
+    }
+    clearOutputTable();
+    var packet = packets[pkt_num].next_header.next_header;
+    tcp_filter = true;
+    tf_values[0] = new Uint32Array(packet.src)[0];
+    tf_values[2] = new Uint32Array(packet.dst)[0];
+    packet = packet.next_header;
+    tf_values[1] = packet.sport;
+    tf_values[3] = packet.dport;
 }
