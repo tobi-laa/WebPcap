@@ -1,26 +1,48 @@
+html {
+    height: 100%;
+}
 body { 
     background-color: lightgrey; 
+    height: 99%;
 }
-.output {
-    width: 100%;
-    padding-left: 4px;
+#tableheader {    
+    width: 60%;
     color: black;
     background-color: white;
+    overflow-y: scroll;
+    font-weight: bold;
+    margin-bottom: 0.2%;
 }
 #output {
-    height: 40em;
+    width: 60%;
+    color: black;
+    background-color: white;
+    float: left;
+    height: 88%;
+    overflow-y: scroll;
+    margin-right: 0.2%;
+}
+#details {    
+    margin-bottom: 0.2%;
+    width: 35%;
+    height: 43.9%;
+    background-color: white;
     overflow-y: scroll;
 }
-#details {
+#payload {    
+    width: 35%;
+    height: 43.9%;
     font-family: monospace;
+    background-color: white;
+    overflow-y: scroll;
 }
 .otable {
     table-layout: fixed;
 }
 #input {
-    width: 98%;
-    padding: 1%;
+    width: 100%;
     color: black;
+    height: 6%;
 }
 
 .table {
@@ -61,33 +83,59 @@ body {
     background-color: #ac0000;
 }
 
-.col5 {
+.col {
     float: left;
     display: table-column;
-    width: 5%;
-}
-.col10 {
-    float: left;
-    display: table-column;
-    width: 10%;
-}
-.col20 {
-    float: left;
-    display: table-column;
-    width: 20%;
-}
-.col30 {
-    float: left;
-    display: table-column;
-    width: 30%;
-}
-.col50 {
-    float: left;
-    display: table-column;
-    width: 50%;
+    margin-left: 0.1%;
 }
 
-button > img {
-    width: 6em;
-    height: 6em;
+.\3 5p  { width:  5%;}
+.\31 0p { width: 10%;}
+.\31 5p { width: 15%;}
+.\32 0p { width: 20%;}
+.\32 5p { width: 25%;}
+.\33 0p { width: 30%;}
+.\34 0p { width: 40%;}
+.\35 0p { width: 50%;}
+
+button {
+    width: 3%;
 }
+button img {
+    width: 100%;
+}
+
+input[type="checkbox"] + label {
+    font-weight: bold;
+}
+
+input[type="checkbox"] + label span {
+    display:inline-block;
+    width: 19px;
+    height: 19px;
+    margin: -1px 4px 0 0;
+    vertical-align:middle;
+    background: url(img/arrow-right.svg) left top no-repeat;
+    background-size: 19px 19px;
+    cursor:pointer;
+}
+
+input[type="checkbox"] + label span:hover {
+    opacity: 0.5;
+}
+
+input[type="checkbox"]:checked + label span {
+    background: url(img/arrow-down.svg) left top no-repeat;
+    background-size: 19px 19px;
+}
+
+input[type="checkbox"] {
+    display: none;
+}
+input[type="checkbox"] ~ div {
+    display: none;
+}
+input[type="checkbox"]:checked ~ div {
+    display: block; 
+    margin-left: 24px;
+}​

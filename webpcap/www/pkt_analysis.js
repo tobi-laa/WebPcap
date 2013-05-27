@@ -3,18 +3,20 @@ var ws = null;
 var conn_button = document.getElementById("connect");
 var output = document.getElementById("output");
 var otable = document.getElementById("otable");
-var details = document.getElementById("details");
+var payload_div = document.getElementById("payload");
+var details_div = document.getElementById("details");
 var counter = 1;
 var oldPacket = null;
 var selectedRow = null;
 var packets = new Array();
 var rawPackets = new Array();
+var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
 function ntohl(num) {
-    return ((num >> 24) & 0x000000FF) |
-           ((num >> 16) & 0x0000FF00) |
-           ((num >>  8) & 0x00FF0000) |
-           ((num >>  0) & 0xFF000000);
+    return ((num & 0x000000FF) >>> 0) |
+           ((num & 0x0000FF00) >>> 8) |
+           ((num & 0x00FF0000) >>> 16) |
+           ((num & 0xFF000000) >>> 24);
 }
 
 function ntohs(num) {
@@ -53,12 +55,11 @@ function dissect(packet) {
     var row = document.createElement("div");
     row.setAttribute("class","row "+infos[2]);
     row.setAttribute("onclick","processClick(this, "+counter+")");
-    row.innerHTML = '<div class="col5">'+(counter++)+"</div>"+
-                    '<div class="col10">'+infos[0]+"</div>"+
-                    '<div class="col10">'+infos[1]+"</div>"+
-                    '<div class="col5">'+infos[3]+"</div>"+
-                    '<div class="col5">'+ph.orig_len+"</div>"+
-                    '<div class="col50">'+infos[4]+"</div>";
+    row.innerHTML = '<div class="col 10p">'+(counter++)+"</div>"+
+                    '<div class="col 30p">'+infos[0]+"</div>"+
+                    '<div class="col 30p">'+infos[1]+"</div>"+
+                    '<div class="col 10p">'+infos[3]+"</div>"+
+                    '<div class="col 10p">'+ph.orig_len+"</div>";
                 
     otable.appendChild(row);
     output.scrollTop = output.scrollHeight;
@@ -173,24 +174,25 @@ function dissectTransportLayer(packet, offset, prot, infos) {
 
 function dissectApplicationLayer(packet, offset, infos) {
     return null;
-    /*            if (offset < ph.incl_len) {
-                var buff = new Uint8Array(msg.data, offset);
-                buff = String.fromCharCode.apply(String, buff);
-                info += buff;
-            }
-            if (tl.sport == 6600 || tl.dport == 6600) {
-                prot = "MPD";
-                info += buff;
-            }
-            else if(buff == "GET " || buff =="HTTP") {
-                prot = "HTTP";
-                tr_class = "http";
-            }*/    
+/*  if (offset < ph.incl_len) {
+        var buff = new Uint8Array(msg.data, offset);
+        buff = String.fromCharCode.apply(String, buff);
+        info += buff;
+    }
+    if (tl.sport == 6600 || tl.dport == 6600) {
+        prot = "MPD";
+        info += buff;
+    }
+    else if(buff == "GET " || buff =="HTTP") {
+        prot = "HTTP";
+        tr_class = "http";
+    }*/    
 }
 
 function processClick(row, pkt_num) {
     selectRow(row);
-    showDetails(pkt_num);
+    printPacketDetails(pkt_num);
+    printPayload(pkt_num);
 }
 
 function selectRow(row) {
@@ -204,65 +206,87 @@ function deselectRow(row) {
         row.className = row.className.replace("active","");
 }
 
-function showDetails(pkt_num) {
-    var offset = 0;
+function printPacketDetails(pkt_num) {
     var packet = packets[pkt_num];
     
-    while (packet.next_header != null) { // go to payload
-        offset += packet.getHeaderLength();
+    details_div.innerHTML = "";
+    
+    while (packet != null) { // go to payload
+        details_div.appendChild(packet.printDetails());
         packet = packet.next_header;        
     }
-    offset += packet.getHeaderLength();
+}
+
+function printPayload(pkt_num) {
+//     var offset = 0;
+//     var packet = packets[pkt_num];
+//     
+//     while (packet != null) { // go to payload
+//         offset += packet.getHeaderLength();
+//         packet = packet.next_header;        
+//     }
+//     
+//     var payload = new Uint8Array(rawPackets[pkt_num].slice(offset));
     
-    // alert(offset);
-    
-    var payload = new Uint8Array(rawPackets[pkt_num].slice(offset));
+    var payload = new Uint8Array(rawPackets[pkt_num]);
     
     var output = "<pre>";
         
     var remainder = payload.byteLength % 16;
-    var row_num = (payload.byteLength - remainder)/16;
     
     var i, j;
     
-    for (i = 0; i < row_num; i++) {
-        // output += "<p>"
+    for (i = 0; i < payload.byteLength - 16; i += 16) {
+        output += printNum(i, 16, 4)+"  ";
         for (j = 0; j < 16; j++) {
-            if (payload[16 * i + j] > 16)
-                output += payload[16 * i + j].toString(16)+" ";
-            else
-                output += "0"+payload[16 * i + j].toString(16)+" ";
+            output += printNum(payload[i + j], 16, 2) + " ";
             if (j == 7)
                 output += " ";
         }
-        output += "  ";
+        output += " ";
         for (j = 0; j < 16; j++) {
-            if (payload[16 * i + j] != 10)
-                output += String.fromCharCode(payload[16 * i + j]);
+            if (payload[i + j] >= 32 && payload[i + j] <= 126)
+                output += String.fromCharCode(payload[i + j]);
             else
                 output += ".";
         }
         output += "</br>";
     }
+    
+    output += printNum(i, 16, 4)+"  ";
     for (j = 0; j < remainder; j++) {
-        if (payload[16 * i + j] > 16)
-            output += payload[16 * i + j].toString(16)+" ";
-        else
-            output += "0"+payload[16 * i + j].toString(16)+" ";
+        output += printNum(payload[i + j], 16, 2) + " ";
         if (j == 7)
             output += " ";
     }
-    output += "  ";
-    for (j = 0; j < 16; j++) {
-        if (payload[16 * i + j] != 10)
-            output += String.fromCharCode(payload[16 * i + j]);
+    
+    for (j = 0; j < (16 - remainder); j++) {
+        output += "   ";
+        if (j == 7)
+            output += " ";
+    }
+    output += " ";
+    
+    for (j = 0; j < remainder; j++) {
+        if (payload[i + j] >= 32 && payload[i + j] <= 126)
+            output += String.fromCharCode(payload[i + j]);
         else
             output += ".";
     }
     
     output += "</pre>";
     
-    details.innerHTML = output;
+    payload_div.innerHTML = output;
+}
+
+function printNum(num, base, len) {
+    if(num == null)
+        return "%";
+    var hex = num.toString(base);
+    var toReturn = "";
+    for (var i = 0; i < (len - hex.length); i++)
+        toReturn += "0";
+    return toReturn + hex;
 }
 
 function clearOutputTable() {
@@ -291,4 +315,8 @@ function onWSClose() {
     ws = null;
     conn_button.setAttribute("title","Start a new live capture");
     conn_button.setAttribute("class","conn");
+}
+
+function printDate(date) {
+    return months[date.getMonth()]+" "+date.getDate()+", "+date.getFullYear()+" "+date.getHours()+":"+date.getMinutes()+":"+date.getSeconds();
 }

@@ -21,6 +21,29 @@ Pcaph.prototype = {
     getHeaderLength: function() {
         return Pcaph.HLEN;
     },
+    printDetails: function() {
+        var details = document.createElement("div");
+        details.setAttribute("class","pcap");
+        var check = document.createElement("input");
+        check.setAttribute("type","checkbox");  
+        check.setAttribute("id","pd");
+        var hidden = document.createElement("div");
+        var label = document.createElement("label");
+        var icon = document.createElement("span");
+        label.setAttribute("for","pd");
+        label.appendChild(icon);
+        label.innerHTML += "General Information";
+        details.appendChild(check);
+        details.appendChild(label);        
+        
+        hidden.innerHTML += "Arrival Time: " + printDate(new Date(this.ts_sec * 1000)) + "." + printNum(this.ts_usec, 10, 6) + "</br>";
+        hidden.innerHTML += "Frame Length: " + this.incl_len + " bytes (" + (this.incl_len * 8) + " bits)</br>";
+        hidden.innerHTML += "Captured Length: " + this.orig_len + " bytes (" + (this.orig_len * 8) + " bits)</br>";
+        
+        details.appendChild(hidden);
+        
+        return details;
+    },
     toString: function() {
         return "";
     }
@@ -49,6 +72,29 @@ Ethh.prototype = {
     getHeaderLength: function() {
         return Ethh.HLEN;
     },
+    printDetails: function() {
+        var details = document.createElement("div");
+        details.setAttribute("class","eth");
+        var check = document.createElement("input");
+        check.setAttribute("type","checkbox");  
+        check.setAttribute("id","ed");
+        var hidden = document.createElement("div");
+        var label = document.createElement("label");
+        var icon = document.createElement("span");
+        label.setAttribute("for","ed");
+        label.appendChild(icon);
+        label.innerHTML += "Ethernet II";
+        details.appendChild(check);
+        details.appendChild(label);   
+                
+        hidden.innerHTML  = "Destination: " + Ethh.printMAC(this.dst) + "</br>";
+        hidden.innerHTML += "Source: " + Ethh.printMAC(this.src) + "</br>";
+        hidden.innerHTML += "Type: " + Ethh.printEtherType(this.prot) + " (0x" + printNum(this.prot, 16, 4) + ")</br>";
+        
+        details.appendChild(hidden);
+        
+        return details;
+    },
     toString: function() {
         return "From: "+Ethh.printMAC(this.src)+
                " To: " +Ethh.printMAC(this.dst);
@@ -60,11 +106,24 @@ Ethh.ALEN = 6;  // MAC address length in bytes
 
 // FIXME: check params for consistency
 Ethh.printMAC = function(mac) {
-    var output = mac[0].toString(16);
+    var output = printNum(mac[0], 16, 2);
     for (i = 1; i < mac.length; i++)
-        output += ":"+mac[i].toString(16);
+        output += ":" + printNum(mac[i], 16, 2);
     return output;
 };
+Ethh.printEtherType = function(type) {
+    switch(type) {
+        case 0x0800: return "IPv4";
+        case 0x0806: return "ARP";
+        case 0x0842: return "Wake-on-LAN";
+        case 0x8035: return "RARP";
+        case 0x8137: return "IPX";
+        case 0x8138: return "IPX";
+        case 0x86DD: return "IPv6";
+        case 0x8808: return "Ethernet flow control";
+        default:     return "Unknown";
+    }
+}
 
 // FIXME: add 802.11 support
 
@@ -79,16 +138,18 @@ function IPv4h(data, offset) {
     var byteView  = new  Uint8Array(data, 0, IPv4h.HLEN);
     var shortView = new Uint16Array(data, 0, IPv4h.HLEN / 2);
     
-    this.v_hl = byteView[0];               // version & IP header length
-    this.tos  = byteView[1];               // type of service
-    this.tlen = ntohs(shortView[1]);       // total length
-    this.id   = ntohs(shortView[2]);       // identification
-    this.frag = ntohs(shortView[3]);       // fragmentation flags & offset
-    this.ttl  = byteView[8];               // time to live
-    this.prot = byteView[9];               // protocol (i.e. TCP)
-    this.csum = ntohs(shortView[5]);       // header checksum
-    this.src  = byteView.subarray(12, 16); // source IPv4 address
-    this.dst  = byteView.subarray(16, 20); // destination IPv4 address
+    this.v    = byteView[0] >> 4;             // version
+    this.hl   = byteView[0] & 0x0F;           // IP header length
+    this.tos  = byteView[1];                  // type of service
+    this.tlen = ntohs(shortView[1]);          // total length
+    this.id   = ntohs(shortView[2]);          // identification
+    this.frag = ntohs(shortView[3]);          // fragmentation flags & offset
+    this.off  = ntohs(shortView[3]) & 0x1FFF; // fragmentation offset
+    this.ttl  = byteView[8];                  // time to live
+    this.prot = byteView[9];                  // protocol (i.e. TCP)
+    this.csum = ntohs(shortView[5]);          // header checksum
+    this.src  = byteView.subarray(12, 16);    // source IPv4 address
+    this.dst  = byteView.subarray(16, 20);    // destination IPv4 address
     /* various options may follow; it is virtually impossible
      * though to specify them within this struct */
         
@@ -97,7 +158,40 @@ function IPv4h(data, offset) {
 
 IPv4h.prototype = {
     getHeaderLength: function() {
-        return 4 * (this.v_hl & 0x0F);
+        return 4 * this.hl;
+    },
+    printDetails: function() {
+        var details = document.createElement("div");
+        details.setAttribute("class","ip");
+        var check = document.createElement("input");
+        check.setAttribute("type","checkbox");  
+        check.setAttribute("id","id");
+        var hidden = document.createElement("div");
+        var label = document.createElement("label");
+        var icon = document.createElement("span");
+        label.setAttribute("for","id");
+        label.appendChild(icon);
+        label.innerHTML += "Internet Protocol Version 4";
+        details.appendChild(check);
+        details.appendChild(label);   
+         
+        hidden.innerHTML = "Version: " + this.v + "</br>"
+                         + "Header length: " + this.getHeaderLength() + "</br>"
+                         + "Differentiated Services Field: 0x" + printNum(this.tos, 16, 2) + "</br>"
+                         + "Total Length: " + this.tlen + "</br>"
+                         + "Identification: 0x" + printNum(this.id, 16, 4) + " (" + this.id + ")</br>"
+                         // FIXME
+        //                  += "Flags: " +  + "</br>"
+                         + "Fragment offset: " + this.off + "</br>"
+                         + "Time to live: " + this.ttl + "</br>"
+                         + "Protocol: " + this.prot + "</br>"
+                         + "Header checksum: 0x" + printNum(this.csum, 16, 4) + "</br>"
+                         + "Source: " + IPv4h.printIP(this.src) + "</br>"
+                         + "Destination: " + IPv4h.printIP(this.dst) + "</br>";
+
+        details.appendChild(hidden);
+        
+        return details;
     },
     toString: function() {
         return "";
@@ -134,6 +228,11 @@ IPv6h.prototype = {
     getHeaderLength: function() {
         return IPv6.HLEN;
     },
+    printDetails: function() {
+        var details = document.createElement("div");
+        details.innerHTML = "IPv6";
+        return details;
+    },
     toString: function() {
         return "";
     }
@@ -144,9 +243,9 @@ IPv6h.ALEN = 8;  // IPv6 address length in shorts
 
 // FIXME: check params for consistency
 IPv6h.printIP = function(ip) {
-    var output = ip[0].toString(16);
+    var output = printNum(ip[0], 16, 2);
     for (i = 1; i < ip.length; i++)
-        output += ":"+ip[i].toString(16);
+        output += ":" + printNum(ip[i], 16, 2);
     return output;
 };
 
@@ -176,6 +275,11 @@ function ARPh(data, offset) {
 ARPh.prototype = {
     getHeaderLength: function() {
         return ARPh.HLEN + 2*this.hlen + 2*this.plen;
+    },
+    printDetails: function() {
+        var details = document.createElement("div");
+        details.innerHTML = "ARP";
+        return details;
     },
     toString: function() {
         if (this.op == 1) { // ARP query
@@ -210,13 +314,13 @@ function TCPh(data, offset) {
     
     this.sport    = ntohs(shortView[0]); // source port
     this.dport    = ntohs(shortView[1]); // destination port
-    this.seqn     = intView[1];   // sequence number
-    this.ackn     = intView[2];   // ACK number
+    this.seqn     = ntohl(intView[1]);   // sequence number
+    this.ackn     = ntohl(intView[2]);   // ACK number
     // FIXME: maybe split the following in two chars?
     this.off_flag = shortView[6]; // data offset, reserved portion, flags
-    this.wsize    = shortView[7]; // window size
-    this.csum     = shortView[8]; // header checksum
-    this.urg      = shortView[9]; // urgent pointer
+    this.wsize    = ntohs(shortView[7]); // window size
+    this.csum     = ntohs(shortView[8]); // header checksum
+    this.urg      = ntohs(shortView[9]); // urgent pointer
     /* various options may follow; it is virtually impossible
      * though to specify them within this struct */
         
@@ -226,6 +330,36 @@ function TCPh(data, offset) {
 TCPh.prototype = {
     getHeaderLength: function() {
         return 4 * ((ntohs(this.off_flag)) >> 12);
+    },
+    printDetails: function() {
+        var details = document.createElement("div");
+        details.setAttribute("class","tcp");
+        var check = document.createElement("input");
+        check.setAttribute("type","checkbox");  
+        check.setAttribute("id","td");
+        var hidden = document.createElement("div");
+        var label = document.createElement("label");
+        var icon = document.createElement("span");
+        label.setAttribute("for","td");
+        label.appendChild(icon);
+        label.innerHTML += "Transmission Control Protocol";
+        details.appendChild(check);
+        details.appendChild(label);   
+         
+        hidden.innerHTML = "Source port: " + this.sport + "</br>"
+                         + "Destination port: " + this.dport + "</br>"
+                         + "Sequence number: " + this.seqn + "</br>"
+                         + "Acknowledgment number: " + this.ackn + "</br>"
+                         + "Header length: " + this.getHeaderLength() + "</br>"
+                         // FIXME
+                         // + "Flags: " +  + "</br>"
+                         + "Window size value: " + this.wsize + "</br>"                         
+                         + "Checksum: 0x" + printNum(this.csum, 16, 4) + "</br>";
+                         // FIXME options
+
+        details.appendChild(hidden);
+        
+        return details;
     },
     toString: function() {
         return "SRC Port: "+this.sport+
@@ -250,6 +384,30 @@ function UDPh(data, offset) {
 UDPh.prototype = {
     getHeaderLength: function() {
         return UDPh.HLEN;
+    },
+    printDetails: function() {
+        var details = document.createElement("div");
+        details.setAttribute("class","udp");
+        var check = document.createElement("input");
+        check.setAttribute("type","checkbox");  
+        check.setAttribute("id","ud");
+        var hidden = document.createElement("div");
+        var label = document.createElement("label");
+        var icon = document.createElement("span");
+        label.setAttribute("for","ud");
+        label.appendChild(icon);
+        label.innerHTML += "User Datagram Protocol";
+        details.appendChild(check);
+        details.appendChild(label);   
+         
+        hidden.innerHTML = "Source port: " + this.sport + "</br>"
+                         + "Destination port: " + this.dport + "</br>"
+                         + "Length: " + this.len + "</br>"                    
+                         + "Checksum: 0x" + printNum(this.csum, 16, 4) + "</br>";
+        
+        details.appendChild(hidden);
+        
+        return details;
     },
     toString: function() {
         return "SRC Port: "+this.sport+

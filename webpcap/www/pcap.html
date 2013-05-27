@@ -10,71 +10,38 @@
             <button title="Start a new live capture" type="button" id="connect" class="conn" onclick="switchConnection()">
                 <img src="img/ksniffer.svg" alt="Start capture">
             </button>
-            
+
             <button title="Clear screen" type="button" onclick="clearOutputTable()">
                 <img src="img/clear.svg" alt="Clear screen">
             </button>
-            
+
             <button title="Save capture" type="button" onclick="saveCapture()">
                 <img src="img/save.svg" alt="Save capture">
             </button>
-
         </div>
     
-        <div class="output">
+        <div id="tableheader">
             <div class="table">
                 <div class="row">
-                    <div class="col5"><p>Number</p></div>
-                    <div class="col10"><p>Source</p></div>
-                    <div class="col10"><p>Destination</p></div>
-                    <div class="col5"><p>Protocol</p></div>
-                    <div class="col5"><p>Length</p></div>
-                    <div class="col50"><p>Info</p></div>
+                    <div class="col 10p">Number</div>
+                    <div class="col 30p">Source</div>
+                    <div class="col 30p">Destination</div>
+                    <div class="col 10p">Protocol</div>
+                    <div class="col 10p">Length</div>
                 </div>
             </div>
         </div>
         
-        <div class="output" id="output">
+        <div id="output">
             <div class="table" id="otable">
             </div>
         </div>
     
-        <div class="output" id="details">
+        <div id="details">
         </div>
-        <!--
-        <div class="output">
-            <table class="otable">
-                <colgroup>
-                    <col width="100">
-                    <col width="400">
-                    <col width="400">
-                    <col width="100">
-                    <col width="100">
-                    <col width="700">
-                </colgroup>
-                <tr>
-                    <td>Number</td>
-                    <td>Source</td>
-                    <td>Destination</td>
-                    <td>Protocol</td>
-                    <td>Length</td>
-                    <td>Info</td>
-                </tr>
-            </table>
+        
+        <div id="payload">
         </div>
-        <div id="output" class="output">
-            <table id="otable" class="otable">
-                <colgroup>
-                    <col width="100">
-                    <col width="400">
-                    <col width="400">
-                    <col width="100">
-                    <col width="100">
-                    <col width="700">
-                </colgroup>
-            </table>
-        </div>
-        !-->
         
         <script src="./gistfile1.js"></script>
         <script src="./pkt_headers.js"></script>
