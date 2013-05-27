@@ -311,8 +311,10 @@ function printNum(num, base, len) {
     return toReturn + hex;
 }
 
-function clearOutputTable() {
+function clearScreen() {
     otable.innerHTML = "";
+    details.innerHTML = "";
+    payload.innerHTML = "";
 }
 
 function switchConnection() {
@@ -348,7 +350,7 @@ function filterTCPConn(pkt_num) {
         tcp_filter = false;
         return;
     }
-    clearOutputTable();
+    clearScreen();
     var packet = packets[pkt_num].next_header.next_header;
     tcp_filter = true;
     tf_values[0] = new Uint32Array(packet.src)[0];
