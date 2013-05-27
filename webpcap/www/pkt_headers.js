@@ -165,11 +165,11 @@ IPv4h.prototype = {
         details.setAttribute("class","ip");
         var check = document.createElement("input");
         check.setAttribute("type","checkbox");  
-        check.setAttribute("id","id");
+        check.setAttribute("id","i4d");
         var hidden = document.createElement("div");
         var label = document.createElement("label");
         var icon = document.createElement("span");
-        label.setAttribute("for","id");
+        label.setAttribute("for","i4d");
         label.appendChild(icon);
         label.innerHTML += "Internet Protocol Version 4";
         details.appendChild(check);
@@ -214,8 +214,9 @@ function IPv6h(data, offset) {
     var byteView  = new  Uint8Array(data, 0, IPv6h.HLEN);
     var shortView = new Uint16Array(data, 0, IPv6h.HLEN / 2);
     
+    this.v = (byteView[0] & 0xF0) >> 4;     // version
     this.v_tc_fl = byteView.subarray(0, 4); // version, traffic class, flow label
-    this.plen = shortView[2];               // payload length
+    this.plen = ntohs(shortView[2]);        // payload length
     this.nh = byteView[6];                  // next header; same as protocol for ipv4h
     this.hlim = byteView[7];                // hop limit
     this.src = shortView.subarray(4, 12);   // source IPv6 address
@@ -230,7 +231,29 @@ IPv6h.prototype = {
     },
     printDetails: function() {
         var details = document.createElement("div");
-        details.innerHTML = "IPv6";
+        details.setAttribute("class","ip");
+        var check = document.createElement("input");
+        check.setAttribute("type","checkbox");  
+        check.setAttribute("id","i6d");
+        var hidden = document.createElement("div");
+        var label = document.createElement("label");
+        var icon = document.createElement("span");
+        label.setAttribute("for","i6d");
+        label.appendChild(icon);
+        label.innerHTML += "Internet Protocol Version 6";
+        details.appendChild(check);
+        details.appendChild(label);   
+         
+        hidden.innerHTML = "Version: " + this.v + "</br>"
+                         // FIXME traffic class & flow label
+                         + "Payload length: " + this.plen + "</br>"
+                         + "Next header: " + this.nh + "</br>"
+                         + "Hop limit " + this.hlim + "</br>"
+                         + "Source: " + IPv6h.printIP(this.src) + "</br>"
+                         + "Destination: " + IPv6h.printIP(this.dst) + "</br>";
+
+        details.appendChild(hidden);
+        
         return details;
     },
     toString: function() {
@@ -278,7 +301,32 @@ ARPh.prototype = {
     },
     printDetails: function() {
         var details = document.createElement("div");
-        details.innerHTML = "ARP";
+        details.setAttribute("class","arp");
+        var check = document.createElement("input");
+        check.setAttribute("type","checkbox");  
+        check.setAttribute("id","ad");
+        var hidden = document.createElement("div");
+        var label = document.createElement("label");
+        var icon = document.createElement("span");
+        label.setAttribute("for","ad");
+        label.appendChild(icon);
+        label.innerHTML += "Address Resolution Protocol";
+        details.appendChild(check);
+        details.appendChild(label);   
+         
+        // FIXME FIXME obviously not always IP & MAC... also show whether query or reply etc
+        hidden.innerHTML = "Hardware type: " + this.htype + "</br>"
+                         + "Protocol type: " + Ethh.printEtherType(this.ptype) + " (0x" + printNum(this.ptype, 16, 4) + ")</br>"
+                         + "Hardware size: " + this.hlen + "</br>"
+                         + "Protocol size: " + this.plen + "</br>"
+                         + "Opcode: " + this.op + "</br>"
+                         + "Sender MAC address: " + Ethh.printMAC(this.sha) + "</br>"                         
+                         + "Sender IP address: " + IPv4h.printIP(this.spa) + "</br>"
+                         + "Target MAC address: " + Ethh.printMAC(this.tha) + "</br>"                         
+                         + "Target IP address: " + IPv4h.printIP(this.tpa) + "</br>";
+
+        details.appendChild(hidden);
+        
         return details;
     },
     toString: function() {

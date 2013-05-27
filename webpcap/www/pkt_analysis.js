@@ -55,11 +55,13 @@ function dissect(packet) {
     var row = document.createElement("div");
     row.setAttribute("class","row "+infos[2]);
     row.setAttribute("onclick","processClick(this, "+counter+")");
-    row.innerHTML = '<div class="col 10p">'+(counter++)+"</div>"+
-                    '<div class="col 30p">'+infos[0]+"</div>"+
-                    '<div class="col 30p">'+infos[1]+"</div>"+
-                    '<div class="col 10p">'+infos[3]+"</div>"+
-                    '<div class="col 10p">'+ph.orig_len+"</div>";
+    row.innerHTML = '<div class="col 5p">'+(counter++)+"</div>"+
+                    '<div class="col 25p">'+infos[0]+"</div>"+
+                    '<div class="col 25p">'+infos[1]+"</div>"+
+                    '<div class="col 5p">'+infos[3]+"</div>"+
+                    '<div class="col 5p">'+ph.orig_len+"</div>"+
+                    '<div class="col 30p">'+infos[4]+'</div>';
+                    
                 
     otable.appendChild(row);
     output.scrollTop = output.scrollHeight;

@@ -6,7 +6,7 @@ body {
     height: 99%;
 }
 #tableheader {    
-    width: 60%;
+    width: 65%;
     color: black;
     background-color: white;
     overflow-y: scroll;
@@ -14,7 +14,7 @@ body {
     margin-bottom: 0.2%;
 }
 #output {
-    width: 60%;
+    width: 65%;
     color: black;
     background-color: white;
     float: left;
@@ -24,13 +24,13 @@ body {
 }
 #details {    
     margin-bottom: 0.2%;
-    width: 35%;
+    width: 34%;
     height: 43.9%;
     background-color: white;
     overflow-y: scroll;
 }
 #payload {    
-    width: 35%;
+    width: 34%;
     height: 43.9%;
     font-family: monospace;
     background-color: white;
@@ -89,7 +89,7 @@ body {
     margin-left: 0.1%;
 }
 
-.\3 5p  { width:  5%;}
+.\35 p  { width:  5%;}
 .\31 0p { width: 10%;}
 .\31 5p { width: 15%;}
 .\32 0p { width: 20%;}
