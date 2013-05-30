@@ -149,7 +149,7 @@ int main(int argc,char* argv[]) {
     char filter_set = 0; // 0 if no filter was specified by user
     int i; // for-loop
     
-    for(i = 1; i < argc; i++){ //argv[0] does not need to be checked!
+    for(i = 1; i < argc; i++) { //argv[0] does not need to be checked!
         if((strcmp(argv[i],"-i") == 0) && (i<argc-1)){
             dev = argv[i+1];
             dev_set = 1;
