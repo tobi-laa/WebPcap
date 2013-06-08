@@ -95,8 +95,8 @@ function dissectTransportLayer(packet, data, offset, parent) {
         toReturn = new TCPh(data, offset, parent);
         packet.tcp_id = toReturn.id;
         
-        // FIXME
-        tcpConns[toReturn.id] = packet;
+        if (!tcpConns[toReturn.id]) tcpConns[toReturn.id] = [packet];
+        else tcpConns[toReturn.id].push(packet);
         
         packet.prot = "TCP";
         toReturn.next_header = 
@@ -142,6 +142,10 @@ function getPacket(num) {
 
 function getPackets() {
     return packets;
+}
+
+function getTCPConn(id) {
+    return tcpConns[id];
 }
 
 function getRawPacket(num) {
