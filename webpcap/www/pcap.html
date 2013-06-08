@@ -7,47 +7,70 @@
     <body>
     
         <div id="input">
-            <button title="Start a new live capture" type="button" id="connect" class="conn" onclick="switchConnection()">
+
+            <div id="conn" class="button relpos" onclick="switchConnection()" title="Start a new live capture">
                 <img src="img/ksniffer.svgz" alt="Start capture">
-            </button>
-
-            <button title="Clear screen" type="button" onclick="clearScreen()">
+                <input type="checkbox"></input>
+                <div title="Indicates whether capture is running or not"></div>
+            </div>
+            
+            <div class="button" onclick="clearScreen()" title="Clear screen">
                 <img src="img/clear.svgz" alt="Clear screen">
-            </button>
+            </div>
 
-            <button title="Save capture" type="button" onclick="saveCapture()">
+            <div class="button" onclick="saveCapture()" title="Save capture">
                 <img src="img/save.svgz" alt="Save capture">
-            </button>
+            </div>
+            
+            <input type="file" onchange="readPcapFile(this.files[0], printRow)"></input>
+                        
         </div>
     
-        <div id="tableheader">
-            <div class="table">
-                <div class="row">
-                    <div class="col 5p">No.</div>
-                    <div class="col 25p">Source</div>
-                    <div class="col 25p">Destination</div>
-                    <div class="col 5p">Protocol</div>
-                    <div class="col 5p">Length</div>
-                    <div class="col 30p">Info</div>
+        <div class="relpos">
+            <div id="tableheader">
+                <div class="table">
+                    <div class="row">
+                        <div class="col 5p">No.</div>
+                        <div class="col 25p">Source</div>
+                        <div class="col 25p">Destination</div>
+                        <div class="col 5p">Protocol</div>
+                        <div class="col 5p">Length</div>
+                        <div class="col 30p">Info</div>
+                    </div>
                 </div>
+            </div>    
+            <div id="hidescrollbar">
             </div>
         </div>
         
         <div id="output">
-            <div class="table" id="otable">
+            <div class="table">
             </div>
         </div>
     
-        <div id="details">
+        <div id="details" class="details">
         </div>
         
-        <div id="payload">
+        <div id="payload" class="details">
+            <pre>
+            </pre>
         </div>
         
-        <script src="./gistfile1.js"></script>
-        <script src="./pkt_headers.js"></script>
-        <script src="./pkt_download.js"></script>
-        <script src="./pkt_analysis.js"></script>
+        <script src="./webpcap/arrayBuffers.js"></script>
+        <script src="./webpcap/fileIO.js"></script>
+        <script src="./webpcap/formattedOutput.js"></script>
+        <script src="./webpcap/webpcap.js"></script>
+ 
+        <script src="./webpcap/dissection/byteOrder.js"></script>
+        <script src="./webpcap/dissection/Pcaph.js"></script>
+        <script src="./webpcap/dissection/Ethh.js"></script>
+        <script src="./webpcap/dissection/IPv4h.js"></script>        
+        <script src="./webpcap/dissection/IPv6h.js"></script>
+        <script src="./webpcap/dissection/ARPh.js"></script>
+        <script src="./webpcap/dissection/TCPh.js"></script>
+        <script src="./webpcap/dissection/UDPh.js"></script>
+        <script src="./webpcap/dissection/dissection.js"></script>
+                
         
     </body>
 </html>
