@@ -10,7 +10,7 @@
 
             <div id="conn" class="button relpos" onclick="switchConnection()" title="Start a new live capture">
                 <img src="img/ksniffer.svgz" alt="Start capture">
-                <input type="checkbox"></input>
+                <input type="checkbox">
                 <div title="Indicates whether capture is running or not"></div>
             </div>
             
@@ -22,7 +22,13 @@
                 <img src="img/save.svgz" alt="Save capture">
             </div>
             
-            <input type="file" onchange="readPcapFile(this.files[0], printRow)"></input>
+            <div class="button" onclick="clickOnFileInput()" title="Open pcap file">                 
+                <img src="img/document-open.svgz" alt="Save capture">                
+            </div>            
+            
+            <div class="hidebox">
+                <input id="fi" type="file" onchange="readPcapFile(this.files[0], printRow)">
+            </div>
                         
         </div>
     
@@ -55,6 +61,8 @@
             <pre>
             </pre>
         </div>
+        
+        <script src="./webpcap/require.js"></script>
         
         <script src="./webpcap/arrayBuffers.js"></script>
         <script src="./webpcap/fileIO.js"></script>
