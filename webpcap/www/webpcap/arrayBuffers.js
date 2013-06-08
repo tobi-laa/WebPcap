@@ -1,3 +1,16 @@
+function appendBuffer(buff, toAppend) {
+    if (buff === null)
+        return toAppend;
+    if (toAppend === null)
+        return buff;
+    var toReturn = new Uint8Array(buff.byteLength + toAppend.byteLength);
+    toReturn.set(new Uint8Array(buff),     0);
+    toReturn.set(new Uint8Array(toAppend), buff.byteLength);
+    return toReturn.buffer;
+} 
+
+// The following method is not my own; I found it online
+
 // Converts an ArrayBuffer directly to base64, without any intermediate 'convert to string then
 // use window.btoa' step. According to my tests, this appears to be a faster approach:
 // http://jsperf.com/encoding-xhr-image-data/5
