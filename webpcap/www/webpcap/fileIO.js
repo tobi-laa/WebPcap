@@ -1,5 +1,6 @@
 var getURL, appendPacketData, cache, dataURL;
 var MAGIC_NUMBER = (0xa1b2c3d4 >>> 0);
+var MIMETYPE = 'application/vnd.tcpdump.pcap';
 
 if (Blob && window.URL && URL.createObjectURL) {
     getURL = getBlobURL;
@@ -9,7 +10,7 @@ if (Blob && window.URL && URL.createObjectURL) {
 else {
     getURL = getDataURL;
     appendPacketData = appendToDataURL;
-    dataURL = 'data:application/x-download;base64,' + 
+    dataURL = 'data:' + MIMETYPE + ';base64,' + 
               base64ArrayBuffer(createPcapGlobalHeader());
     cache = null;
 }
@@ -54,7 +55,7 @@ function getDataURL() {
 }
 
 function getBlobURL() {
-    var blob = new Blob([cache]);
+    var blob = new Blob([cache], {type: MIMETYPE, size: cache.byteLength});
     return URL.createObjectURL(blob);
 }
 
