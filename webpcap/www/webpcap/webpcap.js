@@ -3,8 +3,7 @@ var output = doc.getElementById("output");
 var table = output.getElementsByTagName("div")[0];
 var payload_div = doc.getElementById("payload");
 var details_div = doc.getElementById("details");
-var selectedRow = null;
-var selectedRowNum;
+var selectedRow = new Object();
 
 
 
@@ -39,12 +38,20 @@ function onWSClose() {
 var tmpLink = document.createElement("a");
 tmpLink.download = "log.pcap";
 
+// will be used to click on the link
+var mc = document.createEvent("MouseEvents");
+mc.initEvent("click", true, false);
+
 function saveCapture() {
     tmpLink.href = getURL();
-    tmpLink.click();
+    tmpLink.dispatchEvent(mc);
 } 
 
 
+
+function clickOnFileInput() {
+    fi.click();
+}
 
 
 
@@ -90,11 +97,13 @@ function printRow(packet) {
     row.appendChild(len);
     row.appendChild(info);
                     
-    table.appendChild(row);
-    output.scrollTop = output.scrollHeight;
+    table.appendChild(row);    
     
     return row;
 }
+
+// FIXME
+setInterval(function() { if(ws) output.scrollTop = output.scrollHeight;}, 500);
 
 function processClick(row, pkt_num) {
     selectRow(row, pkt_num);
@@ -103,15 +112,19 @@ function processClick(row, pkt_num) {
 }
 
 function selectRow(row, pkt_num) {
-    deselectRow(selectedRow);
-    row.className += "active";
-    selectedRow = row;
-    selectedRowNum = pkt_num;
+    deselectRow(selectedRow.row);
+    
+    selectedRow.class = row.className;    
+    selectedRow.row = row;
+    selectedRow.num = pkt_num;
+    
+    row.setAttribute('class','row selected');
 }
 
 function deselectRow(row) {
-    if (row !== null)
-        row.className = row.className.replace("active","");
+    if (!row) return;
+    
+    row.setAttribute('class', selectedRow.class);
 }
 
 function printPacketDetails(pkt_num) {
@@ -211,16 +224,22 @@ function switchConnection() {
 var tcp_filter = false;
 
 function filterTCPConn(tcp_id) {
-    if (tcp_filter)
+    clearScreen(); // redraw the table
+    if (tcp_filter) {
         tcp_filter = false;
-    else
+        printPackets(getPackets());
+    }
+    else {
         tcp_filter = tcp_id;
+        printPackets(getTCPConn(tcp_id));
+    }
+}
+
+function printPackets(packets) {
+    if (!packets) return;
     
-    // now redraw the table
-    var packets = getPackets();
-    clearScreen();
     for (var i = 1; i < packets.length; i++) {
-        if (i === selectedRowNum) {
+        if (packets[i].num === selectedRow.num) {
             selectRow(printRow(packets[i]), i);
             printPacketDetails(i);
             printPayload(i);
