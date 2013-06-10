@@ -1,7 +1,7 @@
 function appendBuffer(buff, toAppend) {
-    if (buff === null)
+    if (!buff)
         return toAppend;
-    if (toAppend === null)
+    if (!toAppend)
         return buff;
     var toReturn = new Uint8Array(buff.byteLength + toAppend.byteLength);
     toReturn.set(new Uint8Array(buff),     0);
@@ -66,3 +66,6 @@ function base64ArrayBuffer(arrayBuffer) {
   
   return base64
 }
+
+if (typeof module !== 'undefined')
+    module.exports.appendBuffer = appendBuffer;

@@ -57,8 +57,8 @@ IPv4h.prototype = {
                          + "Time to live: " + this.ttl + "</br>"
                          + "Protocol: " + this.prot + "</br>"
                          + "Header checksum: 0x" + printNum(this.csum, 16, 4) + "</br>"
-                         + "Source: " + IPv4h.printIP(this.src) + "</br>"
-                         + "Destination: " + IPv4h.printIP(this.dst) + "</br>";
+                         + "Source: " + printIPv4(this.src) + "</br>"
+                         + "Destination: " + printIPv4(this.dst) + "</br>";
 
         details.appendChild(hidden);
         
@@ -73,9 +73,14 @@ IPv4h.HLEN = 20; // IPv4 minimum header length in bytes
 IPv4h.ALEN = 4;  // IPv4 address length in bytes
 
 // FIXME: check params for consistency
-IPv4h.printIP = function (ip) {
+function printIPv4(ip) {
     var output = ip[0];
     for (i = 1; i < ip.length; i++)
         output += "."+ip[i];
-    return output;    
-} 
+    return output;
+}
+
+if (typeof module !== 'undefined') {
+    module.exports.printIPv4 = printIPv4;
+    module.exports.IPv4h = IPv4h;
+}

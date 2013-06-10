@@ -1,3 +1,6 @@
+if (typeof require !== 'undefined')
+    var printNum = require('../formattedOutput').printNum;
+
 /*
  ******************************************************************
  ************************* IPV6 HEADER ****************************
@@ -44,8 +47,8 @@ IPv6h.prototype = {
                          + "Payload length: " + this.plen + "</br>"
                          + "Next header: " + this.nh + "</br>"
                          + "Hop limit " + this.hlim + "</br>"
-                         + "Source: " + IPv6h.printIP(this.src) + "</br>"
-                         + "Destination: " + IPv6h.printIP(this.dst) + "</br>";
+                         + "Source: " + printIPv6(this.src) + "</br>"
+                         + "Destination: " + printIPv6(this.dst) + "</br>";
 
         details.appendChild(hidden);
         
@@ -60,9 +63,14 @@ IPv6h.HLEN = 40; // IPv6 header length in bytes
 IPv6h.ALEN = 8;  // IPv6 address length in shorts
 
 // FIXME: check params for consistency
-IPv6h.printIP = function (ip) {
+function printIPv6(ip) {
     var output = printNum(ip[0], 16, 2);
     for (i = 1; i < ip.length; i++)
         output += ":" + printNum(ip[i], 16, 2);
     return output;
-};
+}
+
+if (typeof module !== 'undefined') {
+    module.exports.printIPv6 = printIPv6;
+    module.exports.IPv6h = IPv6h;
+}

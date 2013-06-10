@@ -1,18 +1,25 @@
+if (typeof require !== 'undefined') {
+    var dissect = require('./dissection/dissection').dissect;
+    var switchByteOrder = require('./dissection/byteOrder').switchByteOrder;
+}
+
 var getURL, appendPacketData, cache, dataURL;
 var MAGIC_NUMBER = (0xa1b2c3d4 >>> 0);
 var MIMETYPE = 'application/vnd.tcpdump.pcap';
 
-if (Blob && window.URL && URL.createObjectURL) {
-    getURL = getBlobURL;
-    appendPacketData = appendToBlob;
-    cache = createPcapGlobalHeader();    
-}
-else {
-    getURL = getDataURL;
-    appendPacketData = appendToDataURL;
-    dataURL = 'data:' + MIMETYPE + ';base64,' + 
-              base64ArrayBuffer(createPcapGlobalHeader());
-    cache = null;
+if (typeof window !== 'undefined') {
+    if (Blob && window.URL && URL.createObjectURL) {
+        getURL = getBlobURL;
+        appendPacketData = appendToBlob;
+        cache = createPcapGlobalHeader();    
+    }
+    else {
+        getURL = getDataURL;
+        appendPacketData = appendToDataURL;
+        dataURL = 'data:' + MIMETYPE + ';base64,' + 
+                base64ArrayBuffer(createPcapGlobalHeader());
+        cache = null;
+    }
 }
 
 function createPcapGlobalHeader() {
@@ -62,16 +69,23 @@ function getBlobURL() {
 function readPcapFile(file, f) {
     var fr = new FileReader();
     fr.readAsArrayBuffer(file);
-    fr.onload = function() {
-        var magic_number = new Uint32Array(fr.result, 0, 1)[0] >>> 0;
-        if (magic_number === ntohl(MAGIC_NUMBER))
-            switchByteOrder(false);
-        else if (magic_number !== MAGIC_NUMBER) {
-            alert('Invalid Magic Number'); // FIXME
-            return false;
-        }
-        dissect(fr.result.slice(24), f);
-        switchByteOrder(true); // always reset this value
-        return true;
-    };
+    fr.onload = function() {dissectPcapFile(fr.result, f);}; 
+}
+
+function dissectPcapFile(data, f) {
+    var magic_number = new Uint32Array(data, 0, 1)[0] >>> 0;
+    if (magic_number === ntohl(MAGIC_NUMBER))
+        switchByteOrder(false);
+    else if (magic_number !== MAGIC_NUMBER) {
+        // alert('Invalid Magic Number'); // FIXME
+        return false;
+    }
+    dissect(data.slice(24), f);
+    switchByteOrder(true); // always reset this value
+    return true;
+}
+
+if (typeof module !== 'undefined') {
+    module.exports.readPcapFile = readPcapFile;
+    module.exports.dissectPcapFile = dissectPcapFile;
 }

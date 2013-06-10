@@ -16,3 +16,6 @@ function printDate(date) {
            date.getFullYear() + " " + date.getHours() + ":" + 
            date.getMinutes() + ":" + date.getSeconds();
 } 
+
+if (typeof module !== 'undefined')
+    module.exports.printNum = printNum;

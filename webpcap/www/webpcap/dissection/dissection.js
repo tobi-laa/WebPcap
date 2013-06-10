@@ -5,6 +5,20 @@ var tcpConns = {};
 
 var counter = 1;
 
+if (typeof require !== 'undefined') {
+    var Pcaph = require('./Pcaph');
+    var Ethh = require('./Ethh').Ethh;
+    var printMAC = require('./Ethh').printMAC;
+    var printIPv4 = require('./IPv4h').printIPv4;
+    var printIPv6 = require('./IPv6h').printIPv6;
+    var IPv4h = require('./IPv4h').IPv4h;
+    var IPv6h = require('./IPv6h').IPv6h;
+    var ARPh = require('./ARPh');
+    var TCPh = require('./TCPh');
+    var UDPh = require('./UDPh');
+    var appendBuffer = require('./../arrayBuffers').appendBuffer;
+}
+
 function dissect(data, f) {
     if (oldPacket !== null) { // consider previously received data
         data = appendBuffer(oldPacket, data);
@@ -30,8 +44,8 @@ function dissect(data, f) {
     if(f) f(packet); // callback
     
     // store dissected and raw packet
-    packets[counter] = packet;
-    rawPackets[counter] = data.slice(0, packet.incl_len + 16);
+    packets[counter - 1] = packet;
+    rawPackets[counter - 1] = data.slice(0, packet.incl_len + 16);
     counter++;  
     
     // see if there is more data to dissect
@@ -42,8 +56,8 @@ function dissect(data, f) {
 function dissectLinkLayer(packet, data, offset) {
     // FIXME probably should be variable
     var toReturn = new Ethh(data, offset);       
-    packet.src  = Ethh.printMAC(toReturn.src);
-    packet.dst  = Ethh.printMAC(toReturn.dst);
+    packet.src  = printMAC(toReturn.src);
+    packet.dst  = printMAC(toReturn.dst);
     packet.prot = "Ethernet";
     toReturn.next_header = 
     dissectNetworkLayer(packet, data, offset + Ethh.HLEN, toReturn);    
@@ -55,19 +69,19 @@ function dissectNetworkLayer(packet, data, offset, parent) {
     switch(parent.prot) {
     case 0x0800: // IPv4
         toReturn = new IPv4h(data, offset);
-        packet.src  = IPv4h.printIP(toReturn.src);
-        packet.dst  = IPv4h.printIP(toReturn.dst);
+        packet.src  = printIPv4(toReturn.src);
+        packet.dst  = printIPv4(toReturn.dst);
         packet.prot = "IPv4";
         toReturn.next_header = 
         dissectTransportLayer(packet, data, offset + toReturn.getHeaderLength(), toReturn);
         break;
     case 0x86DD: // IPv6
         toReturn = new IPv6h(data, offset);   
-        packet.src  = IPv6h.printIP(toReturn.src);
-        packet.dst  = IPv6h.printIP(toReturn.dst);
+        packet.src  = printIPv6(toReturn.src);
+        packet.dst  = printIPv6(toReturn.dst);
         packet.prot = "IPv6";        
         toReturn.next_header = 
-        dissectTransportLayer(packet, data, offset + IPv6h.HLEN, toReturn);
+        dissectTransportLayer(packet, data, offset + toReturn.getHeaderLength(), toReturn);
         break;
     case 0x0806: // ARP    
         toReturn = new ARPh(data, offset);
@@ -137,7 +151,7 @@ function dissectApplicationLayer(packet, data, offset, parent) {
 } 
 
 function getPacket(num) {
-    return packets[num];
+    return packets[num - 1];
 }
 
 function getPackets() {
@@ -149,5 +163,8 @@ function getTCPConn(id) {
 }
 
 function getRawPacket(num) {
-    return rawPackets[num];
+    return rawPackets[num - 1];
 }
+
+if (typeof module !== 'undefined')
+    module.exports.dissect = dissect;

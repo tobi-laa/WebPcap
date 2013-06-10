@@ -57,27 +57,32 @@ function clickOnFileInput() {
 
 
 
-
-
 function printRow(packet) {
     if (tcp_filter && packet.tcp_id !== tcp_filter)
         return;
     
     var row = doc.createElement("div");
+    var num   = doc.createElement("div");
+    var src  = doc.createElement("div");
+    var dst  = doc.createElement("div");
+    var prot = doc.createElement("div");
+    var len  = doc.createElement("div");
+    var info = doc.createElement("div");
+        
     row.setAttribute('onclick','processClick(this, ' + packet.num + ')');
     row.setAttribute('class','row ' + packet.prot);
     
-    var num   = doc.createElement("div");
+    
     num.setAttribute('class', 'col 5p');
-    var src  = doc.createElement("div");
+    
     src.setAttribute('class', 'col 25p');
-    var dst  = doc.createElement("div");
+    
     dst.setAttribute('class', 'col 25p');
-    var prot = doc.createElement("div");
+    
     prot.setAttribute('class', 'col 5p');
-    var len  = doc.createElement("div");
+    
     len.setAttribute('class', 'col 5p');
-    var info = doc.createElement("div");
+    
     info.setAttribute('class', 'col 30p');
     
     num.innerHTML  = packet.num;
@@ -238,11 +243,11 @@ function filterTCPConn(tcp_id) {
 function printPackets(packets) {
     if (!packets) return;
     
-    for (var i = 1; i < packets.length; i++) {
+    for (var i = 0; i < packets.length; i++) {
         if (packets[i].num === selectedRow.num) {
-            selectRow(printRow(packets[i]), i);
-            printPacketDetails(i);
-            printPayload(i);
+            selectRow(printRow(packets[i]), packets[i].num);
+            printPacketDetails(packets[i].num);
+            printPayload(packets[i].num);
         }
         else
             printRow(packets[i]);

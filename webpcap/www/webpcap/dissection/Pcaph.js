@@ -57,3 +57,6 @@ Pcaph.prototype = {
 };
 
 Pcaph.HLEN = 16; // pcap header length in bytes 
+
+if (typeof module !== 'undefined')
+    module.exports = Pcaph;

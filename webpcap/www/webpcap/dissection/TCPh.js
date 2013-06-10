@@ -88,3 +88,6 @@ TCPh.prototype = {
 };
 
 TCPh.HLEN = 20; // TCP minimum header length in bytes
+
+if (typeof module !== 'undefined')
+    module.exports = TCPh;

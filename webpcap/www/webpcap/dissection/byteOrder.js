@@ -45,7 +45,10 @@ function switchByteOrder(bool) {
     sbo = bool;
 }
 
-exports = module.exports.ntohl = ntohl;
-exports = module.exports.ntohs = ntohs;
-exports = module.exports.htonl = ntohl;
-exports = module.exports.htons = ntohs;
+if (typeof module !== 'undefined') {
+    module.exports.ntohl = ntohl;
+    module.exports.ntohs = ntohs;
+    module.exports.htonl = ntohl;
+    module.exports.htons = ntohs;
+    module.exports.switchByteOrder = switchByteOrder;
+}

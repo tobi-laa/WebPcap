@@ -51,3 +51,6 @@ UDPh.prototype = {
 };
 
 UDPh.HLEN = 8; // UDP header length in bytes  
+
+if (typeof module !== 'undefined')
+    module.exports = UDPh;

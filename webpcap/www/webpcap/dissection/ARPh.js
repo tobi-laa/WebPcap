@@ -1,3 +1,9 @@
+if (typeof require !== 'undefined') {
+    printEtherType = require('./Ethh').printEtherType;
+    printMAC = require('./Ethh').printMAC;
+    printIPv4 = require('./IPv4h').printIPv4;
+    printIPv6 = require('./IPv6h').printIPv6;
+}
 /*
  ******************************************************************
  ************************** ARP HEADER ****************************
@@ -48,14 +54,14 @@ ARPh.prototype = {
          
         // FIXME FIXME obviously not always IP & MAC... also show whether query or reply etc
         hidden.innerHTML = "Hardware type: " + this.htype + "</br>"
-                         + "Protocol type: " + Ethh.printEtherType(this.ptype) + " (0x" + printNum(this.ptype, 16, 4) + ")</br>"
+                         + "Protocol type: " + printEtherType(this.ptype) + " (0x" + printNum(this.ptype, 16, 4) + ")</br>"
                          + "Hardware size: " + this.hlen + "</br>"
                          + "Protocol size: " + this.plen + "</br>"
                          + "Opcode: " + this.op + "</br>"
-                         + "Sender MAC address: " + Ethh.printMAC(this.sha) + "</br>"                         
-                         + "Sender IP address: " + IPv4h.printIP(this.spa) + "</br>"
-                         + "Target MAC address: " + Ethh.printMAC(this.tha) + "</br>"                         
-                         + "Target IP address: " + IPv4h.printIP(this.tpa) + "</br>";
+                         + "Sender MAC address: " + printMAC(this.sha) + "</br>"                         
+                         + "Sender IP address: " + printIPv4(this.spa) + "</br>"
+                         + "Target MAC address: " + printMAC(this.tha) + "</br>"                         
+                         + "Target IP address: " + printIPv4(this.tpa) + "</br>";
 
         details.appendChild(hidden);
         
@@ -64,13 +70,13 @@ ARPh.prototype = {
     toString: function () {
         if (this.op == 1) { // ARP query
             if (this.ptype == 0x0800)
-                return "Who has "+IPv4h.printIP(this.tpa)+"? Tell "+IPv4h.printIP(this.spa);
+                return "Who has "+printIPv4(this.tpa)+"? Tell "+printIPv4(this.spa);
             else
                 return "ARP Query";
         }
         if (this.op == 2) {// ARP reply
             if (this.ptype == 0x0800 && this.htype == 1)
-                return IPv4h.printIP(this.spa)+" is at "+Ethh.printMAC(this.sha);
+                return printIPv4(this.spa)+" is at "+printMAC(this.sha);
             else
                 return "ARP Reply";
         }
@@ -78,3 +84,6 @@ ARPh.prototype = {
 }
 
 ARPh.HLEN = 8; // beginning (!) of ARP header length in bytes
+
+if (typeof module !== 'undefined')
+    module.exports = ARPh;
