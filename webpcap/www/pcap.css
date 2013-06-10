@@ -56,7 +56,7 @@ body {
 #input {
     width: 100%;
     color: black;
-    height: 6%;
+    height: 6.5%;
     margin-bottom: 0.3%;
     overflow: hidden; /* prevent this div from 'destroying' the whole layout */
 }
@@ -117,7 +117,7 @@ body {
     margin-right: 0.3%;
     margin-bottom: 0.3%;
     background-color: white;
-    border-radius: 10px;
+    border-radius: 17%;
     box-shadow: 2px 2px 4px black;
     float: left;
 }
@@ -130,7 +130,7 @@ body {
     left: 0.2%;
 }
 
-img {
+.button img {
     width: 90%;
     margin-left: 5%;
     margin-top: 5%;
@@ -151,7 +151,7 @@ img {
     vertical-align:middle;
     background: url(img/go-next.svgz) left top no-repeat;
     background-size: 19px 19px;
-    cursor:pointer;
+    cursor: pointer;
 }
 
 .details input[type="checkbox"] + label span:hover {
@@ -178,30 +178,25 @@ input[type="checkbox"] {
 }
 
 .details input[type="checkbox"] ~ div {
-/*    display: none;*/
-    max-height: 0;
-    transition-property: all;
-    transition-duration: 0s, 0.5s;
+    display: none;
     margin-left: 24px;
-    overflow: hidden;
 }
 
 .details input[type="checkbox"]:checked ~ div {
-/*    display: block; */
-    max-height: 200px;
+    display: block; 
 }
 
 .button input[type="checkbox"] + div {
     position: absolute;
-    top: 1px;
-    right: 2px;
-    width: 1em;
-    height: 1em;
+    top: 2%;
+    right: 4%;
+    width: 10%;
+    height: 10%;
     background-color: #ff0000;
     border: 1px solid;
     transition-property: background-color;
     transition-duration: 0s, 0.5s;
-    border-radius: 1em;
+    border-radius: 50%;
 }
 
 .button input[type="checkbox"]:checked + div {
@@ -213,4 +208,10 @@ input[type="checkbox"] {
 }
 .disconn {
     background-color: #ac0000;
+}
+
+.w3cicon {
+    border: 0;
+    width: 5%;
+    float: right;
 }

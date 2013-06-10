@@ -3,6 +3,7 @@
     <head>
         <title>WebPcap</title>
         <link rel="stylesheet" type="text/css" href="pcap.css" />
+        <meta http-equiv="Content-Type" content="text/html;charset=utf-8" >
     </head>
     <body>
     
@@ -29,6 +30,18 @@
             <div class="hidebox">
                 <input id="fi" type="file" onchange="readPcapFile(this.files[0], printRow)">
             </div>
+            
+            <a href="http://jigsaw.w3.org/css-validator/check/referer">
+                <img class="w3cicon"
+                    src="http://www.w3.org/Icons/valid-css-blue-v.svg"
+                    alt="Valid CSS!">
+            </a>
+            
+            <a href="http://validator.w3.org/check/referer">
+                <img class="w3cicon"
+                    src="http://www.w3.org/Icons/valid-html401-blue-v.svg"
+                    alt="Valid CSS!">
+            </a>
                         
         </div>
     
@@ -61,8 +74,6 @@
             <pre>
             </pre>
         </div>
-        
-        <script src="./webpcap/require.js"></script>
         
         <script src="./webpcap/arrayBuffers.js"></script>
         <script src="./webpcap/fileIO.js"></script>
