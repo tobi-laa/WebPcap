@@ -1,9 +1,15 @@
 html {
     height: 100%; /* specify height so children can do the same */
+    font-family: "Times New Roman", serif;
 }
 body { 
     background-color: #79b0e8; 
-    height: 99%; /* as with html tag, but use less to avoid scroll bar */
+    padding: 0.5%;
+    padding-bottom: 0;
+    height: 97%; /* as with html tag, but use less to avoid scroll bar */
+}
+.hidden {
+    display: none;
 }
 .follow { /* explicitly specify for 'empty' links */
     color: #43ace8;  
@@ -13,51 +19,58 @@ body {
     text-decoration: underline;
     cursor: pointer;
 }
-#tableheader {  
+.tableheader {  
     background-color: white;
     width: 65%;
+    height: 3%;
     color: black;
-    overflow-y: scroll;
+    overflow: hidden;
     font-weight: bold;
-    margin-bottom: 0.2%;
+    margin-bottom: 0.4%;
 }
-#hidescrollbar {
+.overflow-y {
+    overflow-y: scroll;
+}
+.hidescrollbar {
     position: absolute;
     background-color: white;
-    width: 5%;
+    width: 3%;
     height: 100%;
     top: 0%;
-    right: 35%;
+    right: 0%;
     z-index: 1;
 }
 
 .relpos {
     position: relative;
 }
-#output {
+#pktview {
+    height: 88%;
+}
+#connview {
+    height: 88%;
+}
+.output {
     width: 65%;
+    margin-right: 0.4%;    
     color: black;
     background-color: white;
     float: left;
-    height: 88%;
+    height: 100%;
     overflow-y: scroll;
-    margin-right: 0.2%;
 }
 .details {
-    width: 34%;
-    height: 43.8%;
-    margin-bottom: 0.2%;
+    width: 34.6%;
+    height: 50%;
+    margin-bottom: 0.4%;
     background-color: white;
     overflow-y: scroll;
-}
-.otable {
-    table-layout: fixed;
 }
 #input {
     width: 100%;
     color: black;
     height: 6.5%;
-    margin-bottom: 0.3%;
+    margin-bottom: 0.4%;
     overflow: hidden; /* prevent this div from 'destroying' the whole layout */
 }
 
@@ -100,17 +113,17 @@ body {
     float: left;
     display: table-column;
     overflow: hidden;
-    margin-left: 5px;
+    margin-left: 0.2%;
 }
 
-.\35 p  { width:  5%;}
-.\31 0p { width: 10%;}
-.\31 5p { width: 15%;}
-.\32 0p { width: 20%;}
-.\32 5p { width: 25%;}
-.\33 0p { width: 30%;}
-.\34 0p { width: 40%;}
-.\35 0p { width: 50%;}
+.\35 p  { width: 4.8%;}
+.\31 0p { width: 9.8%;}
+.\31 5p { width: 14.8%;}
+.\32 0p { width: 19.8%;}
+.\32 5p { width: 24.8%;}
+.\33 0p { width: 29.8%;}
+.\34 0p { width: 39.8%;}
+.\35 0p { width: 49.8%;}
 
 .button {
     width: 3%;
@@ -120,9 +133,6 @@ body {
     border-radius: 17%;
     box-shadow: 2px 2px 4px black;
     float: left;
-}
-.button:hover img {
-    opacity: 0.8;
 }
 .button:active {
     position: relative;
@@ -134,8 +144,14 @@ body {
     width: 90%;
     margin-left: 5%;
     margin-top: 5%;
+}
+.glow {
+    opacity: 1;
     transition-property: opacity;
-    transition-duration: 0s, 0.2s;
+    transition-duration: 0s, 0.3s;
+}
+.glow:hover {
+    opacity: 0.8;
 }
 
 .details input[type="checkbox"] + label {
