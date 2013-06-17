@@ -12,7 +12,7 @@ body {
     display: none;
 }
 .follow { /* explicitly specify for 'empty' links */
-    color: #43ace8;  
+    color: #4b6983;  
     font-weight: bold;
 }
 .follow:hover { /* explicitly specify for 'empty' links */
@@ -85,28 +85,28 @@ body {
 }
 
 .TCP {
-    background-color: #E7E5FF;
+    background-color: #e7e6ff;
 }
 .UDP {
-    background-color: #70DFFF;
+    background-color: #daeeff;
 }
 .HTTP {
-    background-color: #8CFF7F;
+    background-color: #e4ffc7;
 }
 .ARP {
-    background-color: #D6E7FF;
+    background-color: #faf0d7;
 }
 .ICMP {
-    background-color: #C1C2FF;
+    background-color: #fce0ff;
 }
 .Ethernet {
     background-color: white;
 }
 .MPD {
-    background-color: #ffc499;
+    background-color: #ffe7d6;
 }
 .selected {
-    background-color: #43ace8;
+    background-color: #4b6983;
 }
 
 .col {
