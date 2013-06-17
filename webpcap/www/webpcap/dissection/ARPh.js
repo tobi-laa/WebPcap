@@ -20,7 +20,7 @@ function ARPh(data, offset) {
     this.plen  = byteView[5];
     this.op    = ntohs(shortView[3]);
     
-    offset   = ARPh.HLEN;
+    offset  += ARPh.HLEN;
     this.sha = new Uint8Array(data, offset, this.hlen);
     offset  += this.hlen;
     this.spa = new Uint8Array(data, offset, this.plen);
