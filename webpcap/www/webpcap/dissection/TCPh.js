@@ -5,9 +5,8 @@
  */
 
 function TCPh(data, offset, parent) {
-    data = data.slice(offset);
-    var shortView = new Uint16Array(data, 0, TCPh.HLEN / 2);
-    var intView   = new Uint32Array(data, 0, TCPh.HLEN / 4);
+    var shortView = new Uint16Array(data, offset, TCPh.HLEN / 2);
+    var intView   = new Uint32Array(data, offset, TCPh.HLEN / 4);
     
     this.sport    = ntohs(shortView[0]);     // source port
     this.dport    = ntohs(shortView[1]);     // destination port
@@ -29,7 +28,7 @@ function TCPh(data, offset, parent) {
 
 function createID(src, sport, dst, dport) {
     // FIXME find a more elegant way than strings
-    var toSort = ["" + sport, "" + dport];
+    var toSort = ['' + sport, '' + dport];
     for (var i = 0; i < src.length; i++) {
         toSort[0] += src[i];
         toSort[1] += dst[i];
@@ -43,38 +42,38 @@ TCPh.prototype = {
         return 4 * ((ntohs(this.off_flag)) >> 12);
     },
     printDetails: function (pkt_num) {
-        var details = document.createElement("div");
-        details.setAttribute("class","tcp");
-        var check = document.createElement("input");
-        check.setAttribute("type","checkbox");  
-        check.setAttribute("id","td");
-        var hidden = document.createElement("div");
-        var label = document.createElement("label");
-        var icon = document.createElement("span");
-        label.setAttribute("for","td");
+        var details = document.createElement('div');
+        details.setAttribute('class','tcp');
+        var check = document.createElement('input');
+        check.setAttribute('type','checkbox');  
+        check.setAttribute('id','td');
+        var hidden = document.createElement('div');
+        var label = document.createElement('label');
+        var icon = document.createElement('span');
+        label.setAttribute('for','td');
         label.appendChild(icon);
-        label.innerHTML += "Transmission Control Protocol";
+        label.innerHTML += 'Transmission Control Protocol';
         details.appendChild(check);
         details.appendChild(label);   
          
-        hidden.innerHTML = "Source port: " + this.sport + "</br>"
-                         + "Destination port: " + this.dport + "</br>"
-                         + "Sequence number: " + this.seqn + "</br>"
-                         + "Acknowledgment number: " + this.ackn + "</br>"
-                         + "Header length: " + this.getHeaderLength() + "</br>"
+        hidden.innerHTML = 'Source port: ' + this.sport + '</br>'
+                         + 'Destination port: ' + this.dport + '</br>'
+                         + 'Sequence number: ' + this.seqn + '</br>'
+                         + 'Acknowledgment number: ' + this.ackn + '</br>'
+                         + 'Header length: ' + this.getHeaderLength() + '</br>'
                          // FIXME
-                         // + "Flags: " +  + "</br>"
-                         + "Window size value: " + this.wsize + "</br>"                         
-                         + "Checksum: 0x" + printNum(this.csum, 16, 4) + "</br>";
+                         // + 'Flags: ' +  + '</br>'
+                         + 'Window size value: ' + this.wsize + '</br>'                         
+                         + 'Checksum: 0x' + printNum(this.csum, 16, 4) + '</br>';
                          // FIXME options
                          
-        var follow = document.createElement("span");
+        var follow = document.createElement('span');
         follow.setAttribute('onclick','filterTCPConn("' + this.id + '")');
         follow.setAttribute('class', 'follow');
         if (tcp_filter)
-            follow.innerHTML = "Unfollow";
+            follow.innerHTML = 'Unfollow';
         else
-            follow.innerHTML = "Follow this TCP stream";
+            follow.innerHTML = 'Follow this TCP stream';
         hidden.appendChild(follow);
         
         details.appendChild(hidden);
@@ -82,8 +81,8 @@ TCPh.prototype = {
         return details;
     },
     toString: function () {
-        return "SRC Port: "+this.sport+
-              " DST Port: "+this.dport;
+        return 'SRC Port: '+this.sport+
+              ' DST Port: '+this.dport;
     }
 };
 

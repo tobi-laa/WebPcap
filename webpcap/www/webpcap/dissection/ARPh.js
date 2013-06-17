@@ -11,9 +11,8 @@ if (typeof require !== 'undefined') {
  */
 
 function ARPh(data, offset) {
-    data = data.slice(offset);
-    var byteView  = new  Uint8Array(data, 0, ARPh.HLEN);
-    var shortView = new Uint16Array(data, 0, ARPh.HLEN / 2);
+    var byteView  = new  Uint8Array(data, offset, ARPh.HLEN);
+    var shortView = new Uint16Array(data, offset, ARPh.HLEN / 2);
     
     this.htype = ntohs(shortView[0]);
     this.ptype = ntohs(shortView[1]);
@@ -38,30 +37,30 @@ ARPh.prototype = {
         return ARPh.HLEN + 2*this.hlen + 2*this.plen;
     },
     printDetails: function (pkt_num) {
-        var details = document.createElement("div");
-        details.setAttribute("class","arp");
-        var check = document.createElement("input");
-        check.setAttribute("type","checkbox");  
-        check.setAttribute("id","ad");
-        var hidden = document.createElement("div");
-        var label = document.createElement("label");
-        var icon = document.createElement("span");
-        label.setAttribute("for","ad");
+        var details = document.createElement('div');
+        details.setAttribute('class','arp');
+        var check = document.createElement('input');
+        check.setAttribute('type','checkbox');  
+        check.setAttribute('id','ad');
+        var hidden = document.createElement('div');
+        var label = document.createElement('label');
+        var icon = document.createElement('span');
+        label.setAttribute('for','ad');
         label.appendChild(icon);
-        label.innerHTML += "Address Resolution Protocol";
+        label.innerHTML += 'Address Resolution Protocol';
         details.appendChild(check);
         details.appendChild(label);   
          
         // FIXME FIXME obviously not always IP & MAC... also show whether query or reply etc
-        hidden.innerHTML = "Hardware type: " + this.htype + "</br>"
-                         + "Protocol type: " + printEtherType(this.ptype) + " (0x" + printNum(this.ptype, 16, 4) + ")</br>"
-                         + "Hardware size: " + this.hlen + "</br>"
-                         + "Protocol size: " + this.plen + "</br>"
-                         + "Opcode: " + this.op + "</br>"
-                         + "Sender MAC address: " + printMAC(this.sha) + "</br>"                         
-                         + "Sender IP address: " + printIPv4(this.spa) + "</br>"
-                         + "Target MAC address: " + printMAC(this.tha) + "</br>"                         
-                         + "Target IP address: " + printIPv4(this.tpa) + "</br>";
+        hidden.innerHTML = 'Hardware type: ' + this.htype + '</br>'
+                         + 'Protocol type: ' + printEtherType(this.ptype) + ' (0x' + printNum(this.ptype, 16, 4) + ')</br>'
+                         + 'Hardware size: ' + this.hlen + '</br>'
+                         + 'Protocol size: ' + this.plen + '</br>'
+                         + 'Opcode: ' + this.op + '</br>'
+                         + 'Sender MAC address: ' + printMAC(this.sha) + '</br>'                         
+                         + 'Sender IP address: ' + printIPv4(this.spa) + '</br>'
+                         + 'Target MAC address: ' + printMAC(this.tha) + '</br>'                         
+                         + 'Target IP address: ' + printIPv4(this.tpa) + '</br>';
 
         details.appendChild(hidden);
         
@@ -70,15 +69,15 @@ ARPh.prototype = {
     toString: function () {
         if (this.op == 1) { // ARP query
             if (this.ptype == 0x0800)
-                return "Who has "+printIPv4(this.tpa)+"? Tell "+printIPv4(this.spa);
+                return 'Who has '+printIPv4(this.tpa)+'? Tell '+printIPv4(this.spa);
             else
-                return "ARP Query";
+                return 'ARP Query';
         }
         if (this.op == 2) {// ARP reply
             if (this.ptype == 0x0800 && this.htype == 1)
-                return printIPv4(this.spa)+" is at "+printMAC(this.sha);
+                return printIPv4(this.spa)+' is at '+printMAC(this.sha);
             else
-                return "ARP Reply";
+                return 'ARP Reply';
         }
     }
 }

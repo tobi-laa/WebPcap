@@ -231,3 +231,7 @@ input[type="checkbox"] {
     width: 5%;
     float: right;
 }
+
+.tr {
+    text-align: right;
+}

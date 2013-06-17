@@ -8,9 +8,8 @@ if (typeof require !== 'undefined')
  */
 
 function Ethh(data, offset) {
-    data = data.slice(offset);
-    var byteView  = new  Uint8Array(data, 0, Ethh.HLEN);
-    var shortView = new Uint16Array(data, 2 * Ethh.ALEN, 1);
+    var byteView  = new  Uint8Array(data, offset, Ethh.HLEN);
+    var shortView = new Uint16Array(data, offset + 2 * Ethh.ALEN, 1);
     
     this.dst  = byteView.subarray(0, 6);  // destination MAC address
     this.src  = byteView.subarray(6, 12); // source MAC address    
@@ -24,31 +23,31 @@ Ethh.prototype = {
         return Ethh.HLEN;
     },
     printDetails: function (pkt_num) {
-        var details = document.createElement("div");
-        details.setAttribute("class","eth");
-        var check = document.createElement("input");
-        check.setAttribute("type","checkbox");  
-        check.setAttribute("id","ed");
-        var hidden = document.createElement("div");
-        var label = document.createElement("label");
-        var icon = document.createElement("span");
-        label.setAttribute("for","ed");
+        var details = document.createElement('div');
+        details.setAttribute('class','eth');
+        var check = document.createElement('input');
+        check.setAttribute('type','checkbox');  
+        check.setAttribute('id','ed');
+        var hidden = document.createElement('div');
+        var label = document.createElement('label');
+        var icon = document.createElement('span');
+        label.setAttribute('for','ed');
         label.appendChild(icon);
-        label.innerHTML += "Ethernet II";
+        label.innerHTML += 'Ethernet II';
         details.appendChild(check);
         details.appendChild(label);   
                 
-        hidden.innerHTML  = "Destination: " + printMAC(this.dst) + "</br>";
-        hidden.innerHTML += "Source: " + printMAC(this.src) + "</br>";
-        hidden.innerHTML += "Type: " + printEtherType(this.prot) + " (0x" + printNum(this.prot, 16, 4) + ")</br>";
+        hidden.innerHTML  = 'Destination: ' + printMAC(this.dst) + '</br>';
+        hidden.innerHTML += 'Source: ' + printMAC(this.src) + '</br>';
+        hidden.innerHTML += 'Type: ' + printEtherType(this.prot) + ' (0x' + printNum(this.prot, 16, 4) + ')</br>';
         
         details.appendChild(hidden);
         
         return details;
     },
     toString: function () {
-        return "From: "+printMAC(this.src)+
-               " To: " +printMAC(this.dst);
+        return 'From: '+printMAC(this.src)+
+               ' To: ' +printMAC(this.dst);
     }
 };
 
@@ -59,21 +58,21 @@ Ethh.ALEN = 6;  // MAC address length in bytes
 function printMAC(mac) {
     var output = printNum(mac[0], 16, 2);
     for (i = 1; i < mac.length; i++)
-        output += ":" + printNum(mac[i], 16, 2);
+        output += ':' + printNum(mac[i], 16, 2);
     return output;
 }
 
 function printEtherType(type) {
     switch(type) {
-    case 0x0800: return "IPv4";
-    case 0x0806: return "ARP";
-    case 0x0842: return "Wake-on-LAN";
-    case 0x8035: return "RARP";
-    case 0x8137: return "IPX";
-    case 0x8138: return "IPX";
-    case 0x86DD: return "IPv6";
-    case 0x8808: return "Ethernet flow control";
-    default:     return "Unknown";
+    case 0x0800: return 'IPv4';
+    case 0x0806: return 'ARP';
+    case 0x0842: return 'Wake-on-LAN';
+    case 0x8035: return 'RARP';
+    case 0x8137: return 'IPX';
+    case 0x8138: return 'IPX';
+    case 0x86DD: return 'IPv6';
+    case 0x8808: return 'Ethernet flow control';
+    default:     return 'Unknown';
     }
 }
 

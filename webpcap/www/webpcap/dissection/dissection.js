@@ -1,10 +1,3 @@
-var oldPacket = null; // cache for previously received data
-var packets = [];
-var rawPackets = [];
-var tcpConns = {};
-
-var counter = 1;
-
 if (typeof require !== 'undefined') {
     var Pcaph = require('./Pcaph');
     var Ethh = require('./Ethh').Ethh;
@@ -18,6 +11,13 @@ if (typeof require !== 'undefined') {
     var UDPh = require('./UDPh');
     var appendBuffer = require('./../arrayBuffers').appendBuffer;
 }
+
+var oldPacket = null; // cache for previously received data
+var packets = [];
+var rawPackets = [];
+var tcpConns = {};
+
+var counter = 1;
 
 function dissect(data, f) {
     if (oldPacket !== null) { // consider previously received data
@@ -55,12 +55,12 @@ function dissect(data, f) {
 
 function dissectLinkLayer(packet, data, offset) {
     // FIXME probably should be variable
-    var toReturn = new Ethh(data, offset);       
+    var toReturn = new SLLh(data, offset);       
     packet.src  = printMAC(toReturn.src);
-    packet.dst  = printMAC(toReturn.dst);
-    packet.prot = "Ethernet";
+    // packet.dst  = printMAC(toReturn.dst);
+    packet.prot = 'Ethernet';
     toReturn.next_header = 
-    dissectNetworkLayer(packet, data, offset + Ethh.HLEN, toReturn);    
+    dissectNetworkLayer(packet, data, offset + toReturn.getHeaderLength(), toReturn);    
     return toReturn;
 }
 
@@ -71,7 +71,7 @@ function dissectNetworkLayer(packet, data, offset, parent) {
         toReturn = new IPv4h(data, offset);
         packet.src  = printIPv4(toReturn.src);
         packet.dst  = printIPv4(toReturn.dst);
-        packet.prot = "IPv4";
+        packet.prot = 'IPv4';
         toReturn.next_header = 
         dissectTransportLayer(packet, data, offset + toReturn.getHeaderLength(), toReturn);
         break;
@@ -79,19 +79,19 @@ function dissectNetworkLayer(packet, data, offset, parent) {
         toReturn = new IPv6h(data, offset);   
         packet.src  = printIPv6(toReturn.src);
         packet.dst  = printIPv6(toReturn.dst);
-        packet.prot = "IPv6";        
+        packet.prot = 'IPv6';        
         toReturn.next_header = 
         dissectTransportLayer(packet, data, offset + toReturn.getHeaderLength(), toReturn);
         break;
     case 0x0806: // ARP    
         toReturn = new ARPh(data, offset);
-        packet.prot = "ARP";
+        packet.prot = 'ARP';
         break;
     case 0x8035: // RARP
         toReturn = null;
-        packet.prot = "RARP";
+        packet.prot = 'RARP';
         break;
-    default: // "unknown" ethtype
+    default: // 'unknown' ethtype
         toReturn = null;
         break;
     }
@@ -103,7 +103,7 @@ function dissectTransportLayer(packet, data, offset, parent) {
     switch(parent.prot) {
     case 1: // ICMP
         toReturn = null;      
-        packet.prot = "ICMP";
+        packet.prot = 'ICMP';
         break;
     case 6: // TCP
         toReturn = new TCPh(data, offset, parent);
@@ -124,13 +124,13 @@ function dissectTransportLayer(packet, data, offset, parent) {
             tcpConns[toReturn.id].num++;
             tcpConns[toReturn.id].len += packet.orig_len;
         }
-        packet.prot = "TCP";
+        packet.prot = 'TCP';
         toReturn.next_header = 
         dissectApplicationLayer(packet, data, offset + toReturn.getHeaderLength(), toReturn);
         break;
     case 17: // UDP
         toReturn = new UDPh(data, offset);
-        packet.prot = "UDP";
+        packet.prot = 'UDP';
         toReturn.next_header = 
         dissectApplicationLayer(packet, data, offset + toReturn.getHeaderLength(), toReturn);
         break;
@@ -143,9 +143,9 @@ function dissectTransportLayer(packet, data, offset, parent) {
 
 function dissectApplicationLayer(packet, data, offset, parent) {
     if (parent.sport === 6600 || parent.dport === 6600)
-        packet.prot = "MPD";
+        packet.prot = 'MPD';
     else if (parent.sport === 80 || parent.dport === 80)
-        packet.prot = "HTTP";
+        packet.prot = 'HTTP';
     return null;
 /*  if (offset < ph.incl_len) {
         var buff = new Uint8Array(msg.data, offset);
@@ -153,12 +153,12 @@ function dissectApplicationLayer(packet, data, offset, parent) {
         info += buff;
     }
     if (tl.sport === 6600 || tl.dport === 6600) {
-        prot = "MPD";
+        prot = 'MPD';
         info += buff;
     }
-    else if(buff === "GET " || buff ==="HTTP") {
-        prot = "HTTP";
-        tr_class = "http";
+    else if(buff === 'GET ' || buff ==='HTTP') {
+        prot = 'HTTP';
+        tr_class = 'http';
     }*/    
 } 
 

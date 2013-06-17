@@ -37,7 +37,8 @@ function createPcapGlobalHeader() {
     intView[2]   = 0;            // diff between local time & UTC
     intView[3]   = 0;            // timestamp accuracy
     intView[4]   = 65535;        // snaplen
-    intView[5]   = 1;            // Ethernet    
+    // intView[5]   = 1;            // Ethernet    
+    intView[5]   = 113;          // linux cooked capture
     
     return pcap_global_header;
 }

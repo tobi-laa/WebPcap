@@ -5,8 +5,7 @@
  */
 
 function UDPh(data, offset) {
-    data = data.slice(offset);
-    var shortView = new Uint16Array(data, 0, UDPh.HLEN / 2);
+    var shortView = new Uint16Array(data, offset, UDPh.HLEN / 2);
     
     this.sport = ntohs(shortView[0]); // source port
     this.dport = ntohs(shortView[1]); // destination port
@@ -21,32 +20,32 @@ UDPh.prototype = {
         return UDPh.HLEN;
     },
     printDetails: function (pkt_num) {
-        var details = document.createElement("div");
-        details.setAttribute("class","udp");
-        var check = document.createElement("input");
-        check.setAttribute("type","checkbox");  
-        check.setAttribute("id","ud");
-        var hidden = document.createElement("div");
-        var label = document.createElement("label");
-        var icon = document.createElement("span");
-        label.setAttribute("for","ud");
+        var details = document.createElement('div');
+        details.setAttribute('class','udp');
+        var check = document.createElement('input');
+        check.setAttribute('type','checkbox');  
+        check.setAttribute('id','ud');
+        var hidden = document.createElement('div');
+        var label = document.createElement('label');
+        var icon = document.createElement('span');
+        label.setAttribute('for','ud');
         label.appendChild(icon);
-        label.innerHTML += "User Datagram Protocol";
+        label.innerHTML += 'User Datagram Protocol';
         details.appendChild(check);
         details.appendChild(label);   
          
-        hidden.innerHTML = "Source port: " + this.sport + "</br>"
-                         + "Destination port: " + this.dport + "</br>"
-                         + "Length: " + this.len + "</br>"                    
-                         + "Checksum: 0x" + printNum(this.csum, 16, 4) + "</br>";
+        hidden.innerHTML = 'Source port: ' + this.sport + '</br>'
+                         + 'Destination port: ' + this.dport + '</br>'
+                         + 'Length: ' + this.len + '</br>'                    
+                         + 'Checksum: 0x' + printNum(this.csum, 16, 4) + '</br>';
         
         details.appendChild(hidden);
         
         return details;
     },
     toString: function () {
-        return "SRC Port: "+this.sport+
-              " DST Port: "+this.dport;
+        return 'SRC Port: '+this.sport+
+              ' DST Port: '+this.dport;
     }
 };
 

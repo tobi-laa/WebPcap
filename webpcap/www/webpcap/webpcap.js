@@ -1,22 +1,19 @@
 var doc = document;
-var pktview = doc.getElementById("pktview");
-var connview = doc.getElementById("connview");
+var pktview = doc.getElementById('pktview');
+var connview = doc.getElementById('connview');
 var pktoutput = pktview.getElementsByClassName('output')[0];
 var connoutput = connview.getElementsByClassName('output')[0];
-var pkttable  = pktoutput.getElementsByTagName("div")[0];
-var conntable = connoutput.getElementsByTagName("div")[0];
-var payload_div = doc.getElementById("payload");
-var details_div = doc.getElementById("details");
+var pkttable  = pktoutput.getElementsByTagName('div')[0];
+var conntable = connoutput.getElementsByTagName('div')[0];
+var payload_div = doc.getElementById('payload');
+var details_div = doc.getElementById('details');
 var selectedPacketRow = new Object();
 var selectedConnectionRow = new Object();
 
-
-
-
-var ws_url = "ws://" + window.location.host + "/binary";
+var ws_url = 'ws://' + window.location.host + '/binary';
 var ws = null;  
-var conn_button = document.getElementById("conn");
-var conn_light = conn.getElementsByTagName("input")[0];
+var conn_button = doc.getElementById('conn');
+var conn_light = conn.getElementsByTagName('input')[0];
 
 function onWSMessage(msg) {    
     appendPacketData(msg.data);
@@ -25,7 +22,7 @@ function onWSMessage(msg) {
 }  
 
 function onWSOpen() {
-    ws.send("none\0"); // default filter
+    ws.send('none\0'); // default filter
     conn_light.checked = true;
     conn_button.setAttribute('title', 'Stop the running live capture');
 }
@@ -57,12 +54,12 @@ function switchView() {
 
 
 
-var tmpLink = document.createElement("a");
-tmpLink.download = "log.pcap";
+var tmpLink = document.createElement('a');
+tmpLink.download = 'log.pcap';
 
 // will be used to click on the link
-var mc = document.createEvent("MouseEvents");
-mc.initEvent("click", true, false);
+var mc = document.createEvent('MouseEvents');
+mc.initEvent('click', true, false);
 
 function saveCapture() {
     tmpLink.href = getURL();
@@ -86,13 +83,13 @@ function printRow(packet) {
     if (tcp_filter && packet.tcp_id !== tcp_filter)
         return;
     
-    var row = doc.createElement("div");
-    var num   = doc.createElement("div");
-    var src  = doc.createElement("div");
-    var dst  = doc.createElement("div");
-    var prot = doc.createElement("div");
-    var len  = doc.createElement("div");
-    var info = doc.createElement("div");
+    var row = doc.createElement('div');
+    var num   = doc.createElement('div');
+    var src  = doc.createElement('div');
+    var dst  = doc.createElement('div');
+    var prot = doc.createElement('div');
+    var len  = doc.createElement('div');
+    var info = doc.createElement('div');
         
     row.setAttribute('onclick','processClick(this, ' + packet.num + ')');
     row.setAttribute('class','row ' + packet.prot);
@@ -135,20 +132,20 @@ function printConnection(packet) {
     
     var row = connRows[packet.tcp_id];
     if (!row) {
-        row = connRows[packet.tcp_id] = doc.createElement("div");
+        row = connRows[packet.tcp_id] = doc.createElement('div');
         row.setAttribute('onclick','processClick(this, ' + packet.tcp_id + ')');
         row.setAttribute('class','row ' + packet.prot);
         conntable.appendChild(row);
     }
         
-    var num   = doc.createElement("div");
-    var src  = doc.createElement("div");
-    var sport  = doc.createElement("div");
-    var dst  = doc.createElement("div");
-    var dport = doc.createElement("div");
-    var prot = doc.createElement("div");
-    var len  = doc.createElement("div");
-    var info = doc.createElement("div");
+    var num   = doc.createElement('div');
+    var src  = doc.createElement('div');
+    var sport  = doc.createElement('div');
+    var dst  = doc.createElement('div');
+    var dport = doc.createElement('div');
+    var prot = doc.createElement('div');
+    var len  = doc.createElement('div');
+    var info = doc.createElement('div');
         
     num.setAttribute('class', 'col 5p');    
     src.setAttribute('class', 'col 25p'); 
@@ -156,7 +153,7 @@ function printConnection(packet) {
     dst.setAttribute('class', 'col 25p'); 
     dport.setAttribute('class', 'col 5p');    
     prot.setAttribute('class', 'col 10p');    
-    len.setAttribute('class', 'col 5p');    
+    len.setAttribute('class', 'col 5p tr');    
     info.setAttribute('class', 'col 20p');
     
     num.innerHTML   = conn.num;
@@ -166,16 +163,16 @@ function printConnection(packet) {
     dport.innerHTML = conn.dport;
     prot.innerHTML  = packet.prot;
     if (conn.len < 1024)
-        len.innerHTML = conn.len + " B";
+        len.innerHTML = conn.len + ' B';
     else if (conn.len < 1024 * 1024)
-        len.innerHTML = (conn.len/1024 >> 0) + " KiB";
+        len.innerHTML = (conn.len/1024 >> 0) + ' KiB';
     else if (conn.len < 1024 * 1024 * 1024)
-        len.innerHTML = (conn.len/(1024 * 1024) >> 0) + " MiB";
+        len.innerHTML = (conn.len/(1024 * 1024) >> 0) + ' MiB';
     else
-        len.innerHTML = (conn.len/(1024 * 1024 * 1024) >> 0) + " GiB";
-    info.innerHTML  = "lol";
+        len.innerHTML = (conn.len/(1024 * 1024 * 1024) >> 0) + ' GiB';
+    // info.innerHTML  = 'lol';
     
-    row.innerHTML = "";
+    row.innerHTML = '';
     row.appendChild(num);
     row.appendChild(src);
     row.appendChild(sport);
@@ -226,7 +223,7 @@ function printPacketDetails(pkt_num) {
     var packet = getPacket(pkt_num);
     if(!packet) return;
     
-    details_div.innerHTML = "";
+    details_div.innerHTML = '';
     
     while (packet !== null) { // go to payload
         details_div.appendChild(packet.printDetails(pkt_num));
@@ -235,7 +232,7 @@ function printPacketDetails(pkt_num) {
 }
 
 function printPayload(pkt_num) { 
-    payload_div.innerHTML = "";
+    payload_div.innerHTML = '';
     
     var payload = getRawPacket(pkt_num);
     if (!payload) return;
@@ -248,41 +245,41 @@ function printPayload(pkt_num) {
     var i, j;
     
     for (i = 0; i < payload.byteLength - 16; i += 16) {
-        output += printNum(i, 16, 4)+"  ";
+        output += printNum(i, 16, 4)+'  ';
         for (j = 0; j < 16; j++) {
-            output += printNum(payload[i + j], 16, 2) + " ";
+            output += printNum(payload[i + j], 16, 2) + ' ';
             if (j === 7)
-                output += " ";
+                output += ' ';
         }
-        output += " ";
+        output += ' ';
         for (j = 0; j < 16; j++) {
             if (payload[i + j] >= 32 && payload[i + j] <= 126)
                 output += String.fromCharCode(payload[i + j]);
             else
-                output += ".";
+                output += '.';
         }
-        output += "\n";
+        output += '\n';
     }
     
-    output += printNum(i, 16, 4)+"  ";
+    output += printNum(i, 16, 4)+'  ';
     for (j = 0; j < remainder; j++) {
-        output += printNum(payload[i + j], 16, 2) + " ";
+        output += printNum(payload[i + j], 16, 2) + ' ';
         if (j === 7)
-            output += " ";
+            output += ' ';
     }
     
     for (j = 0; j < (16 - remainder); j++) {
-        output += "   ";
+        output += '   ';
         if (j === 7)
-            output += " ";
+            output += ' ';
     }
-    output += " ";
+    output += ' ';
     
     for (j = 0; j < remainder; j++) {
         if (payload[i + j] >= 32 && payload[i + j] <= 126)
             output += String.fromCharCode(payload[i + j]);
         else
-            output += ".";
+            output += '.';
     }
     
     var pre = document.createElement('pre');
@@ -291,9 +288,9 @@ function printPayload(pkt_num) {
 }
 
 function clearScreen() {
-    pkttable.innerHTML = "";
-    details.innerHTML = "";
-    payload.innerHTML = "";
+    pkttable.innerHTML = '';
+    details.innerHTML = '';
+    payload.innerHTML = '';
 }
 
 function switchConnection() {
@@ -303,7 +300,7 @@ function switchConnection() {
         return;
     }
     ws = new WebSocket(ws_url);
-    ws.binaryType = "arraybuffer";
+    ws.binaryType = 'arraybuffer';
     ws.onopen = onWSOpen;
     ws.onclose = onWSClose;
     ws.onmessage = onWSMessage;        
