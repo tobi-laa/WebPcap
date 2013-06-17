@@ -1,12 +1,15 @@
 var doc = document;
 var pktview = doc.getElementById('pktview');
-var connview = doc.getElementById('connview');
 var pktoutput = pktview.getElementsByClassName('output')[0];
-var connoutput = connview.getElementsByClassName('output')[0];
 var pkttable  = pktoutput.getElementsByTagName('div')[0];
+var pktdetails = pktview.getElementsByClassName('details')[0];
+var pktpayload = pktview.getElementsByClassName('details')[1];
+
+var connview = doc.getElementById('connview');
+var connoutput = connview.getElementsByClassName('output')[0];
 var conntable = connoutput.getElementsByTagName('div')[0];
-var payload_div = doc.getElementById('payload');
-var details_div = doc.getElementById('details');
+var conndetails = connview.getElementsByClassName('details')[0];
+
 var selectedPacketRow = new Object();
 var selectedConnectionRow = new Object();
 
@@ -133,7 +136,7 @@ function printConnection(packet) {
     var row = connRows[packet.tcp_id];
     if (!row) {
         row = connRows[packet.tcp_id] = doc.createElement('div');
-        row.setAttribute('onclick','processClick(this, ' + packet.tcp_id + ')');
+        row.setAttribute('onclick','processClick(this, "' + packet.tcp_id + '")');
         row.setAttribute('class','row ' + packet.prot);
         conntable.appendChild(row);
     }
@@ -162,14 +165,7 @@ function printConnection(packet) {
     dst.innerHTML   = conn.dst;
     dport.innerHTML = conn.dport;
     prot.innerHTML  = packet.prot;
-    if (conn.len < 1024)
-        len.innerHTML = conn.len + ' B';
-    else if (conn.len < 1024 * 1024)
-        len.innerHTML = (conn.len/1024 >> 0) + ' KiB';
-    else if (conn.len < 1024 * 1024 * 1024)
-        len.innerHTML = (conn.len/(1024 * 1024) >> 0) + ' MiB';
-    else
-        len.innerHTML = (conn.len/(1024 * 1024 * 1024) >> 0) + ' GiB';
+    len.innerHTML   = printSize(conn.len);
     // info.innerHTML  = 'lol';
     
     row.innerHTML = '';
@@ -193,14 +189,43 @@ function printConnections() {
 }
 
 // FIXME
-setInterval(function() { if(ws) pktoutput.scrollTop = pktoutput.scrollHeight;}, 500);
+setInterval(function() { 
+    if(ws) 
+        pktoutput.scrollTop = pktoutput.scrollHeight;
+    printConnectionDetails(selectedConnectionRow.num);
+}, 500);
 
 function processClick(row, num) {
     selectRow(row, num);
-    if (!packetView)
-        return;
-    printPacketDetails(num);
-    printPayload(num);
+    if (packetView) {
+        printPacketDetails(num);
+        printPayload(num);
+    }
+    else
+        printConnectionDetails(num);
+}
+
+function printConnectionDetails(id) {
+    var conn = getTCPConn(id);
+    if(!conn) return;
+    var lastPacket = conn.packets[conn.packets.length - 1];    
+    
+    conndetails.innerHTML = '';
+        
+    conndetails.innerHTML  = 'Last packet arrival: ' + lastPacket.printTime() + '</br>';
+    conndetails.innerHTML += 'Number of packets: ' + conn.num + '</br>';
+    conndetails.innerHTML += 'Amount of data: ' + printSize(conn.len) + '</br>';
+    
+    // FIXME atm only adding filter button
+    var follow = document.createElement('span');
+    follow.setAttribute('onclick','filterTCPConn("' + id + '")');
+    follow.setAttribute('class', 'follow');
+    if (tcp_filter === id)
+        follow.innerHTML = 'Unfollow';
+    else
+        follow.innerHTML = 'Follow this TCP stream';
+    
+    conndetails.appendChild(follow);
 }
 
 function selectRow(row, num) {
@@ -223,16 +248,16 @@ function printPacketDetails(pkt_num) {
     var packet = getPacket(pkt_num);
     if(!packet) return;
     
-    details_div.innerHTML = '';
+    pktdetails.innerHTML = '';
     
-    while (packet !== null) { // go to payload
-        details_div.appendChild(packet.printDetails(pkt_num));
+    while (packet !== null) { // print details for each header
+        pktdetails.appendChild(packet.printDetails(pkt_num));
         packet = packet.next_header;        
     }
 }
 
 function printPayload(pkt_num) { 
-    payload_div.innerHTML = '';
+    pktpayload.innerHTML = '';
     
     var payload = getRawPacket(pkt_num);
     if (!payload) return;
@@ -284,13 +309,13 @@ function printPayload(pkt_num) {
     
     var pre = document.createElement('pre');
     pre.appendChild(document.createTextNode(output))
-    payload_div.appendChild(pre);
+    pktpayload.appendChild(pre);
 }
 
 function clearScreen() {
     pkttable.innerHTML = '';
-    details.innerHTML = '';
-    payload.innerHTML = '';
+    pktdetails.innerHTML = '';
+    pktpayload.innerHTML = '';
 }
 
 function switchConnection() {
@@ -317,12 +342,17 @@ var tcp_filter = false;
 
 function filterTCPConn(tcp_id) {
     clearScreen(); // redraw the table
-    if (tcp_filter) {
+    if (tcp_filter === tcp_id) {
         tcp_filter = false;
+        if (!packetView)
+            switchView();
         printPackets(getPackets());
     }
     else {
+        if (!packetView)
+            switchView();
         tcp_filter = tcp_id;
+        // FIXME
         printPackets(getTCPConn(tcp_id).packets);
     }
 }

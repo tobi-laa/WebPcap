@@ -11,6 +11,17 @@ function printNum(num, base, len) {
     return toReturn + hex;
 }
 
+function printSize(bytes) {
+    if (bytes < 1024)
+        return bytes + ' B';
+    else if (bytes < 1024 * 1024)
+        return (bytes/1024 >> 0) + ' KiB';
+    else if (bytes < 1024 * 1024 * 1024)
+        return (bytes/(1024 * 1024) >> 0) + ' MiB';
+    else
+        return (bytes/(1024 * 1024 * 1024) >> 0) + ' GiB';
+}
+
 function printDate(date) {
     return months[date.getMonth()] + ' ' + date.getDate() + ', ' + 
            date.getFullYear() + ' ' + date.getHours() + ':' + 

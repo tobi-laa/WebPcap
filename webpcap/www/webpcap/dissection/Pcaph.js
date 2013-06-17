@@ -42,13 +42,16 @@ Pcaph.prototype = {
         details.appendChild(check);
         details.appendChild(label);        
         
-        hidden.innerHTML += 'Arrival Time: ' + printDate(new Date(this.ts_sec * 1000)) + '.' + printNum(this.ts_usec, 10, 6) + '</br>';
+        hidden.innerHTML += 'Arrival Time: ' + this.printTime() + '</br>';
         hidden.innerHTML += 'Frame Length: ' + this.incl_len + ' bytes (' + (this.incl_len * 8) + ' bits)</br>';
         hidden.innerHTML += 'Captured Length: ' + this.orig_len + ' bytes (' + (this.orig_len * 8) + ' bits)</br>';
         
         details.appendChild(hidden);
         
         return details;
+    },
+    printTime: function () {
+        return printDate(new Date(this.ts_sec * 1000)) + '.' + printNum(this.ts_usec, 10, 6);
     },
     toString: function () {
         return '';
