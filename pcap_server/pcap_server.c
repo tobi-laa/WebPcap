@@ -13,9 +13,9 @@
 #define TO_MS 1024      /* based on the value tcpdump uses... */
 
 #define PORT 1337
-#define BUFSIZE 65663
+#define BUFSIZE 4096
 
-#define DEF_FIL "not (tcp port 8080 and ("
+#define DEF_FIL "not (host 127.0.0.1 or (tcp port 8080 and ("
 
 typedef struct pcaprec_hdr_s {
         u_int ts_sec;         /* timestamp seconds */
@@ -74,13 +74,8 @@ int main() {
     pkthdrsz = sizeof(pcaprec_hdr_t);
 
     char *dev, *filter;
+    dev = "any";
     
-    if ((dev = pcap_lookupdev(errbuf)) == NULL) {
-        fprintf(stderr, "ERROR: Unable to select default device for capturing: %s\n", errbuf);
-        return -1;
-    }
-  
-    /* FIXME: might want to make this global */
     pcap_t *sdescr; /* session descriptor */
 
     if ((sdescr = pcap_open_live(dev, SNAP_LEN, PROMISC, TO_MS, errbuf)) == NULL) {
@@ -91,11 +86,11 @@ int main() {
     fprintf(stdout,"Successfully opened interface %s for capturing.\n",dev);
     fflush(stdout);
 
-    /* FIXME: DEFINITELY want to support 802.11 as well */
-    if (pcap_datalink(sdescr) != DLT_EN10MB) {
-        fprintf(stderr, "ERROR: Unable to capture on %s: Only Ethernet supported at this point.\n", dev);
-        return -1;
-    }
+//     /* FIXME: DEFINITELY want to support 802.11 as well */
+//     if (pcap_datalink(sdescr) != DLT_EN10MB) {
+//         fprintf(stderr, "ERROR: Unable to capture on %s: Only Ethernet supported at this point (%d).\n", dev, pcap_datalink(sdescr));
+//         return -1;
+//     }
     
     int flen;
     if((flen = read(client, buffer, BUFSIZE)) > 0) {
@@ -221,7 +216,7 @@ char *createDefaultFilter() {
         }
     }
     
-    strncat(filter, "))", BUFSIZE - strlen(filter));
+    strncat(filter, ")))", BUFSIZE - strlen(filter));
 
     if (strcmp(user_filter, "none")) { /* user wants to specify filter */
         strncat(filter, " and ", BUFSIZE - strlen(filter));
