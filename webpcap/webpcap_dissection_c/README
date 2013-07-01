@@ -1,0 +1,22 @@
+Small C program which provides methods to dissect packets and display them as
+HTML snippets (to be used with the webpcap application).
+
+For this, it still needs to be compiled via emscripten; for now, the dissection
+routines work only as a stand-alone demo.
+
+Requirements:
+
+- gcc
+- glib
+- libwireshark, libwiretap, libwsutil (comes with Wireshark)
+- make
+
+Build instructions:
+
+Just execute the following command and you should have a working binary:
+
+$ make
+
+Emscripten build instructions:
+
+To be done!

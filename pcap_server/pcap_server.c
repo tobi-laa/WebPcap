@@ -7,6 +7,7 @@
 #include <errno.h>
 #include <ifaddrs.h>
 #include <pcap.h>
+#include <glib.h>
 
 #define SNAP_LEN 65535  /* should be enough to hold any packet */
 #define PROMISC 0       /* capture in promiscuous mode or not? */
@@ -18,10 +19,10 @@
 #define DEF_FIL "not (host 127.0.0.1 or (tcp port 8080 and ("
 
 typedef struct pcaprec_hdr_s {
-        u_int ts_sec;         /* timestamp seconds */
-        u_int ts_usec;        /* timestamp microseconds */
-        u_int incl_len;       /* number of octets of packet saved in file */
-        u_int orig_len;       /* actual length of packet */
+        guint32 ts_sec;         /* timestamp seconds */
+        guint32 ts_usec;        /* timestamp microseconds */
+        guint32 incl_len;       /* number of octets of packet saved in file */
+        guint32 orig_len;       /* actual length of packet */
 } pcaprec_hdr_t;
 
 int setSocketUp();
@@ -101,8 +102,8 @@ int main() {
     /* fprintf(stdout, filter);
        fflush(stdout); */
 
-    u_int net;  /* network address */
-    u_int mask; /* subnet mask */
+    guint32 net;  /* network address */
+    guint32 mask; /* subnet mask */
     
     if (pcap_lookupnet(dev, &net, &mask, errbuf) == -1) {
         fprintf(stderr, "ERROR: Unable to detect IP address settings for device %s: %s\n", dev, errbuf);
@@ -165,8 +166,8 @@ int setSocketUp() {
 }
 
 void sendPacket(u_char *user, const struct pcap_pkthdr *h, const u_char *sp) {
-    pktbuff->ts_sec   = (u_int) h->ts.tv_sec;
-    pktbuff->ts_usec  = (u_int) h->ts.tv_usec;
+    pktbuff->ts_sec   = (guint32) h->ts.tv_sec;
+    pktbuff->ts_usec  = (guint32) h->ts.tv_usec;
     pktbuff->incl_len = h->caplen;
     pktbuff->orig_len = h->len;
     

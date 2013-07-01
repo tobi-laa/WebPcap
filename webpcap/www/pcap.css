@@ -77,7 +77,6 @@ body {
 .table {
     display: table;
     width: 100%;
-    border-spacing: 2px;
 }
 .row {
     display: table-row;
@@ -107,6 +106,7 @@ body {
 }
 .selected {
     background-color: #4b6983;
+    color: white;
 }
 
 .col {
@@ -130,8 +130,8 @@ body {
     margin-right: 0.3%;
     margin-bottom: 0.3%;
     background-color: white;
-    border-radius: 17%;
-    box-shadow: 2px 2px 4px black;
+    border-radius: 17%;    
+    box-shadow: 0.15em 0.15em 0.3em 0em black;
     float: left;
 }
 .button:active {
