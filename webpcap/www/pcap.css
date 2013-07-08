@@ -1,7 +1,7 @@
 html {
     height: 100%; /* specify height so children can do the same */
     font-family: "Times New Roman", serif;
-    font-size: 1.2vw;
+    font-size: 1vw;
 }
 body { 
     background-color: #79b0e8; 
@@ -35,7 +35,7 @@ body {
 .hidescrollbar {
     position: absolute;
     background-color: white;
-    width: 3%;
+    width: 4%;
     height: 100%;
     top: 0%;
     right: 0%;
@@ -120,8 +120,9 @@ body {
     float: left;
     display: table-column;
     overflow: hidden;
-    padding-left: 0.4%;
+    padding-right: 0.6%;
     box-sizing: border-box;
+    -moz-box-sizing: border-box;
 }
 
 .\35 p  { width: 5%;}
@@ -164,18 +165,17 @@ body {
 
 input[type="checkbox"] + label {
     font-weight: bold;
-    margin: 2px;
 }
 
 .dropdown {
     display: inline-block;
-    width: 19px;
-    height: 19px;
-    margin: -1px 4px 0 0;
-    vertical-align: middle;
+    width: 1.4vw;
+    height: 1.2vw;
+    margin: auto;
     background: url(img/arrow-right.svgz) left top no-repeat;
-    background-size: 19px 19px;
+    background-size: 1.2vw 1.2vw;
     cursor: pointer;
+    float: left;
 }
 
 .dropdown:hover {
@@ -184,12 +184,12 @@ input[type="checkbox"] + label {
 
 .clicked {
     background: url(img/arrow-down.svgz) left top no-repeat;
-    background-size: 19px 19px;
+    background-size: 1.2vw 1.2vw;
 }
 
 input[type="checkbox"]:checked + label .dropdown {
     background: url(img/arrow-down.svgz) left top no-repeat;
-    background-size: 19px 19px;
+    background-size: 1.2vw 1.2vw;
 }
 
 input[type="checkbox"] {
@@ -204,7 +204,7 @@ input[type="checkbox"] {
 
 .details input[type="checkbox"] ~ div {
     display: none;
-    margin-left: 24px;
+    margin-left: 1.4vw;
 }
 
 .details input[type="checkbox"]:checked ~ div {

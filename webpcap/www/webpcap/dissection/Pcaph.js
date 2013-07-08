@@ -28,17 +28,17 @@ Pcaph.prototype = {
     getHeaderLength: function () {
         return Pcaph.HLEN;
     },
-    printDetails: function (pkt_num) {
+    printDetails: function (pkt_num, prefix) {
         var details = document.createElement('div');
         details.setAttribute('class','pcap');
         var check = document.createElement('input');
         check.setAttribute('type','checkbox');  
-        check.setAttribute('id','pd');
+        check.setAttribute('id', prefix + 'pd');
         var hidden = document.createElement('div');
         var label = document.createElement('label');
         var icon = document.createElement('span');
         icon.setAttribute('class', 'dropdown');
-        label.setAttribute('for','pd');
+        label.setAttribute('for', prefix + 'pd');
         label.appendChild(icon);
         label.innerHTML += 'General Information';
         details.appendChild(check);

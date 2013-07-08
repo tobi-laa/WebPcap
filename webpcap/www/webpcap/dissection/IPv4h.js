@@ -30,17 +30,17 @@ IPv4h.prototype = {
     getHeaderLength: function () {
         return 4 * this.hl;
     },
-    printDetails: function (pkt_num) {
+    printDetails: function (pkt_num, prefix) {
         var details = document.createElement('div');
         details.setAttribute('class','ip');
         var check = document.createElement('input');
         check.setAttribute('type','checkbox');  
-        check.setAttribute('id','i4d');
+        check.setAttribute('id', prefix + 'i4d');
         var hidden = document.createElement('div');
         var label = document.createElement('label');
         var icon = document.createElement('span');
         icon.setAttribute('class', 'dropdown');
-        label.setAttribute('for','i4d');
+        label.setAttribute('for', prefix + 'i4d');
         label.appendChild(icon);
         label.innerHTML += 'Internet Protocol Version 4';
         details.appendChild(check);

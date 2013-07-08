@@ -26,17 +26,17 @@ IPv6h.prototype = {
     getHeaderLength: function () {
         return IPv6h.HLEN;
     },
-    printDetails: function (pkt_num) {
+    printDetails: function (pkt_num, prefix) {
         var details = document.createElement('div');
         details.setAttribute('class','ip');
         var check = document.createElement('input');
         check.setAttribute('type','checkbox');  
-        check.setAttribute('id','i6d');
+        check.setAttribute('id', prefix + 'i6d');
         var hidden = document.createElement('div');
         var label = document.createElement('label');
         var icon = document.createElement('span');
         icon.setAttribute('class', 'dropdown');
-        label.setAttribute('for','i6d');
+        label.setAttribute('for', prefix + 'i6d');
         label.appendChild(icon);
         label.innerHTML += 'Internet Protocol Version 6';
         details.appendChild(check);

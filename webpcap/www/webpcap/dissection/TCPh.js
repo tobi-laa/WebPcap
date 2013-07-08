@@ -43,17 +43,17 @@ TCPh.prototype = {
     getHeaderLength: function () {
         return 4 * ((ntohs(this.off_flag)) >> 12);
     },
-    printDetails: function (pkt_num) {
+    printDetails: function (pkt_num, prefix) {
         var details = document.createElement('div');
         details.setAttribute('class','tcp');
         var check = document.createElement('input');
         check.setAttribute('type','checkbox');  
-        check.setAttribute('id','td');
+        check.setAttribute('id', prefix + 'td');
         var hidden = document.createElement('div');
         var label = document.createElement('label');
         var icon = document.createElement('span');
         icon.setAttribute('class', 'dropdown');
-        label.setAttribute('for','td');
+        label.setAttribute('for', prefix + 'td');
         label.appendChild(icon);
         label.innerHTML += 'Transmission Control Protocol';
         details.appendChild(check);

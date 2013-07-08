@@ -104,7 +104,7 @@ function simplePrint(infos) {
     row.setAttribute('onclick','processClick(this, ' + infos[0] + ')');
     row.setAttribute('class','row ' + infos[3]);
         
-    num.setAttribute('class', 'col 5p');    
+    num.setAttribute('class', 'col 5p tr');    
     src.setAttribute('class', 'col 25p');    
     dst.setAttribute('class', 'col 25p');    
     prot.setAttribute('class', 'col 10p');    
@@ -148,7 +148,7 @@ function printRow(packet) {
     src.setAttribute('class', 'col 25p');    
     dst.setAttribute('class', 'col 25p');    
     prot.setAttribute('class', 'col 10p');    
-    len.setAttribute('class', 'col 5p tr');    
+    len.setAttribute('class', 'col 5p');    
     info.setAttribute('class', 'col 30p');
     
     num.innerHTML  = packet.num;
@@ -193,7 +193,7 @@ function printConnection(packet) {
         row.root.setAttribute('id', 't' + packet.tcp_id);
         
         row.row.setAttribute('onclick','processClick(this, "' + packet.tcp_id + '")');
-        row.row.setAttribute('class','row bold ' + packet.prot);
+        row.row.setAttribute('class','row ' + packet.prot);
         
         conntable.appendChild(row.row);
         conntable.appendChild(row.root);
@@ -214,7 +214,7 @@ function printConnection(packet) {
     src.setAttribute('class', 'col 25p'); 
     dst.setAttribute('class', 'col 25p'); 
     prot.setAttribute('class', 'col 10p');    
-    len.setAttribute('class', 'col 5p tr');    
+    len.setAttribute('class', 'col 5p');    
     info.setAttribute('class', 'col 30p');
     
     var dropdown = doc.createElement('span');
@@ -263,30 +263,38 @@ function printConnections() {
 
 // FIXME
 setInterval(function() {    
-    if(ws)
+    if(ws) {
         //scrollDown();
         pktoutput.scrollTop = pktoutput.scrollHeight;
+        connoutput.scrollTop = connoutput.scrollHeight;
+    }
     printConnectionDetails(selectedConnectionRow.num);
 }, 500);
 
 function processClick(row, num) {
     selectRow(row, num);
+    
     if (packetView) {
         printPacketDetails(num);
         printPayload(num);
+        return;
     }
-    else {
+    
+    if (getTCPConn(num)) {
         printConnectionDetails(num);
+        return;
     }
+    
+    printPacketDetails(num);
+    printPayload(num);
 }
 
 function printConnectionDetails(id) {
     var conn = getTCPConn(id);
-    if(!conn) {
-        printPacketDetails(id);
-        printPayload(id);
+    
+    if (!conn)
         return;
-    }
+    
     var lastPacket = conn.packets[conn.packets.length - 1];    
     
     conndetails.innerHTML = '';
@@ -328,13 +336,16 @@ function printPacketDetails(pkt_num) {
     if (!packet) return;
     
     var details = pktdetails;
-    if (!packetView)
+    var prefix = 'p';
+    if (!packetView) {
         details = conndetails;
+        prefix = 'c';
+    }
     
     details.innerHTML = '';
     
     while (packet !== null) { // print details for each header
-        details.appendChild(packet.printDetails(pkt_num));
+        details.appendChild(packet.printDetails(pkt_num, prefix));
         packet = packet.next_header;        
     }
 }

@@ -22,17 +22,17 @@ Ethh.prototype = {
     getHeaderLength: function () {
         return Ethh.HLEN;
     },
-    printDetails: function (pkt_num) {
+    printDetails: function (pkt_num, prefix) {
         var details = document.createElement('div');
         details.setAttribute('class','eth');
         var check = document.createElement('input');
         check.setAttribute('type','checkbox');  
-        check.setAttribute('id','ed');
+        check.setAttribute('id', prefix + 'ed');
         var hidden = document.createElement('div');
         var label = document.createElement('label');
         var icon = document.createElement('span');
         icon.setAttribute('class', 'dropdown');
-        label.setAttribute('for','ed');
+        label.setAttribute('for', prefix + 'ed');
         label.appendChild(icon);
         label.innerHTML += 'Ethernet II';
         details.appendChild(check);
