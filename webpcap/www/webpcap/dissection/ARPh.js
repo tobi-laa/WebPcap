@@ -11,10 +11,8 @@ if (typeof require !== 'undefined') {
  */
 
 function ARPh(data, offset) {
-    var temp = new Date().getTime();
     var byteView  = new  Uint8Array(data, offset, ARPh.HLEN);
     var shortView = new Uint16Array(data, offset, ARPh.HLEN / 2);
-    timeonarray += new Date().getTime() - temp;
     
     this.htype = ntohs(shortView[0]);
     this.ptype = ntohs(shortView[1]);

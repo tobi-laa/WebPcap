@@ -6,11 +6,8 @@
 
 //note: this is basically copied over from the wireshark wiki
 function Pcaph(data, offset) {
-    var temp = new Date().getTime();
-
     var intView  = new Uint32Array(data, offset, Pcaph.HLEN / 4);
 
-    timeonarray += new Date().getTime() - temp;
     
     this.ts_sec   = intView[0];  // timestamp seconds
     this.ts_usec  = intView[1];  // timestamp microseconds

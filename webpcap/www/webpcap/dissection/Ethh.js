@@ -7,13 +7,9 @@ if (typeof require !== 'undefined')
  ******************************************************************
  */
 
-function Ethh(data, offset) {
-    var temp = new Date().getTime();
-    
+function Ethh(data, offset) {    
     var byteView  = new  Uint8Array(data, offset, Ethh.HLEN);
     var shortView = new Uint16Array(data, offset + 2 * Ethh.ALEN, 1);
-    
-    timeonarray += new Date().getTime() - temp;
     
     this.dst  = byteView.subarray(0, 6);  // destination MAC address
     this.src  = byteView.subarray(6, 12); // source MAC address    

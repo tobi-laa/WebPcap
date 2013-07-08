@@ -8,12 +8,8 @@ if (typeof require !== 'undefined')
  */
 
 function IPv6h(data, offset) {
-    var temp = new Date().getTime();
-
     var byteView  = new  Uint8Array(data, offset, IPv6h.HLEN);
     var shortView = new Uint16Array(data, offset, IPv6h.HLEN / 2);
-
-    timeonarray += new Date().getTime() - temp;
     
     this.v = (byteView[0] & 0xF0) >> 4;            // version
     this.v_tc_fl = byteView.subarray(0, 4);        // version, traffic class, flow label

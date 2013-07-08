@@ -83,6 +83,10 @@ body {
     width: 100%;
 }
 
+.conn {
+    font-weight: bold;
+}
+
 .TCP {
     background-color: #e7e6ff;
 }
@@ -154,12 +158,12 @@ body {
     opacity: 0.8;
 }
 
-.details input[type="checkbox"] + label {
+input[type="checkbox"] + label {
     font-weight: bold;
     margin: 2px;
 }
 
-.details input[type="checkbox"] + label span {
+input[type="checkbox"] + label span {
     display:inline-block;
     width: 19px;
     height: 19px;
@@ -170,11 +174,11 @@ body {
     cursor: pointer;
 }
 
-.details input[type="checkbox"] + label span:hover {
+input[type="checkbox"] + label span:hover {
     opacity: 0.5;
 }
 
-.details input[type="checkbox"]:checked + label span {
+input[type="checkbox"]:checked + label span {
     background: url(img/go-down.svgz) left top no-repeat;
     background-size: 19px 19px;
 }
@@ -182,10 +186,6 @@ body {
 input[type="checkbox"] {
     display: none;
 }
-
-/*input {
-    display: none;
-}*/
 
 .hidebox {
     width: 0;
@@ -217,13 +217,6 @@ input[type="checkbox"] {
 
 .button input[type="checkbox"]:checked + div {
     background-color: #00ff00;
-}
-
-.conn {
-    background-color: #5ece32;
-}
-.disconn {
-    background-color: #ac0000;
 }
 
 .w3cicon {

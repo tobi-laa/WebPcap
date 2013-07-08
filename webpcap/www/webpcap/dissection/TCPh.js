@@ -5,12 +5,8 @@
  */
 
 function TCPh(data, offset, parent) {
-    var temp = new Date().getTime();
-
     var shortView = new Uint16Array(data, offset, TCPh.HLEN / 2);
     var intView   = new Uint32Array(data, offset, TCPh.HLEN / 4);
-    
-    timeonarray += new Date().getTime() - temp;
     
     this.sport    = ntohs(shortView[0]);     // source port
     this.dport    = ntohs(shortView[1]);     // destination port

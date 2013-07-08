@@ -4,13 +4,9 @@
  ******************************************************************
  */
 
-function IPv4h(data, offset) {
-    var temp = new Date().getTime();
-    
+function IPv4h(data, offset) {   
     var byteView  = new  Uint8Array(data, offset, IPv4h.HLEN);
     var shortView = new Uint16Array(data, offset, IPv4h.HLEN / 2);
-    
-    timeonarray += new Date().getTime() - temp;
     
     this.v    = byteView[0] >> 4;             // version
     this.hl   = byteView[0] & 0x0F;           // IP header length
