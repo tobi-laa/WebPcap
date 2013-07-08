@@ -3,22 +3,18 @@ if (typeof require !== 'undefined') {
     var switchByteOrder = require('./dissection/byteOrder').switchByteOrder;
 }
 
-var getURL, appendPacketData, cache, dataURL;
+var getURL, appendPacketData, dataURL;
 var MAGIC_NUMBER = (0xa1b2c3d4 >>> 0);
 var MIMETYPE = 'application/vnd.tcpdump.pcap';
 
 if (typeof window !== 'undefined') {
     if (Blob && window.URL && URL.createObjectURL) {
-        getURL = getBlobURL;
-        appendPacketData = appendToBlob;
-        cache = createPcapGlobalHeader();    
+        getURL = getBlobURL; 
     }
     else {
         getURL = getDataURL;
-        appendPacketData = appendToDataURL;
         dataURL = 'data:' + MIMETYPE + ';base64,' + 
                 base64ArrayBuffer(createPcapGlobalHeader());
-        cache = null;
     }
 }
 
@@ -43,27 +39,13 @@ function createPcapGlobalHeader() {
     return pcap_global_header;
 }
 
-function appendToDataURL(buff) {
-    cache = appendBuffer(cache, buff);
-    var len = cache.byteLength;
-    len -= (len % 3);
-    dataURL += base64ArrayBuffer(cache.slice(0, len));
-    cache = cache.slice(len, cache.byteLength);
-}
-
-function appendToBlob(buff) {
-    cache = appendBuffer(cache, buff);
-}
-
 function getDataURL() {
-    if (cache != null && cache.byteLength > 0)
-        return dataURL + base64ArrayBuffer(cache);
-    else
-        return dataURL;
+    return dataURL + base64ArrayBuffer(mergeBuffers(getRawPackets()));
 }
 
 function getBlobURL() {
-    var blob = new Blob([cache], {type: MIMETYPE, size: cache.byteLength});
+    var content = appendBuffer(createPcapGlobalHeader(), mergeBuffers(getRawPackets()));
+    var blob = new Blob([content], {type: MIMETYPE, size: content.byteLength});
     return URL.createObjectURL(blob);
 }
 

@@ -1,3 +1,23 @@
+function mergeBuffers(buffers) {
+    var byteLength = 0, currentPos = 0;
+    
+    for (var i = 0; i < buffers.length; i++) {
+        if (buffers[i])
+            byteLength += buffers[i].byteLength;
+    }
+
+    var toReturn = new Uint8Array(byteLength);
+    
+    for (var i = 0; i < buffers.length; i++) {
+        if (buffers[i]) {
+            toReturn.set(new Uint8Array(buffers[i]), currentPos);
+            currentPos += buffers[i].byteLength;
+        }
+    }
+    
+    return toReturn.buffer;
+}
+
 function appendBuffer(buff, toAppend) {
     if (!buff)
         return toAppend;

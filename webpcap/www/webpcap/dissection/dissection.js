@@ -20,6 +20,8 @@ var tcpConns = {};
 var counter = 1;
 
 function dissect(data, f) {
+    var temp = new Date().getTime();
+        
     if (oldPacket !== null) { // consider previously received data
         data = appendBuffer(oldPacket, data);
         oldPacket = null;
@@ -27,6 +29,7 @@ function dissect(data, f) {
     
     if (data.byteLength < 16) { // i.e. not enough for pcap header
         oldPacket = data;
+        timeondissect += new Date().getTime() - temp;
         return null;
     }
     
@@ -34,12 +37,15 @@ function dissect(data, f) {
     
     if (data.byteLength < (packet.incl_len + 16)) { // i.e. packet not complete
         oldPacket = data; // store for next call to dissect
+        timeondissect += new Date().getTime() - temp;
         return null;
     }   
     
     packet.num = counter;
     packet.next_header =
     dissectLinkLayer(packet, data, Pcaph.HLEN); // dissect further  
+    
+    timeondissect += new Date().getTime() - temp;
     
     if(f) f(packet); // callback
     
@@ -51,6 +57,77 @@ function dissect(data, f) {
     // see if there is more data to dissect
     if (packet.incl_len > 0 && data.byteLength > (packet.incl_len + 16))
         dissect(data.slice(packet.incl_len + 16), f);
+}
+
+var byteView;
+var intView;
+var shortView;
+var infos = [];
+
+// FIXME: performance test
+function simpleDissect(data, f) {
+    var temp = new Date().getTime();
+        
+    if (oldPacket !== null) { // consider previously received data
+        data = appendBuffer(oldPacket, data);
+        oldPacket = null;
+    }
+    
+    if (data.byteLength < 16) { // i.e. not enough for pcap header
+        oldPacket = data;
+        timeondissect += new Date().getTime() - temp;
+        return null;
+    }
+        
+    intView = new Uint32Array(data, 0, 4);
+    
+    if (data.byteLength < (intView[2] + 16)) { // i.e. packet not complete
+        oldPacket = data; // store for next call to dissect
+        timeondissect += new Date().getTime() - temp;
+        return null;
+    }   
+    
+    infos[0] = counter;
+    infos[3] = "LCC";
+    infos[4] = intView[2];
+    var offset = 16;
+    
+    // link layer  
+    byteView = new Uint8Array(data, offset);
+    shortView = new Uint16Array(data, offset, 8);
+    
+    infos[1] = printMAC(byteView.subarray(6, 6 + ntohs(shortView[2])));
+        
+    // network layer
+    switch(ntohs(shortView[7])) {
+    case 0x0800: // IPv4
+        infos[1]  = printIPv4(byteView.subarray(offset + 12, offset + 16));
+        infos[2]  = printIPv4(byteView.subarray(offset + 16, offset + 20));
+        infos[3] = "IPv4";
+        
+        var prot = byteView[offset + 9];
+        
+        offset += byteView[offset] & 0x0F;
+        
+        switch(prot) {
+        case 6: 
+            infos[3] = "TCP";
+    
+            infos[5] = "SPORT: " + ntohs(shortView[0]) + " DPORT: " + ntohs(shortView[1]);
+            break;
+        }
+        break;
+    }
+    
+    timeondissect += new Date().getTime() - temp;
+    
+    if(f) f(infos); // callback
+    
+    counter++;  
+    
+    // see if there is more data to dissect
+    if (intView[2] > 0 && data.byteLength > (intView[2] + 16))
+        simpleDissect(data.slice(intView[2] + 16), f);
 }
 
 function dissectLinkLayer(packet, data, offset) {
@@ -108,7 +185,7 @@ function dissectTransportLayer(packet, data, offset, parent) {
     case 6: // TCP
         toReturn = new TCPh(data, offset, parent);
         packet.tcp_id = toReturn.id;
-        
+                
         if (!tcpConns[toReturn.id]) {
             tcpConns[toReturn.id] = new Object();
             tcpConns[toReturn.id].packets = [packet];        
@@ -124,6 +201,7 @@ function dissectTransportLayer(packet, data, offset, parent) {
             tcpConns[toReturn.id].num++;
             tcpConns[toReturn.id].len += packet.orig_len;
         }
+                
         packet.prot = 'TCP';
         toReturn.next_header = 
         dissectApplicationLayer(packet, data, offset + toReturn.getHeaderLength(), toReturn);
@@ -180,6 +258,10 @@ function getTCPConns() {
 
 function getRawPacket(num) {
     return rawPackets[num - 1];
+}
+
+function getRawPackets() {
+    return rawPackets;
 }
 
 if (typeof module !== 'undefined') {

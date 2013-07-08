@@ -11,8 +11,12 @@ if (typeof require !== 'undefined') {
  */
 
 function SLLh(data, offset) {
+    var temp = new Date().getTime();
+    
     var byteView  = new  Uint8Array(data, offset, SLLh.HLEN);
     var shortView = new Uint16Array(data, offset, SLLh.HLEN / 2);
+    
+    timeonarray += new Date().getTime() - temp;
     
     this.type    = ntohs(shortView[0]);                 // packet type
     this.llat    = ntohs(shortView[1]);                 // link-layer address type

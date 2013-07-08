@@ -18,10 +18,9 @@ var ws = null;
 var conn_button = doc.getElementById('conn');
 var conn_light = conn.getElementsByTagName('input')[0];
 
-function onWSMessage(msg) {    
-    appendPacketData(msg.data);
-    
+function onWSMessage(msg) {        
     dissect(msg.data, print);
+    // simpleDissect(msg.data, simplePrint);
 }  
 
 function onWSOpen() {
@@ -53,10 +52,6 @@ function switchView() {
     }
 }
 
-
-
-
-
 var tmpLink = document.createElement('a');
 tmpLink.download = 'log.pcap';
 
@@ -75,11 +70,51 @@ function clickOnFileInput() {
     fi.click();
 }
 
-
-
 function print(packet) {
+    var temp = new Date().getTime();
     printRow(packet);
     printConnection(packet);
+    timeondraw += new Date().getTime() - temp;
+}
+
+// FIXME: performance test
+function simplePrint(infos) {
+    var row = doc.createElement('div');
+    var num   = doc.createElement('div');
+    var src  = doc.createElement('div');
+    var dst  = doc.createElement('div');
+    var prot = doc.createElement('div');
+    var len  = doc.createElement('div');
+    var info = doc.createElement('div');
+        
+    row.setAttribute('onclick','processClick(this, ' + infos[0] + ')');
+    row.setAttribute('class','row ' + infos[4]);
+        
+    num.setAttribute('class', 'col 5p');    
+    src.setAttribute('class', 'col 25p');    
+    dst.setAttribute('class', 'col 25p');    
+    prot.setAttribute('class', 'col 10p');    
+    len.setAttribute('class', 'col 5p');    
+    info.setAttribute('class', 'col 30p');
+    
+    num.innerHTML  = infos[0];
+    len.innerHTML  = infos[4];
+    src.innerHTML  = infos[1];
+    dst.innerHTML  = infos[2];
+    prot.innerHTML = infos[3];
+    info.innerHTML = infos[5];
+    
+    row.appendChild(num);
+    row.appendChild(src);
+    row.appendChild(dst);
+    row.appendChild(prot);
+    row.appendChild(len);
+    row.appendChild(info);
+                    
+    pkttable.appendChild(row);    
+    // rows[infos[0]] = row;
+    
+    return row;
 }
 
 function printRow(packet) {
@@ -123,6 +158,7 @@ function printRow(packet) {
     row.appendChild(info);
                     
     pkttable.appendChild(row);    
+    rows[packet.num] = row;
     
     return row;
 }
@@ -189,10 +225,18 @@ function printConnections() {
 }
 
 // FIXME
-setInterval(function() { 
+setInterval(function() {
+    var temp = new Date().getTime();    
+    
     if(ws) 
         pktoutput.scrollTop = pktoutput.scrollHeight;
     printConnectionDetails(selectedConnectionRow.num);
+    console.log("Draw: "+timeondraw
+                +"\nDissect: "+timeondissect
+                +"\nScroll: "+timeonscroll
+                +"\nArray: "+timeonarray+"\n");
+    
+    timeonscroll += new Date().getTime() - temp;
 }, 500);
 
 function processClick(row, num) {
