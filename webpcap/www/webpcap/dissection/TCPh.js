@@ -21,12 +21,14 @@ function TCPh(data, offset, parent) {
     /* various options may follow; it is virtually impossible
      * though to specify them within this struct */
     
-    this.id = createID(parent.src, this.sport, parent.dst, this.dport);
+    this.id = createID(parent.src, this.sport, parent.dst, this.dport, 't');
     
     this.next_header = null;
 }
 
-function createID(src, sport, dst, dport) {
+function createID(src, sport, dst, dport, prefix) {
+    if (sport === 0 || dport === 0)
+        return false;
     // FIXME find a more elegant way than strings
     var toSort = ['' + sport, '' + dport];
     for (var i = 0; i < src.length; i++) {
@@ -34,7 +36,7 @@ function createID(src, sport, dst, dport) {
         toSort[1] += dst[i];
     }
     toSort.sort();
-    return toSort[0] + toSort[1];
+    return prefix + toSort[0] + toSort[1];
 }
 
 TCPh.prototype = {
@@ -50,6 +52,7 @@ TCPh.prototype = {
         var hidden = document.createElement('div');
         var label = document.createElement('label');
         var icon = document.createElement('span');
+        icon.setAttribute('class', 'dropdown');
         label.setAttribute('for','td');
         label.appendChild(icon);
         label.innerHTML += 'Transmission Control Protocol';

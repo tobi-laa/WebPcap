@@ -9,6 +9,7 @@ var connview = doc.getElementById('connview');
 var connoutput = connview.getElementsByClassName('output')[0];
 var conntable = connoutput.getElementsByTagName('div')[0];
 var conndetails = connview.getElementsByClassName('details')[0];
+var connpayload = connview.getElementsByClassName('details')[1];
 
 var selectedPacketRow = new Object();
 var selectedConnectionRow = new Object();
@@ -18,10 +19,12 @@ var ws = null;
 var conn_button = doc.getElementById('conn');
 var conn_light = conn.getElementsByTagName('input')[0];
 
-
 var MAXROWS = 30;
 var currentRow = 0;
 var rows = [];
+
+var packetView = true;
+var connRows = {};
 
 function scrollDown() {
     pkttable.innerHTML = "";
@@ -48,9 +51,6 @@ function onWSClose() {
     conn_light.checked = false;
     conn_button.setAttribute('title', 'Start a new live capture');
 }
-
-var packetView = true;
-var connRows = {};
 
 function switchView() {
     packetView = !packetView;
@@ -144,7 +144,7 @@ function printRow(packet) {
     row.setAttribute('class','row ' + packet.prot);
     
     
-    num.setAttribute('class', 'col 5p');    
+    num.setAttribute('class', 'col 5p tr');    
     src.setAttribute('class', 'col 25p');    
     dst.setAttribute('class', 'col 25p');    
     prot.setAttribute('class', 'col 10p');    
@@ -193,7 +193,7 @@ function printConnection(packet) {
         row.root.setAttribute('id', 't' + packet.tcp_id);
         
         row.row.setAttribute('onclick','processClick(this, "' + packet.tcp_id + '")');
-        row.row.setAttribute('class','row conn ' + packet.prot);
+        row.row.setAttribute('class','row bold ' + packet.prot);
         
         conntable.appendChild(row.row);
         conntable.appendChild(row.root);
@@ -210,20 +210,20 @@ function printConnection(packet) {
     
     row.root.appendChild(printRow(packet));
         
-    num.setAttribute('class', 'col 5p');    
+    num.setAttribute('class', 'col 5p tr');    
     src.setAttribute('class', 'col 25p'); 
     dst.setAttribute('class', 'col 25p'); 
     prot.setAttribute('class', 'col 10p');    
     len.setAttribute('class', 'col 5p tr');    
     info.setAttribute('class', 'col 30p');
     
-    var button = doc.createElement('span');
+    var dropdown = doc.createElement('span');
     
-    button.setAttribute('class', '');
-    button.setAttribute('onclick', 'switchVisibility("t' + packet.tcp_id + '")');
-    button.innerHTML = "\\/"
+    dropdown.setAttribute('class', 'dropdown');
+    dropdown.setAttribute('onclick', 'switchVisibility(this,' +
+                                     '"t' + packet.tcp_id + '")');
     
-    num.appendChild(button);
+    num.appendChild(dropdown);
     num.innerHTML  += conn.num;
     src.innerHTML   = conn.src + ':' + conn.sport;
     dst.innerHTML   = conn.dst + ':' + conn.dport;
@@ -242,12 +242,16 @@ function printConnection(packet) {
     return row.row;
 }
 
-function switchVisibility(id) {
+function switchVisibility(dropdown, id) {
     var container = doc.getElementById(id);
-    if (container.className === 'hidden')
-        container.className = 'table';
-    else
+    if (container.className === 'hidden') {
+        container.className = 'table gray borderbottom';
+        dropdown.className = 'dropdown clicked';
+    }
+    else {
         container.className = 'hidden';
+        dropdown.className = 'dropdown';
+    }
 }
 
 function printConnections() {
@@ -271,13 +275,18 @@ function processClick(row, num) {
         printPacketDetails(num);
         printPayload(num);
     }
-    else
+    else {
         printConnectionDetails(num);
+    }
 }
 
 function printConnectionDetails(id) {
     var conn = getTCPConn(id);
-    if(!conn) return;
+    if(!conn) {
+        printPacketDetails(id);
+        printPayload(id);
+        return;
+    }
     var lastPacket = conn.packets[conn.packets.length - 1];    
     
     conndetails.innerHTML = '';
@@ -316,23 +325,31 @@ function selectRow(row, num) {
 
 function printPacketDetails(pkt_num) {
     var packet = getPacket(pkt_num);
-    if(!packet) return;
+    if (!packet) return;
     
-    pktdetails.innerHTML = '';
+    var details = pktdetails;
+    if (!packetView)
+        details = conndetails;
+    
+    details.innerHTML = '';
     
     while (packet !== null) { // print details for each header
-        pktdetails.appendChild(packet.printDetails(pkt_num));
+        details.appendChild(packet.printDetails(pkt_num));
         packet = packet.next_header;        
     }
 }
 
-function printPayload(pkt_num) { 
-    pktpayload.innerHTML = '';
-    
+function printPayload(pkt_num) {   
     var payload = getRawPacket(pkt_num);
     if (!payload) return;
+    
     payload = new Uint8Array(payload);
     
+    var payloaddiv = pktpayload;
+    if (!packetView)
+        payloaddiv = connpayload;
+    payloaddiv.innerHTML = '';
+                
     var output = '';
         
     var remainder = payload.byteLength % 16;
@@ -379,7 +396,7 @@ function printPayload(pkt_num) {
     
     var pre = document.createElement('pre');
     pre.appendChild(document.createTextNode(output))
-    pktpayload.appendChild(pre);
+    payloaddiv.appendChild(pre);
 }
 
 function clearScreen() {

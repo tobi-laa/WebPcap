@@ -180,30 +180,14 @@ function dissectTransportLayer(packet, data, offset, parent) {
         break;
     case 6: // TCP
         toReturn = new TCPh(data, offset, parent);
-        packet.tcp_id = toReturn.id;
-                
-        if (!tcpConns[toReturn.id]) {
-            tcpConns[toReturn.id] = new Object();
-            tcpConns[toReturn.id].packets = [packet];        
-            tcpConns[toReturn.id].src = printIPv4(parent.src);
-            tcpConns[toReturn.id].dst = printIPv4(parent.dst);
-            tcpConns[toReturn.id].sport = toReturn.sport;
-            tcpConns[toReturn.id].dport = toReturn.dport;
-            tcpConns[toReturn.id].num = 1;
-            tcpConns[toReturn.id].len = packet.orig_len;
-        }
-        else {
-            tcpConns[toReturn.id].packets.push(packet);
-            tcpConns[toReturn.id].num++;
-            tcpConns[toReturn.id].len += packet.orig_len;
-        }
-                
+        handleConnection(toReturn, packet, parent);
         packet.prot = 'TCP';
         toReturn.next_header = 
         dissectApplicationLayer(packet, data, offset + toReturn.getHeaderLength(), toReturn);
         break;
     case 17: // UDP
-        toReturn = new UDPh(data, offset);
+        toReturn = new UDPh(data, offset, parent);
+        handleConnection(toReturn, packet, parent);
         packet.prot = 'UDP';
         toReturn.next_header = 
         dissectApplicationLayer(packet, data, offset + toReturn.getHeaderLength(), toReturn);
@@ -213,6 +197,29 @@ function dissectTransportLayer(packet, data, offset, parent) {
         break;
     }  
     return toReturn;
+}
+
+function handleConnection(toReturn, packet, parent) {
+    if (!toReturn.id)
+        return;
+        
+    packet.tcp_id = toReturn.id;
+            
+    if (!tcpConns[toReturn.id]) {
+        tcpConns[toReturn.id] = new Object();
+        tcpConns[toReturn.id].packets = [packet];        
+        tcpConns[toReturn.id].src = printIPv4(parent.src);
+        tcpConns[toReturn.id].dst = printIPv4(parent.dst);
+        tcpConns[toReturn.id].sport = toReturn.sport;
+        tcpConns[toReturn.id].dport = toReturn.dport;
+        tcpConns[toReturn.id].num = 1;
+        tcpConns[toReturn.id].len = packet.orig_len;
+    }
+    else {
+        tcpConns[toReturn.id].packets.push(packet);
+        tcpConns[toReturn.id].num++;
+        tcpConns[toReturn.id].len += packet.orig_len;
+    }
 }
 
 function dissectApplicationLayer(packet, data, offset, parent) {

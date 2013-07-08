@@ -45,6 +45,7 @@ ARPh.prototype = {
         var hidden = document.createElement('div');
         var label = document.createElement('label');
         var icon = document.createElement('span');
+        icon.setAttribute('class', 'dropdown');
         label.setAttribute('for','ad');
         label.appendChild(icon);
         label.innerHTML += 'Address Resolution Protocol';

@@ -4,13 +4,15 @@
  ******************************************************************
  */
 
-function UDPh(data, offset) {
+function UDPh(data, offset, parent) {
     var shortView = new Uint16Array(data, offset, UDPh.HLEN / 2);
     
     this.sport = ntohs(shortView[0]); // source port
     this.dport = ntohs(shortView[1]); // destination port
     this.len   = ntohs(shortView[2]); // length of payload incl. UDP header
     this.csum  = ntohs(shortView[3]); // header checksum
+      
+    this.id = createID(parent.src, this.sport, parent.dst, this.dport, 'u');
         
     this.next_header = null;
 }
@@ -28,6 +30,7 @@ UDPh.prototype = {
         var hidden = document.createElement('div');
         var label = document.createElement('label');
         var icon = document.createElement('span');
+        icon.setAttribute('class', 'dropdown');
         label.setAttribute('for','ud');
         label.appendChild(icon);
         label.innerHTML += 'User Datagram Protocol';
