@@ -1,95 +1,84 @@
+/******************************************************************************
+ * styling of html objects                                                    *
+ ******************************************************************************/
 html {
     height: 100%; /* specify height so children can do the same */
-    font-family: "Times New Roman", serif;
-    font-size: 1vw;
+    width: 100%;
 }
 body { 
-    background-color: #79b0e8; 
-    padding: 0.5%;
-    padding-bottom: 0;
-    height: 97%; /* as with html tag, but use less to avoid scroll bar */
-}
-.hidden {
-    display: none;
-}
-.follow { /* explicitly specify for 'empty' links */
-    color: #4b6983;  
-    font-weight: bold;
-}
-.follow:hover { /* explicitly specify for 'empty' links */
-    text-decoration: underline;
-    cursor: pointer;
-}
-.tableheader {  
-    background-color: white;
-    width: 100%;
-    height: 3%;
-    color: black;
-    overflow: hidden;
-    font-weight: bold;
-    margin-bottom: 0.4%;
-}
-.overflow-y {
-    overflow-y: scroll;
-}
-.hidescrollbar {
-    position: absolute;
-    background-color: white;
-    width: 4%;
-    height: 100%;
-    top: 0%;
-    right: 0%;
-    z-index: 1;
+    background-color: #79b0e8; /* blue-ish */
+    height: 98%; /* as with html tag but less to avoid scrolling */
+    padding: 0.1%;
+    font-family: "Dejavu Sans", sans-serif;
+    font-size: 1vw;
 }
 
-.relpos {
-    position: relative;
-}
-#pktview {
-    height: 88%;
-}
-#connview {
-    height: 88%;
-}
-.output {
+
+
+/******************************************************************************
+ * primary objects, i.e. the basic layout                                     *
+ ******************************************************************************/
+#input { /* this div holds all the buttons */
     width: 100%;
-    margin-bottom: 0.4%;    
-    color: black;
-    background-color: white;
-    height: 100%;
-    overflow-y: scroll;
-}
-.details {
-    width: 100%;
-    height: 50%;
-    margin-bottom: 0.4%;
-    background-color: white;
-    overflow-y: scroll;
-}
-#input {
-    width: 100%;
-    color: black;
-    height: 6.5%;
+    height: 4.5%; /* fixed height for now */
     margin-bottom: 0.4%;
     overflow: hidden; /* prevent this div from 'destroying' the whole layout */
 }
+#tableheader {  
+    width: 100%;
+    height: auto; /* might be fixed at some point */
+    color: white; /* white on blue */
+    font-weight: bold;
+    margin-bottom: 0.2%;
+}
+#output { /* this holds the table where packets are displayed */
+    width: 100%;
+    margin-bottom: 0.3%;   
+    color: black;
+    background-color: white;
+    height: 50%;
+    overflow: hidden;
+    float: left;
+}
+#details { /* this holds details for selected packets */
+    width: 50%;
+    height: 35%;
+    padding: 0.2%;
+    box-sizing: border-box; /* so padding is inwards */
+    -moz-box-sizing: border-box;
+    background-color: white;
+    float: left;
+    overflow: scroll;
+}
+#raw { /* this shows the selected packet in hex and ascii */
+    width: 50%;
+    height: 35%;
+    padding: 0.2%;
+    box-sizing: border-box; /* so padding is inwards */
+    -moz-box-sizing: border-box;
+    background-color: white;
+    float: left;
+    overflow: scroll;
+    white-space: pre; /* want to display spaces, tabs etc */
+    font-family: "Dejavu Mono", monospace;
+}
+
+
+
+/******************************************************************************
+ * everything table related                                                   *
+ * table-styled div's are used as they appear to perform slightly better      *
+ ******************************************************************************/
 .table {
     display: table;
     width: 100%;
 }
+
 .row {
     display: table-row;
     width: 100%;
 }
-
-.bold {
-    font-weight: bold;
-}
-
-.gray {
-    color: gray;
-}
-
+/* some 'row styles'; these are the same colors as used by wireshark */
 .TCP {
     background-color: #e7e6ff;
 }
@@ -108,7 +97,7 @@ body {
 .Ethernet {
     background-color: white;
 }
-.MPD {
+.MPD { /* custom, not in wireshark */
     background-color: #ffe7d6;
 }
 .selected {
@@ -119,13 +108,17 @@ body {
 .col {
     float: left;
     display: table-column;
-    overflow: hidden;
-    padding-right: 0.6%;
+    overflow: hidden; /* so everything stays on one line */
+    padding-right: 0.6%; /* leave some space for readability */
     box-sizing: border-box;
     -moz-box-sizing: border-box;
 }
-
+/* some fixed widths for columns; the \3 is for escaping the preceding nums */
+.\31 p  { width: 1%;}
+.\32 p  { width: 2%;}
 .\35 p  { width: 5%;}
+.\38 p  { width: 8%;}
+.\39 p  { width: 9%;}
 .\31 0p { width: 10%;}
 .\31 5p { width: 15%;}
 .\32 0p { width: 20%;}
@@ -134,110 +127,203 @@ body {
 .\34 0p { width: 40%;}
 .\35 0p { width: 50%;}
 
+
+
+/******************************************************************************
+ * everything input related, so mostly button styles                          *
+ ******************************************************************************/
 .button {
-    width: 3%;
-    margin-right: 0.3%;
-    margin-bottom: 0.3%;
+    position: relative; /* so we can visually click the button */
+    width: 2%; /* dimensions purely based on trial on error */
+    margin-right: 0.4%;
     background-color: white;
     border-radius: 17%;    
-    box-shadow: 0.15em 0.15em 0.3em 0em black;
-    float: left;
+    /* % does not work nicely for shadows, but rem will be relative.. */
+    box-shadow: 0.15rem 0.15rem 0.3rem 0rem black;
+    float: left; /* line 'em up */
 }
-.button:active {
-    position: relative;
-    top: 3.3%;
+.button:active {    
+    top: 3.3%; /* move the button a bit so it looks like it's clicked */
     left: 0.2%;
 }
 
-.button img {
-    width: 90%;
-    margin-left: 5%;
-    margin-top: 5%;
+.buttonicon {
+    width: 100%; /* we're mostly using svg's, so this is crucial */
+    float: left; /* fit it in nicely */
 }
-.glow {
+
+.w3cicon { /* a different kind of button, actually a link */
+    border: 0;
+    width: 5%;
+    float: right; /* line 'em up on the other side */
+}
+
+.glow { /* just a nice effect to highlight things when hovered */
     opacity: 1;
-    transition-property: opacity;
-    transition-duration: 0s, 0.3s;
+/*    transition-property: opacity; */
+/*    transition-duration: 0s, 0.3s; */
 }
-.glow:hover {
-    opacity: 0.8;
-}
-
-input[type="checkbox"] + label {
-    font-weight: bold;
+.glow:hover { /* make it a bit more opaque; works best with white background */
+    opacity: 0.6;
 }
 
-.dropdown {
-    display: inline-block;
-    width: 1.4vw;
-    height: 1.2vw;
-    margin: auto;
-    background: url(img/arrow-right.svgz) left top no-repeat;
-    background-size: 1.2vw 1.2vw;
+.dropdown { /* this is the little triangle you hit to 'show me more' */
+    width: 1vw; /* font size */
+    height: 1vw;
+    margin-right: 0.2vw;
+    background: url(img/arrow-right.svgz);
+    background-size: 1vw 1vw;
     cursor: pointer;
     float: left;
 }
-
-.dropdown:hover {
-    opacity: 0.5;
-}
-
-.clicked {
-    background: url(img/arrow-down.svgz) left top no-repeat;
-    background-size: 1.2vw 1.2vw;
-}
-
+/* the dropdown icon usually comes with a checkbox to hide and show stuff */
 input[type="checkbox"]:checked + label .dropdown {
-    background: url(img/arrow-down.svgz) left top no-repeat;
-    background-size: 1.2vw 1.2vw;
+    background: url(img/arrow-down.svgz);
+    background-size: 1vw 1vw;
+}
+.clicked { /* this is for javascript triggered hide/show */
+    background: url(img/arrow-down.svgz);
+    background-size: 1vw 1vw;
 }
 
-input[type="checkbox"] {
+input[type="checkbox"] { /* checkboxes are only used for hide/show of divs */
     display: none;
 }
+input[type="checkbox"] + label { /* always highlight corresponding labels */
+    font-weight: bold;
+}
+input[type="checkbox"] ~ div { /* here's the trick; not clicked, don't show */
+    display: none;    
+}
+input[type="checkbox"]:checked ~ div { /* if clicked: show */
+    display: block;
+    margin-left: 1.4vw;
+}
 
-.hidebox {
+/* this is the custom context menu that'll show up for packages/rows */
+#contextmenu {
+    width: auto;
+    position: absolute; /* will be moved around by javascript */
+    z-index: 1; /* keep this above everything else */
+    padding: 0.1%;
+    background-color: white; /* suits the blue and white style */
+    /* % does not work nicely for shadows, but rem will be relative.. */
+    box-shadow: 0.15rem 0.15rem 0.3rem 0rem black;    
+    font-size: 0.8vw; /* a bit smaller than usual text */
+}
+/* this is the style for entries of the context menu */
+.contextentry {
+    white-space: nowrap; /* keep entries on one line */
+    padding: 0.2%;
+    font-weight: 600; /* looks a bit better for small font */
+}
+.contextentry:hover {
+    background-color: #79b0e8;
+}
+
+
+
+/******************************************************************************
+ * everything 'self-made scrollbar' related                                   *
+ ******************************************************************************/
+#scrollcontainer { /* this is the root container for everything... */
+    position: relative;
+    float: left; /* keep it next to #output */
+    width: 15px; /* taken from chromium, might want to change this */
+    height: 50%; /* same height as #output */
+}
+
+#scrollbox { /* this is the dark-gray background box for the scrollbar */
+    position: absolute;
+    top: 15px; /* leave space for the scrollup icon */
+    width: 15px;
+    height: 100%; /* will be 100% - 30px via javascript */
+    background-color: #d3d3d3; /* chromium colors */
+    box-sizing: border-box; /* so the border is inwards */
+    -moz-box-sizing: border-box;
+    border-left: 1px solid #adadad; /* dark gray border */
+    border-right: 1px solid #adadad;
+    overflow: hidden; /* don't show messed up scrollbars ;-) */
+}
+
+#scrollbar { /* this is the actual scrollbar */
+    position: absolute;
+    width: 13px; /* no need to redraw borders from scrollbox */
+    /* chromium's scrollbar is styled as follows */
+    background: -webkit-linear-gradient(left, #f0f0f0 50%, #e5e5e5 50%);
+    background: linear-gradient(left, #f0f0f0 50%, #e5e5e5 50%);
+    border-top: 1px solid #adadad; /* dark gray border */
+    border-bottom: 1px solid #adadad;
+}
+#scrollbar:hover { /* brighten on hover */
+    background: -webkit-linear-gradient(left, #fafafa 50%, #efefef 50%);
+    background: linear-gradient(left, #fafafa 50%, #efefef 50%);
+}
+#scrollbar:active { /* and darken again when clicked */
+    background: -webkit-linear-gradient(left, #f0f0f0 50%, #e5e5e5 50%);
+    background: linear-gradient(left, #f0f0f0 50%, #e5e5e5 50%);
+}
+
+.scrollup { /* the upper button to scroll up a bit (upwards triangle) */
+    position: absolute;
+    top: 0; /* always stay at the top */
+    width: 15px;
+    height: 15px;
+    background: url(img/scroll-up.png); /* chromium's graphics */
+}
+.scrollup:active { /* darken when clicked */
+    background: url(img/scroll-up-active.png);
+}
+.scrollupinactive { /* and gray out when no scrolling possible */
+    position: absolute;
+    top: 0;
+    width: 15px;
+    height: 15px;
+    background: url(img/scroll-up-inactive.png);
+}
+
+.scrolldown { /* the same as scrollup... */
+    position: absolute;
+    bottom: 0; /* always stay at the bottom */
+    width: 15px;
+    height: 15px;
+    background: url(img/scroll-down.png);
+}
+.scrolldown:active {
+    background: url(img/scroll-down-active.png);
+}
+.scrolldowninactive {
+    position: absolute;
+    bottom: 0;
+    width: 15px;
+    height: 15px;
+    background: url(img/scroll-down-inactive.png);
+}
+
+
+
+/******************************************************************************
+ * general display modifiers/keyword                                          *
+ ******************************************************************************/
+.suppressselection { /* if this is active, text etc. will not be selected */
+    user-select: none;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -o-user-select: none;
+    user-select: none;
+}
+
+.hidebox { /* nice trick: hide something but let it be 'clickable' */
     width: 0;
     height: 0;
     overflow: hidden;
 }
 
-.details input[type="checkbox"] ~ div {
-    display: none;
-    margin-left: 1.4vw;
-}
-
-.details input[type="checkbox"]:checked ~ div {
-    display: block; 
-}
-
-.button input[type="checkbox"] + div {
-    position: absolute;
-    top: 2%;
-    right: 4%;
-    width: 10%;
-    height: 10%;
-    background-color: #ff0000;
-    border: 1px solid;
-    transition-property: background-color;
-    transition-duration: 0s, 0.5s;
-    border-radius: 50%;
-}
-
-.button input[type="checkbox"]:checked + div {
-    background-color: #00ff00;
-}
-
-.w3cicon {
-    border: 0;
-    width: 5%;
-    float: right;
-}
-
-.tr {
-    text-align: right;
-}
-
-.borderbottom {
-    border-bottom: 1px solid gray;
-}
+/* these are just here for the sake of avoiding the style='...' within html */
+.hidden {display: none;}
+.overflow-y {overflow-y: scroll;}
+.relpos {position: relative;}
+.bold {font-weight: bold;}
+.gray {color: gray;}
+.tr {text-align: right;}
