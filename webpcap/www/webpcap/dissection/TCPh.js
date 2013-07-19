@@ -18,8 +18,7 @@ function TCPh(data, offset, parent) {
     this.wsize    = ntohs(shortView[7]);     // window size
     this.csum     = ntohs(shortView[8]);     // header checksum
     this.urg      = ntohs(shortView[9]);     // urgent pointer
-    /* various options may follow; it is virtually impossible
-     * though to specify them within this struct */
+    /* various options may follow */
     
     this.id = createID(parent.src, this.sport, parent.dst, this.dport, 't');
     
@@ -52,7 +51,7 @@ TCPh.prototype = {
         var hidden = document.createElement('div');
         var label = document.createElement('label');
         var icon = document.createElement('span');
-        icon.setAttribute('class', 'dropdown');
+        icon.setAttribute('class', 'dropdown glow');
         label.setAttribute('for', prefix + 'td');
         label.appendChild(icon);
         label.innerHTML += 'Transmission Control Protocol';
@@ -69,16 +68,7 @@ TCPh.prototype = {
                          + 'Window size value: ' + this.wsize + '</br>'                         
                          + 'Checksum: 0x' + printNum(this.csum, 16, 4) + '</br>';
                          // FIXME options
-                         
-        var follow = document.createElement('span');
-        follow.setAttribute('onclick','filterTCPConn("' + this.id + '")');
-        follow.setAttribute('class', 'follow');
-        if (tcp_filter)
-            follow.innerHTML = 'Unfollow';
-        else
-            follow.innerHTML = 'Follow this TCP stream';
-        hidden.appendChild(follow);
-        
+                                 
         details.appendChild(hidden);
         
         return details;

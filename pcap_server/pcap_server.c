@@ -78,14 +78,11 @@ int main() {
     dev = "any";
     
     pcap_t *sdescr; /* session descriptor */
-
+    
     if ((sdescr = pcap_open_live(dev, SNAP_LEN, PROMISC, TO_MS, errbuf)) == NULL) {
         fprintf(stderr, "ERROR: Unable to open %s for capturing: %s\n", dev, errbuf);
         return -1;
     }
-    
-    fprintf(stdout,"Successfully opened interface %s for capturing.\n",dev);
-    fflush(stdout);
 
 //     /* FIXME: DEFINITELY want to support 802.11 as well */
 //     if (pcap_datalink(sdescr) != DLT_EN10MB) {
@@ -121,7 +118,10 @@ int main() {
         fprintf(stderr, "ERROR: Unable to install filter %s: %s\n", filter, pcap_geterr(sdescr));
         return -1;
     }
-    
+  
+    fprintf(stdout,"Successfully opened interface %s for capturing.\n",dev);
+
+   
     /* FIXME: this is basically an infinte loop atm */
     pcap_loop(sdescr, -1, sendPacket, NULL);    
     

@@ -39,7 +39,7 @@ IPv4h.prototype = {
         var hidden = document.createElement('div');
         var label = document.createElement('label');
         var icon = document.createElement('span');
-        icon.setAttribute('class', 'dropdown');
+        icon.setAttribute('class', 'dropdown glow');
         label.setAttribute('for', prefix + 'i4d');
         label.appendChild(icon);
         label.innerHTML += 'Internet Protocol Version 4';

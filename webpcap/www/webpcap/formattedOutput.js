@@ -13,7 +13,7 @@ function printNum(num, base, len) {
 
 function printSize(bytes) {
     if (bytes < 1024)
-        return bytes + ' B';
+        return bytes + ' Bit';
     else if (bytes < 1024 * 1024)
         return (bytes/1024 >> 0) + ' KiB';
     else if (bytes < 1024 * 1024 * 1024)
