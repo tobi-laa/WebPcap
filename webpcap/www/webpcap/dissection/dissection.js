@@ -1,6 +1,7 @@
 if (typeof require !== 'undefined') {
     var Pcaph = require('./Pcaph');
     var Ethh = require('./Ethh').Ethh;
+    var SLLh = require('./SLLh').SLLh;
     var printMAC = require('./Ethh').printMAC;
     var printIPv4 = require('./IPv4h').printIPv4;
     var printIPv6 = require('./IPv6h').printIPv6;
@@ -13,9 +14,11 @@ if (typeof require !== 'undefined') {
 }
 
 var oldPacket = null; // cache for previously received data
-var packets = [];
+var dissectedPackets = [];
 var rawPackets = [];
-var tcpConns = {};
+// the following two variables will hold the same objects, but...
+var connectionsById = {};      // .. these will be accessible via their ID
+var connectionsByArrival = []; // .. these are stored chronologically
 
 var counter = 1;
 
@@ -44,7 +47,7 @@ function dissect(data, f) {
     if(f) f(packet); // callback
     
     // store dissected and raw packet
-    packets[counter - 1] = packet;
+    dissectedPackets[counter - 1] = packet;
     rawPackets[counter - 1] = data.slice(0, packet.incl_len + 16);
     counter++;  
     
@@ -203,31 +206,43 @@ function handleConnection(toReturn, packet, parent) {
     if (!toReturn.id)
         return;
         
-    packet.tcp_id = toReturn.id;
+    packet.id = toReturn.id;
             
-    if (!tcpConns[toReturn.id]) {
-        tcpConns[toReturn.id] = new Object();
-        tcpConns[toReturn.id].packets = [packet];        
-        tcpConns[toReturn.id].src = printIPv4(parent.src);
-        tcpConns[toReturn.id].dst = printIPv4(parent.dst);
-        tcpConns[toReturn.id].sport = toReturn.sport;
-        tcpConns[toReturn.id].dport = toReturn.dport;
-        tcpConns[toReturn.id].num = 1;
-        tcpConns[toReturn.id].len = packet.orig_len;
+    if (!connectionsById[toReturn.id]) {
+        var connection = new Object();
+        connection.packets = [packet];        
+        connection.src = printIPv4(parent.src);
+        connection.dst = printIPv4(parent.dst);
+        connection.sport = toReturn.sport;
+        connection.dport = toReturn.dport;
+        connection.num = 1;
+        connection.len = packet.orig_len;
+        connection.visible = 0;
+        connection.id = toReturn.id;
+        
+        connectionsById[toReturn.id] = connection;
+        connectionsByArrival.push(connection);
     }
     else {
-        tcpConns[toReturn.id].packets.push(packet);
-        tcpConns[toReturn.id].num++;
-        tcpConns[toReturn.id].len += packet.orig_len;
+        connectionsById[toReturn.id].packets.push(packet);
+        connectionsById[toReturn.id].num++;
+        connectionsById[toReturn.id].len += packet.orig_len;
     }
 }
 
 function dissectApplicationLayer(packet, data, offset, parent) {
+    var toReturn = null;
     if (parent.sport === 6600 || parent.dport === 6600)
         packet.prot = 'MPD';
-    else if (parent.sport === 80 || parent.dport === 80)
-        packet.prot = 'HTTP';
-    return null;
+    else if (parent.sport === 80 || parent.dport === 80) {
+        toReturn = new HTTPh(data, offset, parent);
+        packet.class = 'HTTP';
+        if (!toReturn.headers)
+            toReturn = null;
+        else
+            packet.prot = 'HTTP';
+    }
+    return toReturn;
 /*  if (offset < ph.incl_len) {
         var buff = new Uint8Array(msg.data, offset);
         buff = String.fromCharCode.apply(String, buff);
@@ -243,20 +258,24 @@ function dissectApplicationLayer(packet, data, offset, parent) {
     }*/    
 } 
 
-function getPacket(num) {
-    return packets[num - 1];
+function getDissectedPacket(num) {
+    return dissectedPackets[num - 1];
 }
 
-function getPackets() {
-    return packets;
+function getDissectedPackets() {
+    return dissectedPackets;
 }
 
-function getTCPConn(id) {
-    return tcpConns[id];
+function getConnectionById(id) {
+    return connectionsById[id];
 }
 
-function getTCPConns() {
-    return tcpConns;
+function getConnectionsById() {
+    return connectionsById;
+}
+
+function getConnectionsByArrival() {
+    return connectionsByArrival;
 }
 
 function getRawPacket(num) {
@@ -269,5 +288,5 @@ function getRawPackets() {
 
 if (typeof module !== 'undefined') {
     module.exports.dissect = dissect;
-    module.exports.getTCPConns = getTCPConns;
+    module.exports.getConnectionsById = getConnectionsById;
 }
