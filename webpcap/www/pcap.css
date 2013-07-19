@@ -71,6 +71,7 @@ body {
  ******************************************************************************/
 .table {
     display: table;
+    table-layout: fixed;
     width: 100%;
 }
 
@@ -109,6 +110,7 @@ body {
     float: left;
     display: table-column;
     overflow: hidden; /* so everything stays on one line */
+    white-space: nowrap;
     padding-right: 0.6%; /* leave some space for readability */
     box-sizing: border-box;
     -moz-box-sizing: border-box;
@@ -197,7 +199,7 @@ input[type="checkbox"] ~ div { /* here's the trick; not clicked, don't show */
 }
 input[type="checkbox"]:checked ~ div { /* if clicked: show */
     display: block;
-    margin-left: 1.4vw;
+    margin-left: 1.2vw; /* dropdown size + margin */
 }
 
 /* this is the custom context menu that'll show up for packages/rows */
@@ -250,18 +252,30 @@ input[type="checkbox"]:checked ~ div { /* if clicked: show */
     position: absolute;
     width: 13px; /* no need to redraw borders from scrollbox */
     /* chromium's scrollbar is styled as follows */
-    background: -webkit-linear-gradient(left, #f0f0f0 50%, #e5e5e5 50%);
-    background: linear-gradient(left, #f0f0f0 50%, #e5e5e5 50%);
+    background: url(img/scrollbar.png),
+               -webkit-linear-gradient(left, #f0f0f0 50%, #e5e5e5 50%);
+    background: url(img/scrollbar.png), 
+                linear-gradient(left, #f0f0f0 50%, #e5e5e5 50%);
+    background-position: center center;
+    background-repeat: no-repeat;
     border-top: 1px solid #adadad; /* dark gray border */
     border-bottom: 1px solid #adadad;
 }
 #scrollbar:hover { /* brighten on hover */
-    background: -webkit-linear-gradient(left, #fafafa 50%, #efefef 50%);
-    background: linear-gradient(left, #fafafa 50%, #efefef 50%);
+    background: url(img/scrollbar.png),
+               -webkit-linear-gradient(left, #fafafa 50%, #efefef 50%);
+    background: url(img/scrollbar.png),
+                linear-gradient(left, #fafafa 50%, #efefef 50%);
+    background-position: center center;
+    background-repeat: no-repeat;
 }
 #scrollbar:active { /* and darken again when clicked */
-    background: -webkit-linear-gradient(left, #f0f0f0 50%, #e5e5e5 50%);
-    background: linear-gradient(left, #f0f0f0 50%, #e5e5e5 50%);
+    background: url(img/scrollbar.png), 
+               -webkit-linear-gradient(left, #f0f0f0 50%, #e5e5e5 50%);
+    background: url(img/scrollbar.png), 
+                linear-gradient(left, #f0f0f0 50%, #e5e5e5 50%);
+    background-position: center center;
+    background-repeat: no-repeat;
 }
 
 .scrollup { /* the upper button to scroll up a bit (upwards triangle) */
@@ -312,6 +326,7 @@ input[type="checkbox"]:checked ~ div { /* if clicked: show */
     -moz-user-select: none;
     -o-user-select: none;
     user-select: none;
+    cursor: default;
 }
 
 .hidebox { /* nice trick: hide something but let it be 'clickable' */
