@@ -9,7 +9,8 @@ body {
     background-color: #79b0e8; /* blue-ish */
     height: 98%; /* as with html tag but less to avoid scrolling */
     padding: 0.1%;
-    font-family: "Dejavu Sans", sans-serif;
+    /*font-family: "Dejavu Sans", sans-serif;*/
+    font-family: "DejaVu Sans Mono", monospace;
     font-size: 1vw;
 }
 
@@ -21,6 +22,8 @@ body {
 #input { /* this div holds all the buttons */
     width: 100%;
     height: 4.5%; /* fixed height for now */
+    color: white; /* white on blue */
+    font-weight: bold;
     margin-bottom: 0.4%;
     overflow: hidden; /* prevent this div from 'destroying' the whole layout */
 }
@@ -80,37 +83,23 @@ body {
     width: 100%;
 }
 /* some 'row styles'; these are the same colors as used by wireshark */
-.TCP {
-    background-color: #e7e6ff;
-}
-.UDP {
-    background-color: #daeeff;
-}
-.HTTP {
-    background-color: #e4ffc7;
-}
-.ARP {
-    background-color: #faf0d7;
-}
-.ICMP {
-    background-color: #fce0ff;
-}
-.Ethernet {
-    background-color: white;
-}
-.MPD { /* custom, not in wireshark */
-    background-color: #ffe7d6;
-}
-.selected {
-    background-color: #4b6983;
-    color: white;
-}
+.TCP       { background-color: #e7e6ff;}
+.UDP       { background-color: #daeeff;}
+.HTTP      { background-color: #e4ffc7;}
+.ARP       { background-color: #faf0d7;}
+.ICMP      { background-color: #fce0ff;}
+.Ethernet  { background-color: white;}
+.MPD       { background-color: #ffe7d6;} /* custom, not from wireshark */
+.malformed { background-color: #12272e;
+             color: #f78787;} /* malformed packet, wrong checksum etc */
+.selected  { background-color: #4b6983;
+             color: white;}
 
 .col {
     float: left;
     display: table-column;
     overflow: hidden; /* so everything stays on one line */
-    white-space: nowrap;
+    white-space: pre;
     padding-right: 0.6%; /* leave some space for readability */
     box-sizing: border-box;
     -moz-box-sizing: border-box;
