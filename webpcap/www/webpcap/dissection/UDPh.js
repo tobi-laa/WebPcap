@@ -13,6 +13,15 @@ function UDPh(data, offset, parent) {
     this.csum  = ntohs(shortView[3]); // header checksum
       
     this.id = createID(parent.src, this.sport, parent.dst, this.dport, 'u');
+    
+    if (offset + this.getHeaderLength() > data.byteLength)
+        this.val = false;
+    else if (!this.csum) // UDP checksum is optional...
+        this.val = true;
+    else {
+        var ph = buildPseudoHeader(parent, data, offset);
+        this.val = validateChecksum(ph);
+    }
         
     this.next_header = null;
 }
@@ -40,7 +49,7 @@ UDPh.prototype = {
         hidden.innerHTML = 'Source port: ' + this.sport + '</br>'
                          + 'Destination port: ' + this.dport + '</br>'
                          + 'Length: ' + this.len + '</br>'                    
-                         + 'Checksum: 0x' + printNum(this.csum, 16, 4) + '</br>';
+                         + 'Checksum: 0x' + printNum(this.csum, 16, 4) + ' [' + (this.val ? 'correct' : 'incorrect') + ']</br>';
         
         details.appendChild(hidden);
         

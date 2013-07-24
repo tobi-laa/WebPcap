@@ -20,6 +20,13 @@ function TCPh(data, offset, parent) {
     this.urg      = ntohs(shortView[9]);     // urgent pointer
     /* various options may follow */
     
+    if (offset + this.getHeaderLength() > data.byteLength)
+        this.val = false;
+    else {
+        var ph = buildPseudoHeader(parent, data, offset);
+        this.val = validateChecksum(ph);
+    }
+
     this.id = createID(parent.src, this.sport, parent.dst, this.dport, 't');
     
     this.next_header = null;
@@ -38,9 +45,41 @@ function createID(src, sport, dst, dport, prefix) {
     return prefix + toSort[0] + toSort[1];
 }
 
+function buildPseudoHeader(parent, data, offset) {
+    var len = data.byteLength - offset;
+    var packet = new Uint16Array(data, offset, len / 2 | 0);
+        
+    if (parent.src.length === 4) { // IPv4
+        var ph = new ArrayBuffer(12 + packet.length * 2);
+        var byteView = new Uint8Array(ph);
+        var shortView = new Uint16Array(ph);
+        
+        for (var i = 0; i < 4; i++) {
+            byteView[i]     = parent.src[i];
+            byteView[i + 4] = parent.dst[i];
+        }
+        byteView[8] = 0; // padding
+        byteView[9] = parent.prot; // will always be 6
+        shortView[5] = ntohs(len); // TCP length
+        
+        for (var i = 0; i < packet.length; i++) {
+            shortView[i + 6] = packet[i];
+        }
+        if (len % 2)
+            shortView[shortView.length - 1] = 
+            new Uint8Array(data)[data.byteLength - 1] << 8;
+        
+        return shortView;
+    }
+    else { // IPv6
+        alert(6)
+        var ph = new ArrayBuffer(40 + tcph.length * 2);
+    }
+}
+
 TCPh.prototype = {
     getHeaderLength: function () {
-        return 4 * ((ntohs(this.off_flag)) >> 12);
+        return 4 * (ntohs(this.off_flag) >> 12);
     },
     printDetails: function (pkt_num, prefix) {
         var details = document.createElement('div');
@@ -66,7 +105,7 @@ TCPh.prototype = {
                          // FIXME
                          // + 'Flags: ' +  + '</br>'
                          + 'Window size value: ' + this.wsize + '</br>'                         
-                         + 'Checksum: 0x' + printNum(this.csum, 16, 4) + '</br>';
+                         + 'Checksum: 0x' + printNum(this.csum, 16, 4) + ' [' + (this.val ? 'correct' : 'incorrect') + ']</br>';
                          // FIXME options
                                  
         details.appendChild(hidden);

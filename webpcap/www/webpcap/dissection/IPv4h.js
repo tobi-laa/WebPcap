@@ -20,8 +20,13 @@ function IPv4h(data, offset) {
     this.csum = ntohs(shortView[5]);          // header checksum
     this.src  = byteView.subarray(12, 16);    // source IPv4 address
     this.dst  = byteView.subarray(16, 20);    // destination IPv4 address
-    /* various options may follow; it is virtually impossible
-     * though to specify them within this struct */
+    /* various options may follow */
+    
+    if (offset + this.getHeaderLength() > data.byteLength)
+        this.val = false;
+    else 
+        this.val = validateChecksum(new Uint16Array(data, offset, 
+                                                    this.getHeaderLength() / 2));
         
     this.next_header = null;
 }
@@ -56,7 +61,7 @@ IPv4h.prototype = {
                          + 'Fragment offset: ' + this.off + '</br>'
                          + 'Time to live: ' + this.ttl + '</br>'
                          + 'Protocol: ' + this.prot + '</br>'
-                         + 'Header checksum: 0x' + printNum(this.csum, 16, 4) + '</br>'
+                         + 'Header checksum: 0x' + printNum(this.csum, 16, 4) + ' [' + (this.val ? 'correct' : 'incorrect') + ']</br>'
                          + 'Source: ' + printIPv4(this.src) + '</br>'
                          + 'Destination: ' + printIPv4(this.dst) + '</br>';
 
@@ -78,6 +83,15 @@ function printIPv4(ip) {
     for (i = 1; i < ip.length; i++)
         output += '.'+ip[i];
     return output;
+}
+
+function validateChecksum(shortView) {    
+    var val = 0;
+    for (var i = 0; i < shortView.length; i++)
+        val += shortView[i];
+    val = ~((val & 0xffff) + (val >>> 16)) & 0xffff;
+    
+    return val === 0;
 }
 
 if (typeof module !== 'undefined') {
