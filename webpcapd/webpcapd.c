@@ -13,10 +13,12 @@
 #define PROMISC 0       /* capture in promiscuous mode or not? */
 #define TO_MS 1024      /* based on the value tcpdump uses... */
 
-#define PORT 1337
+#define PORT 31337
 #define BUFSIZE 4096
 
 #define DEF_FIL "not (host 127.0.0.1 or (tcp port 8080 and ("
+#define OKAY "O"
+#define ERROR "E"
 
 typedef struct pcaprec_hdr_s {
         guint32 ts_sec;         /* timestamp seconds */
@@ -38,6 +40,8 @@ pcaprec_hdr_t *pktbuff;
 /* FIXME: redirect stdout & stderr to a logfile */
 
 int server, client; /* server & client sockets */
+
+pcap_t *sdescr; /* session descriptor */
 
 int pkthdrsz;
 
@@ -73,22 +77,8 @@ int main() {
     pktbuff = malloc(sizeof(pcaprec_hdr_t));
     
     pkthdrsz = sizeof(pcaprec_hdr_t);
-
-    char *dev, *filter;
-    dev = "any";
     
-    pcap_t *sdescr; /* session descriptor */
-    
-    if ((sdescr = pcap_open_live(dev, SNAP_LEN, PROMISC, TO_MS, errbuf)) == NULL) {
-        fprintf(stderr, "ERROR: Unable to open %s for capturing: %s\n", dev, errbuf);
-        return -1;
-    }
-
-//     /* FIXME: DEFINITELY want to support 802.11 as well */
-//     if (pcap_datalink(sdescr) != DLT_EN10MB) {
-//         fprintf(stderr, "ERROR: Unable to capture on %s: Only Ethernet supported at this point (%d).\n", dev, pcap_datalink(sdescr));
-//         return -1;
-//     }
+    char *filter;
     
     int flen;
     if((flen = read(client, buffer, BUFSIZE)) > 0) {
@@ -96,8 +86,14 @@ int main() {
         strncpy(user_filter, buffer, flen);
     }
     filter = createDefaultFilter();
-    /* fprintf(stdout, filter);
-       fflush(stdout); */
+    
+    char *dev;
+    dev = "any";
+    
+    if ((sdescr = pcap_open_live(dev, SNAP_LEN, PROMISC, TO_MS, errbuf)) == NULL) {
+        fprintf(stderr, "ERROR: Unable to open %s for capturing: %s\n", dev, errbuf);
+        return close_session(-1);
+    }
 
     guint32 net;  /* network address */
     guint32 mask; /* subnet mask */
@@ -111,28 +107,36 @@ int main() {
     
     if (pcap_compile(sdescr, &fp, filter, 0, mask) == -1) {
         fprintf(stderr, "ERROR: Unable to parse filter %s: %s\n", filter, pcap_geterr(sdescr));
-        return -1;
+        write(client, ERROR, 1);
+        return close_session(-1);
     }
     
     if (pcap_setfilter(sdescr, &fp) == -1) {
         fprintf(stderr, "ERROR: Unable to install filter %s: %s\n", filter, pcap_geterr(sdescr));
-        return -1;
+        write(client, ERROR, 1);
+        return close_session(-1);
     }
   
-    fprintf(stdout,"Successfully opened interface %s for capturing.\n",dev);
+    fprintf(stdout,"Successfully opened interface %s for capturing.\n", dev);
+    write(client, OKAY, 1);
 
    
     /* FIXME: this is basically an infinte loop atm */
     pcap_loop(sdescr, -1, sendPacket, NULL);    
     
+    return close_session(1);
+}
+
+int close_session(exit_code) {
     pcap_close(sdescr);
     
     close(client);
     
     free(buffer);
     free(errbuf);
+    free(pktbuff);
     
-    return 1;
+    return exit_code;
 }
 
 /** This method creates a new socket, binds it to a specified IP/Port and sets it
@@ -173,9 +177,6 @@ void sendPacket(u_char *user, const struct pcap_pkthdr *h, const u_char *sp) {
     
     write(client, pktbuff, pkthdrsz);   /* send pcap header */
     write(client, sp, h->caplen);       /* send actual captured packet */
-    
-    /* FIXME */
-    /* fprintf(stdout, "%d\n", count++); */
 }
 
 /* FIXME */
@@ -225,6 +226,8 @@ char *createDefaultFilter() {
     }
     
     freeifaddrs(ifaddr);
+    
+    free(user_filter);
     
     return filter;
 }
