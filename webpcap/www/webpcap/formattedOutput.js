@@ -1,6 +1,9 @@
 var months = ['Jan','Feb','Mar','Apr','May','Jun',
               'Jul','Aug','Sep','Oct','Nov','Dec'];
               
+var iecUnits = [' Bit', ' KiB', ' MiB', ' GiB', ' TiB',
+                ' PiB', ' EiB', ' ZiB', ' YiB'];
+              
 function printNum(num, base, len) {
     if(num === null)
         return '%';
@@ -12,20 +15,19 @@ function printNum(num, base, len) {
 }
 
 function printSize(bytes) {
-    if (bytes < 1024)
-        return bytes + ' Bit';
-    else if (bytes < 1024 * 1024)
-        return (bytes/1024 >> 0) + ' KiB';
-    else if (bytes < 1024 * 1024 * 1024)
-        return (bytes/(1024 * 1024) >> 0) + ' MiB';
-    else
-        return (bytes/(1024 * 1024 * 1024) >> 0) + ' GiB';
+    var i = 0;
+    while (bytes >= 1024 && i < iecUnits.length - 1) {
+        bytes /= 1024;
+        i++;
+    }
+    return (bytes | 0) + iecUnits[i];
 }
 
 function printDate(date) {
     return months[date.getMonth()] + ' ' + date.getDate() + ', ' + 
            date.getFullYear() + ' ' + date.getHours() + ':' + 
-           date.getMinutes() + ':' + date.getSeconds();
+           printNum(date.getMinutes(), 10, 2) + ':' + 
+           printNum(date.getSeconds(), 10, 2);
 } 
 
 if (typeof module !== 'undefined')

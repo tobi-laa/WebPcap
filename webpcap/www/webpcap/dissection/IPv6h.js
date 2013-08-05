@@ -66,7 +66,7 @@ IPv6h.ALEN = 8;  // IPv6 address length in shorts
 function printIPv6(ip) {
     var output = printNum(ip[0], 16, 2);
     for (i = 1; i < ip.length; i++)
-        output += ':' + printNum(ip[i], 16, 2);
+        output += ':' + printNum(ip[i], 16, 0);
     return output;
 }
 

@@ -6,12 +6,12 @@ html {
     width: 100%;
 }
 body { 
-    background-color: #79b0e8; /* blue-ish */
+    background-color: #006ab3; /* blue-ish, old color: #79b0e8 */
     height: 98%; /* as with html tag but less to avoid scrolling */
     padding: 0.1%;
-    /*font-family: "Dejavu Sans", sans-serif;*/
-    font-family: "DejaVu Sans Mono", monospace;
-    font-size: 1vw;
+    font-family: "Dejavu Sans", sans-serif;
+    /*font-family: "DejaVu Sans Mono", monospace;*/
+    font-size: 0.9vw;
 }
 
 
@@ -52,6 +52,7 @@ body {
     background-color: white;
     float: left;
     overflow: scroll;
+    white-space: pre; /* want to display spaces, tabs etc */    
 }
 #raw { /* this shows the selected packet in hex and ascii */
     width: 50%;
@@ -62,8 +63,7 @@ body {
     background-color: white;
     float: left;
     overflow: scroll;
-    white-space: pre; /* want to display spaces, tabs etc */
-    font-family: "Dejavu Mono", monospace;
+    white-space: pre; /* want to display spaces, tabs etc */    
 }
 
 
@@ -159,22 +159,22 @@ body {
 }
 
 .dropdown { /* this is the little triangle you hit to 'show me more' */
-    width: 1vw; /* font size */
-    height: 1vw;
-    margin-right: 0.2vw;
+    width: 1em; /* font size */
+    height: 1em;
+    margin-right: 0.2em;
     background: url(img/arrow-right.svgz);
-    background-size: 1vw 1vw;
+    background-size: 1em 1em;
     cursor: pointer;
     float: left;
 }
 /* the dropdown icon usually comes with a checkbox to hide and show stuff */
 input[type="checkbox"]:checked + label .dropdown {
     background: url(img/arrow-down.svgz);
-    background-size: 1vw 1vw;
+    background-size: 1em 1em;
 }
 .clicked { /* this is for javascript triggered hide/show */
     background: url(img/arrow-down.svgz);
-    background-size: 1vw 1vw;
+    background-size: 1em 1em;
 }
 
 input[type="checkbox"] { /* checkboxes are only used for hide/show of divs */
@@ -188,7 +188,7 @@ input[type="checkbox"] ~ div { /* here's the trick; not clicked, don't show */
 }
 input[type="checkbox"]:checked ~ div { /* if clicked: show */
     display: block;
-    margin-left: 1.2vw; /* dropdown size + margin */
+    margin-left: 1.2em; /* dropdown size + margin */
 }
 
 /* this is the custom context menu that'll show up for packages/rows */
@@ -200,7 +200,7 @@ input[type="checkbox"]:checked ~ div { /* if clicked: show */
     background-color: white; /* suits the blue and white style */
     /* % does not work nicely for shadows, but rem will be relative.. */
     box-shadow: 0.15rem 0.15rem 0.3rem 0rem black;    
-    font-size: 0.8vw; /* a bit smaller than usual text */
+    font-size: 0.8rem; /* a bit smaller than usual text */
 }
 /* this is the style for entries of the context menu */
 .contextentry {
@@ -209,7 +209,7 @@ input[type="checkbox"]:checked ~ div { /* if clicked: show */
     font-weight: 600; /* looks a bit better for small font */
 }
 .contextentry:hover {
-    background-color: #79b0e8;
+    background-color: #006ab3;
 }
 
 
@@ -331,3 +331,5 @@ input[type="checkbox"]:checked ~ div { /* if clicked: show */
 .bold {font-weight: bold;}
 .gray {color: gray;}
 .tr {text-align: right;}
+.mono {font-family: "DejaVu Sans Mono", monospace;}
+.fontsized {height: 1rem;}

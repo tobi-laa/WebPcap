@@ -7,41 +7,45 @@
     <meta http-equiv="Content-Type" content="text/html;charset=utf-8" >
 </head>
 
-<body onclick="closeContextMenu()" onmouseup="deselectScrollbox()" onmousemove="moveScrollbox(event)" onresize="processResize()">
+<body id="body">
 
     <div id="input">
-
-        <div id="conn" class="button relpos" onclick="switchConnection()" title="Start a new live capture">
+        <div id="startcap" class="button" title="Start a new live capture">
             <img class="glow buttonicon" src="img/media-record.svgz" alt="Start capture">
         </div>
         
-        <div class="button" onclick="clearScreen()" title="Clear screen">
+        <div id="clearscr" class="button" title="Clear screen">
             <img class="glow buttonicon" src="img/clear.svgz" alt="Clear screen">
         </div>
 
-        <div class="button" onclick="saveCapture()" title="Save capture">
+        <div id="savecap" class="button" title="Save capture">
             <img class="glow buttonicon" src="img/save.svgz" alt="Save capture">
         </div>
         
-        <div class="button" onclick="clickOnFileInput()" title="Open pcap file">                 
+        <div id="loadcap" class="button" otitle="Open pcap file">                 
             <img class="glow buttonicon" src="img/document-open.svgz" alt="Save capture">       
             <div class="hidebox">
                 <input id="fileInput" type="file" onchange="readPcapFile(this.files[0], printRow)">
             </div>
         </div>            
                     
-        <div class="button" onclick="switchView()" title="Switch between packet and connection view">            
+        <div id="switchview" class="button" title="Switch between packet and connection view">            
             <img class="glow buttonicon" src="img/tab-duplicate.svgz" alt="Switch view">
         </div>
         
+        <form id="filterForm" class="submit" style="float: left;">
+            <label>
+            Filter: <input id="filterField" type="text">
+            </label>
+        </form>
+
         <a href="http://jigsaw.w3.org/css-validator/check/referer">
             <img class="glow w3cicon" src="img/valid-css-blue-v.svgz" alt="Valid CSS!">
         </a>
-        
+
         <a href="http://validator.w3.org/check/referer">
             <img class="glow w3cicon" src="img/valid-html-blue-v.svgz" alt="Valid HTML!">
-        </a>
-                    
+        </a>           
     </div>
 
     <div id="tableheader">
@@ -57,23 +61,23 @@
         </div>  
     </div>
     
-    <div id="output" oncontextmenu="return false" onmousewheel="processMouseWheel()">
-        <div class="table" oncontextmenu="return false">
+    <div id="output">
+        <div id="table" class="table">
         </div>            
     </div>
     
     <div id="scrollcontainer" class="suppressselection">
-        <div id="scrollup" class="scrollupinactive" onmousedown="startScrolling(-1)" onmouseup="stopScrolling()"></div>
+        <div id="scrollup" class="scrollupinactive"></div>
         <div id="scrollbox">
-            <div id="scrollbar" class="hidden" onmousedown="selectScrollbox()"></div>
+            <div id="scrollbar" class="hidden"></div>
         </div>
-        <div id="scrolldown" class="scrolldowninactive" onmousedown="startScrolling(1)" onmouseup="stopScrolling()"></div>
+        <div id="scrolldown" class="scrolldowninactive"></div>
     </div>
     
     <div id="details">
     </div>
     
-    <div id="raw">
+    <div id="raw" class="mono">
     </div>
     
     <div id="contextmenu" class="hidden">
@@ -93,6 +97,7 @@
     <script src="./webpcap/dissection/TCPh.js"></script>
     <script src="./webpcap/dissection/UDPh.js"></script>
     <script src="./webpcap/dissection/HTTPh.js"></script>
+    <script src="./webpcap/dissection/MPDh.js"></script>
     <script src="./webpcap/dissection/dissection.js"></script>
     
     <script src="./webpcap/webpcap.js"></script>

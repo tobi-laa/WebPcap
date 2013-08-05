@@ -56,8 +56,8 @@ UDPh.prototype = {
         return details;
     },
     toString: function () {
-        return 'SRC Port: '+this.sport+
-              ' DST Port: '+this.dport;
+        return (UDP_PORTS[this.sport] || this.sport) + ' ⊳ ' +
+               (UDP_PORTS[this.dport] || this.dport);
     }
 };
 

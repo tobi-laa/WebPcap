@@ -8,18 +8,19 @@ function HTTPh(data, offset, parent) {
     if (data.byteLength - offset < 4)
         return;
     
-    var byteView = new Uint8Array(data, offset, 4);
+    var stringView = String.fromCharCode.apply(null, 
+                                               new Uint8Array(data, offset, 4));
 
-    switch(String.fromCharCode.apply(null, byteView)) {
+    switch(stringView) {
     case 'GET ':
     case 'HEAD':
     case 'POST':
         this.type = 'Request';
-        processHeaders(this, new Uint8Array(data, offset));
+        this.processHeaders(String.fromCharCode.apply(null, new Uint8Array(data, offset)), parent);
         break;
     case 'HTTP':
         this.type = 'Response';
-        processHeaders(this, new Uint8Array(data, offset));
+        this.processHeaders(String.fromCharCode.apply(null, new Uint8Array(data, offset)));
         break;
     }
     
@@ -29,6 +30,21 @@ function HTTPh(data, offset, parent) {
 HTTPh.prototype = {
     getHeaderLength: function () {
         return this.hlen;
+    },
+    processHeaders: function (stringView, parent) {
+        var tokens = stringView.split('\r\n');
+        
+        this.hlen = 0
+        this.headers = [];
+        
+        for (var i = 0; i < tokens.length; i++) {
+            if (tokens[i].length === 0) {
+                this.hlen += 2;
+                return;
+            }
+            this.hlen += tokens[i].length + 2;
+            this.headers.push(tokens[i]);
+        }
     },
     printDetails: function (pkt_num, prefix) {
         var details = document.createElement('div');
@@ -59,19 +75,3 @@ HTTPh.prototype = {
         return this.headers[0];
     }
 };
-
-function processHeaders(httph, byteView) {
-    var tokens = String.fromCharCode.apply(null, byteView).split('\r\n');
-    
-    httph.hlen = 0
-    httph.headers = [];
-    
-    for (var i = 0; i < tokens.length; i++) {
-        if (tokens[i].length === 0) {
-            httph.hlen += 2;
-            return;
-        }
-        httph.hlen += tokens[i].length + 2;
-        httph.headers.push(tokens[i]);
-    }
-}

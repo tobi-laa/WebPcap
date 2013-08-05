@@ -1,3 +1,22 @@
+window.requestAnimationFrame = window.requestAnimationFrame || 
+                               window.mozRequestAnimationFrame || 
+                               window.oRequestAnimationFrame ||
+                               window.webkitRequestAnimationFrame;
+                               
+if (!window.requestAnimationFrame) {
+    window.requestAnimationFrame = 
+    function (callback) {
+        return setTimeout(callback, 2);
+    }
+    alert('Hi there!\n\
+           Your browser does not support the nifty method \
+           requestAnimationFrame, so I will render your session \
+           via setTimeout.');
+}
+                               
+window.cancelAnimationFrame =  window.cancelAnimationFrame ||
+                               window.cancelTimeout;
+
 var doc = document;
 var pktoutput = doc.getElementById('output');
 var pkttable  = pktoutput.getElementsByTagName('div')[0];
@@ -9,14 +28,14 @@ var selectedConnectionRow = new Object();
 
 var ws_url = 'ws://' + window.location.host + '/binary';
 var ws = null;  
-var conn_button = doc.getElementById('conn');
+var conn_button = doc.getElementById('startcap');
 
 var MINSCROLLBARSIZE = 28;
 var MAXSCROLLBARSTART;
 var currentRow = 0;
 var rows = [];
 
-var packetView = true;
+var packetView = false; // makes connection view the default
 var connRows = {};
 
 var contextMenu = doc.getElementById('contextmenu');
@@ -48,15 +67,68 @@ var scrolldown = doc.getElementById('scrolldown');
 
 var scrollbarSelected = false;
 
-var dontDraw = false;
+var serverFilter = 'none'; // default filter
+
+var JSEVENTS = 
+[
+    ['body', 'onclick', 'closeContextMenu()'],
+    ['body', 'onmouseup', 'deselectScrollbox()'],
+    ['body', 'onmousemove', 'moveScrollbox(event)'],
+    ['body', 'onresize', 'processResize()'],
+    ['startcap', 'onclick', 'switchConnection()'],
+    ['clearscr', 'onclick', 'clearScreen()'],
+    ['savecap', 'onclick', 'saveCapture()'],
+    ['loadcap', 'onclick', 'clickOnFileInput()'],
+    ['fileInput', 'onchange', 'readPcapFile(this.files[0])'],
+    ['switchview', 'onclick', 'switchView()'],
+    ['filterForm', 'onsubmit', 'return processFilter()'],
+    ['output', 'oncontextmenu', 'return false'],
+    ['output', 'onmousewheel', 'processMouseWheel(event)'],
+    ['table', 'oncontextmenu', 'return false'],    
+    ['scrollup', 'onmousedown', 'startScrolling(-1)'],
+    ['scrollup', 'onmouseup', 'stopScrolling()'],
+    ['scrollbar', 'onmousedown', 'selectScrollbox()'],
+    ['scrolldown', 'onmousedown', 'startScrolling(1)'],
+    ['scrolldown', 'onmouseup', 'stopScrolling()']
+];
+
+function initJSEvents() {
+    for (var i = 0; i < JSEVENTS.length; i++)
+        doc.getElementById(JSEVENTS[i][0])
+           .setAttribute(JSEVENTS[i][1], JSEVENTS[i][2]);
+}
+
+function onFirstMessage(msg) {
+    switch(String.fromCharCode(new Uint8Array(msg.data, 0, 1)[0])) {
+    case 'O':  
+        if (serverFilter !== 'none')
+            filterField.style.backgroundColor = '#afffaf';
+        ws.onmessage = onWSMessage;
+        dissectMessage(msg.data.slice(1));
+        return;
+    case 'E':
+    default:
+        filterField.style.backgroundColor = '#ffafaf';
+        switchConnection();
+        return;
+    }
+}
 
 function onWSMessage(msg) {
-    var oldLength, length, anchor;
+    dissectMessage(msg.data);
+}
+
+function dissectMessage(data) {
+    var oldLength, oldAnchor, length, anchor;
     
     if (packetView) oldLength = pkts.length;
-    else            oldLength = connectionViewLength()[0];
+    else {
+        var tuple = connectionViewLength();
+        oldLength = tuple[0];
+        oldAnchor = tuple[1];
+    }
     
-    dissect(msg.data);
+    dissect(data);
     // simpleDissect(msg.data, simplePrint);
     
     if (packetView)
@@ -64,7 +136,7 @@ function onWSMessage(msg) {
     else {
         var tuple = connectionViewLength();
         length = tuple[0];
-        anchor = tuple[1];   
+        anchor = tuple[1];
     }
     
     if (oldLength === length)
@@ -82,12 +154,16 @@ function onWSMessage(msg) {
             renderNextTime = true;
         }
     }
-    else if (!packetView)
+    else if (!packetView) {
+        // FIXME: what happens if connection is extended BELOW anchor...
+        if (oldAnchor === anchor && oldLength - oldAnchor >= maxPackets)
+            return;
         renderNextTime = true;
+    }
 }  
 
 function onWSOpen() {
-    ws.send('none\0'); // default filter
+    ws.send(serverFilter);
     conn_button.setAttribute('title', 'Stop the running live capture');
     conn_button.innerHTML =
     '<img class="glow buttonicon" src="img/media-playback-stop.svgz" alt="Start capture">';
@@ -100,10 +176,12 @@ function onWSClose() {
     '<img class="glow buttonicon" src="img/media-record.svgz" alt="Start capture">';
 }
 
+initJSEvents();
 processResize();
+switchConnection();
 
 function processResize() {
-    doc.body.style.fontSize = '1vw';
+    doc.body.style.fontSize = '0.9vw';
     
     pktoutput.style.width = '100%';
     scrollbox.style.height = '100%';
@@ -133,25 +211,38 @@ function processResize() {
     renderNextTime = true;    
 }
 
+function processFilter() {
+    serverFilter = filterField.value;
+    return false;
+}
+
 function switchView() {
     packetView = !packetView;
     renderNextTime = true;
 }
 
-var tmpLink = document.createElement('a');
-tmpLink.download = 'log.pcap';
-
-// will be used to click on the link
-var mc = document.createEvent('MouseEvents');
-mc.initEvent('click', true, false);
-
 function saveCapture() {
-    tmpLink.href = getURL();
-    tmpLink.dispatchEvent(mc);
+    downloadFileFromURI(getURL(), 'log.pcap');
 } 
 
+function downloadFileFromURI(uri, filename) {
+    if (!uri)
+        return;
+    
+    var tmpLink = document.createElement('a'); // link to be 'clicked' on
+    var mc = document.createEvent('MouseEvents'); // event to 'click' on it
+    
+    mc.initEvent('click', true, false);
+    
+    if (filename)
+        tmpLink.download = filename;    
+    tmpLink.href = uri;
+    
+    tmpLink.dispatchEvent(mc); //'click' on the link
+}
+
 function clickOnFileInput() {
-    fileInput.click();
+    fileInput.dispatchEvent(mc);
 }
 
 // FIXME: performance test
@@ -218,7 +309,7 @@ function printRow(packet, customClass) {
     src.setAttribute('class', 'col 20p'); 
     dst.setAttribute('class', 'col 20p'); 
     prot.setAttribute('class', 'col 10p');    
-    len.setAttribute('class', 'col 10p tr');    
+    len.setAttribute('class', 'col 10p tr mono');    
     info.setAttribute('class', 'col 30p');
     
     num.innerHTML  = packet.num;
@@ -305,12 +396,18 @@ function calculateScrollbarSize() {
 function selectScrollbox() {
     scrollbarSelected = true;
     doc.body.className = 'suppressselection'; // so we don't select text
+    pktoutput.unselectable = 'on';
+    pktdetails.unselectable = 'on';
+    pktpayload.unselectable = 'on';
     return false;
 }
 
 function deselectScrollbox() {
     scrollbarSelected = false;
     doc.body.className = ''; // re-enable (text) selection
+    pktoutput.unselectable = 'off';
+    pktdetails.unselectable = 'off';
+    pktpayload.unselectable = 'off';
     return false;
 }
 
@@ -346,25 +443,25 @@ function moveScrollbox(event) {
     
         newPos = (length * newPos) | 0;
 
-        if (dontDraw)
-            return;
-        
-        dontDraw = true;
-        
-        setTimeout(function (){
-            dontDraw = false;
-            connAnchor = 0;
-            pktAnchor = -1;        
-            scrollConnectionView(newPos);
-        }, 20);  
-    }
-        
+        connAnchor = 0;
+        pktAnchor = -1;        
+        scrollConnectionView(newPos);
+    }        
   
 }
 
 // FIXME
 // setInterval(render, 200);
-requestAnimationFrame(render);
+var renderThread;
+startRendering();
+
+function stopRendering() {
+    window.cancelAnimationFrame(renderThread);
+}
+
+function startRendering() {
+    renderThread = window.requestAnimationFrame(render);
+}
 
 function processClick(row, num) {
     selectRow(row, num);
@@ -395,9 +492,19 @@ function processRightClick(row, num, event, id) {
     contextMenu.style.left = event.pageX + 'px';
     contextMenu.style.top = event.pageY + 'px';
     
-    var follow = document.createElement('span');
+    var follow = doc.createElement('span');
     follow.setAttribute('onclick','followStream("' + id + '")');
     follow.setAttribute('class', 'contextentry');
+    
+    var srcContent = doc.createElement('span');
+    srcContent.setAttribute('onclick','downloadContent("' + id + '", 1)');
+    srcContent.setAttribute('class', 'contextentry');
+    srcContent.innerHTML = 'Save source content';
+
+    var dstContent = doc.createElement('span');
+    dstContent.setAttribute('onclick','downloadContent("' + id + '", 0)');
+    dstContent.setAttribute('class', 'contextentry');
+    dstContent.innerHTML = 'Save destination content';
     
     if (filter === id)
         follow.innerHTML = 'Unfollow';
@@ -405,8 +512,30 @@ function processRightClick(row, num, event, id) {
         follow.innerHTML = 'Follow this stream';
     
     contextMenu.appendChild(follow);
-        
+    contextMenu.appendChild(doc.createElement('br'));
+    contextMenu.appendChild(srcContent);
+    contextMenu.appendChild(doc.createElement('br'));
+    contextMenu.appendChild(dstContent);
+    
+    if (!connectionsById[id] || !connectionsById[id].contents)
+        return false;
+    
     return false;
+}
+
+function downloadContent(id, src) {
+    var contents = src ? connectionsById[id].srcC.content : connectionsById[id].dstC.content;
+    if (contents.length === 0)
+        return;
+    
+    var data = [];
+    
+    for (var i = 0; i < contents.length; i++)
+        data[i] = contents[i][0].slice(contents[i][1]);
+    
+    data = mergeBuffers(data);
+    
+    downloadFileFromURI(createURI('application/x-download', data), id);
 }
 
 function render() {    
@@ -417,7 +546,7 @@ function render() {
     }
     calculateScrollbarSize();
     
-    requestAnimationFrame(render);
+    window.requestAnimationFrame(render);
 }
 
 function renderPacketView() {    
@@ -558,7 +687,7 @@ function switchConnection() {
     ws.binaryType = 'arraybuffer';
     ws.onopen = onWSOpen;
     ws.onclose = onWSClose;
-    ws.onmessage = onWSMessage;        
+    ws.onmessage = onFirstMessage;        
 }
 
 
@@ -571,15 +700,10 @@ function switchConnection() {
 
 
 
-
-
-
-
-
-
-
-function processMouseWheel() {
-    scroll(event.wheelDelta / -24);
+function processMouseWheel(event) {
+    event = window.event || event;
+    var wheelDelta = event.detail ? event.detail * 5 : event.wheelDelta / -24;
+    scroll(wheelDelta);
     return false;
 }
 
@@ -687,15 +811,12 @@ function updateConnectionView() {
     
     var rows = pkttable.getElementsByClassName('row');
     
-    for (var k = rows.length - 1; k >= 0; k--) {
-        if (j === -1) {
-            updateConnectionHeader(i, rows[k]); 
-            if (--i < 0)
-                return;            
-            j = conns[i].packets.length * conns[i].visible - 1;
+    for (var k = 0; k < rows.length; k++) {
+        if (j === -1) updateConnectionHeader(i, rows[k]);
+        if (++j >= conns[i].packets.length * conns[i].visible) {
+            i++;
+            j = -1;
         }
-        else // don't update pkts, they don't change...
-            j--;
     }
 }
 
@@ -703,7 +824,7 @@ function renderConnectionView() {
     if (conns.length === 0)
         return;
     if (!renderNextTime) {
-        // updateConnectionView();
+        updateConnectionView();
         return;
     }
     
@@ -712,14 +833,20 @@ function renderConnectionView() {
    
     pkttable.innerHTML = '';
     
-    var row;
+    var row, num;
     
     for (var i = 0; i <= maxPackets; i++) {
-        if (p === -1)
+        if (p === -1) {
             row = printConnectionHeader(c);
-        else
+            num = conns[c].id;            
+        }
+        else {
             row = printRow(conns[c].packets[p], 'gray');
+            num = conns[c].packets[p].num;
+        }
         pkttable.appendChild(row);
+        if (num === selectedConnectionRow.num)
+            selectRow(row, num);
         
         p++;
         
@@ -737,88 +864,6 @@ function renderConnectionView() {
         pktoutput.scrollTop = 0;
     
     renderNextTime = false;
-    
-//     if (pktAnchor > -1)
-//         row = printRow(currentConnection.packets[pktAnchor], 'gray');
-//     else
-//         row = printConnectionHeader(connAnchor);
-//     
-//     pkttable.appendChild(row);
-//     shownPackets = 1;
-//     
-//     var i = connAnchor;
-//     var j = pktAnchor - 1;
-//     
-//     if (j < -1 && --i >= 0) {        
-//         currentConnection = conns[i];
-//         j = (currentConnection.packets.length * currentConnection.visible) - 1;
-//     }
-//     
-//     while (i >= 0) {
-//         if (pktoutput.scrollHeight > pktoutput.clientHeight)
-//             break;
-//         
-//         currentConnection = conns[i];
-//         
-//         if (j > -1)
-//             row = printRow(currentConnection.packets[j], 'gray');
-//         else
-//             row = printConnectionHeader(i);
-// 
-//         pkttable.insertBefore(row, pkttable.firstChild);
-//         shownPackets++;
-//         
-//         j--;
-//         
-//         if (j < -1) {
-//             if (--i < 0)
-//                 break;
-//             
-//             currentConnection = conns[i];
-//             j = (currentConnection.packets.length * currentConnection.visible) - 1;
-//         }
-//     }
-//     
-//     i = connAnchor;
-//     j = pktAnchor + 1;
-//     currentConnection = conns[i];
-//     
-//     if (j >= currentConnection.packets.length * currentConnection.visible && ++i < conns.length) {
-//         currentConnection = conns[i];
-//         j = -1;
-//     }
-//     
-//     while (i < conns.length) {
-//         if (pktoutput.scrollHeight > pktoutput.clientHeight)
-//             break;
-//         
-//         currentConnection = conns[i];
-//         
-//         if (j > -1)
-//             row = printRow(currentConnection.packets[j], 'gray');
-//         else
-//             row = printConnectionHeader(i);
-// 
-//         pkttable.appendChild(row);
-//         shownPackets++;
-//         // FIXME
-//         // we always want the anchor to be the last element..
-//         connAnchor = i;
-//         pktAnchor = j;
-//         
-//         j++;
-//                 
-//         if (j >= currentConnection.packets.length * currentConnection.visible) {
-//             if (++i >= conns.length)
-//                 break;
-//             
-//             currentConnection = conns[i];
-//             j = -1;
-//         }
-//     }
-//     
-//     if (autoscroll)
-//         pktoutput.scrollTop = pktoutput.scrollHeight;
 }
 
 function printConnectionHeader(connectionNumber) {
@@ -833,7 +878,7 @@ function printConnectionHeader(connectionNumber) {
 
     row.setAttribute('onclick','processClick(this, "' + connection.id + '")');
     row.setAttribute('oncontextmenu','processRightClick(this, "' + connection.id + '", event, "' + connection.id + '")');
-    row.setAttribute('class','row ' + connection.packets[0].prot);
+    row.className = 'row ' + (connection.class || connection.prot);
     
     var drop = doc.createElement('div');
     var num  = doc.createElement('div');
@@ -848,7 +893,7 @@ function printConnectionHeader(connectionNumber) {
     src.setAttribute('class', 'col 20p'); 
     dst.setAttribute('class', 'col 20p'); 
     prot.setAttribute('class', 'col 10p');    
-    len.setAttribute('class', 'col 10p tr');    
+    len.setAttribute('class', 'col 10p tr mono');    
     info.setAttribute('class', 'col 30p');
     
     var icon = doc.createElement('span');
@@ -862,7 +907,7 @@ function printConnectionHeader(connectionNumber) {
     num.innerHTML  = connection.num;
     src.innerHTML  = connection.src + ':' + connection.sport;
     dst.innerHTML  = connection.dst + ':' + connection.dport;
-    prot.innerHTML = connection.packets[0].prot;
+    prot.innerHTML = connection.prot;
     len.innerHTML  = printSize(connection.len);
     if (filter === connection.id)
         info.innerHTML = 'Following';
@@ -884,12 +929,15 @@ function updateConnectionHeader(connectionNumber, row) {
     if (!connection || !row) 
         return;
     
+    if (selectedConnectionRow.num !== connection.id)
+        row.className = 'row ' + (connection.class || connection.prot);
+    
     var cols = row.getElementsByTagName('div');
     
     cols[1].innerHTML  = connection.num;
     cols[2].innerHTML  = connection.src + ':' + connection.sport;
     cols[3].innerHTML  = connection.dst + ':' + connection.dport;
-    cols[4].innerHTML = connection.packets[0].prot;
+    cols[4].innerHTML  = connection.prot;
     cols[5].innerHTML  = printSize(connection.len);
 }
 
@@ -928,265 +976,3 @@ function followStream(id) {
     autoscroll = true;
     renderNextTime = true;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/*
- * deprecated methods... these might be used for performance tests
- * 
- * later they'll be send to programmer's hell :-P
- */
-// var connview = doc.getElementById('connview');
-// var connoutput = connview.getElementsByClassName('output')[0];
-// var conntable = connoutput.getElementsByTagName('div')[0];
-// var conndetails = connview.getElementsByClassName('details')[0];
-// var connpayload = connview.getElementsByClassName('details')[1];
-// 
-// function switchView_old() {
-//     packetView = !packetView;
-//     if (packetView) {
-//         connview.setAttribute('class', 'hidden');
-//         pktview.removeAttribute('class');
-//     }
-//     else {
-//         pktview.setAttribute('class', 'hidden');
-//         connview.removeAttribute('class');
-//     }
-// }
-// 
-// function switchVisibility_old(dropdown, id) {
-//     var container = doc.getElementById(id);
-//     if (container.className === 'hidden') {
-//         container.className = 'table gray borderbottom';
-//         dropdown.className = 'dropdown clicked';
-//     }
-//     else {
-//         container.className = 'hidden';
-//         dropdown.className = 'dropdown';
-//     }
-// }
-// 
-// function print(packet) {
-//     if (pktoutput.scrollHeight > pktoutput.clientHeight) {
-//         pkttable.removeChild(pkttable.firstChild);
-//     }
-//     
-//     printConnection(packet);
-//     
-//     var row = printRow(packet);
-//     if (tcp_filter && packet.tcp_id !== tcp_filter)
-//         return;
-//     pkttable.appendChild(row);
-// }
-// 
-// function printConnection(packet) {
-//     if (!packet.tcp_id) 
-//         return;
-//     
-//     var conn = getTCPConn(packet.tcp_id);
-//     
-//     var row = connRows[packet.tcp_id];
-//     
-//     if (!row) {
-//         row = connRows[packet.tcp_id] = new Object();
-//         row.root = doc.createElement('div');
-//         row.row = doc.createElement('div');
-//                 
-//         row.root.setAttribute('class', 'hidden');
-//         row.root.setAttribute('id', packet.tcp_id);
-//         
-//         row.row.setAttribute('onclick','processClick(this, "' + packet.tcp_id + '")');
-//         row.row.setAttribute('class','row ' + packet.prot);
-//         
-//         conntable.appendChild(row.row);
-//         conntable.appendChild(row.root);
-//     }
-//         
-//     var num   = doc.createElement('div');
-//     var src  = doc.createElement('div');
-//     var dst  = doc.createElement('div');
-//     var prot = doc.createElement('div');
-//     var len  = doc.createElement('div');
-//     var info = doc.createElement('div');
-//     
-//     
-//     
-//     row.root.appendChild(printRow(packet));
-//         
-//     num.setAttribute('class', 'col 5p tr');    
-//     src.setAttribute('class', 'col 25p'); 
-//     dst.setAttribute('class', 'col 25p'); 
-//     prot.setAttribute('class', 'col 10p');    
-//     len.setAttribute('class', 'col 5p');    
-//     info.setAttribute('class', 'col 30p');
-//     
-//     var dropdown = doc.createElement('span');
-//     
-//     dropdown.setAttribute('class', 'dropdown');
-//     dropdown.setAttribute('onclick', 'switchVisibility(this,' +
-//                                      '"' + packet.tcp_id + '")');
-//     
-//     num.appendChild(dropdown);
-//     num.innerHTML  += conn.num;
-//     src.innerHTML   = conn.src + ':' + conn.sport;
-//     dst.innerHTML   = conn.dst + ':' + conn.dport;
-//     prot.innerHTML  = packet.prot;
-//     len.innerHTML   = printSize(conn.len);
-//     
-//     row.row.innerHTML = '';
-//     row.row.appendChild(num);
-//     row.row.appendChild(src);
-//     row.row.appendChild(dst);
-//     row.row.appendChild(prot);
-//     row.row.appendChild(len);
-//     row.row.appendChild(info);
-//     
-//     return row.row;
-// }
-// 
-// function printConnections() {
-//     var tcpConns = getTCPConns();
-//     
-//     for (id in tcpConns) 
-//         printConnection(tcpConns[id].pkts[0]);
-// }
-// 
-// function filterTCPConn_old(tcp_id) {   
-//     var f;
-//     if (tcp_filter === tcp_id) {
-//         tcp_filter = false;
-//         f = function() {printPackets(getPackets());}
-//     }
-//     else {
-//         tcp_filter = tcp_id;
-//         f = function() {printPackets(getTCPConn(tcp_id).pkts);}
-//     }
-//     clearScreen(f);
-// }
-// 
-// function printPackets(pkts) {
-//     if (!pkts) return;
-//     
-//     var i = 0;
-//     var stepSize = Math.min(Math.ceil(pkts.length / 10), 5000);
-//     
-//     anim = requestAnimationFrame(drawStep);
-//     
-//     function drawStep() {        
-//         var upperLimit = i + stepSize;
-//         
-//         for (; i < pkts.length && i < upperLimit; i++) {
-//             if (pkts[i].num === selectedPacketRow.num) {
-//                 var row = printRow(pkts[i]);
-//                 pkttable.appendChild(row);
-//                 selectRow(row, pkts[i].num);
-//                 printPacketDetails(pkts[i].num);
-//                 printPayload(pkts[i].num);
-//             }
-//             else
-//                 pkttable.appendChild(printRow(pkts[i]));            
-//         }
-//         
-//         var percent = (i * 100 / pkts.length) | 0;
-//         progressBarPercent.innerHTML = percent;
-//         progressBarBox.style.width = percent + '%';
-//         
-//         if (i >= pkts.length) {   
-//             progressBar.className = 'hidden';
-//             cancelAnimationFrame(anim);            
-//         }
-//         else     
-//             anim = requestAnimationFrame(drawStep);
-//     }
-//     
-// //     for (var i = 0; i < pkts.length; i++) {
-// //         if (pkts[i].num === selectedPacketRow.num) {
-// //             var row = printRow(pkts[i]);
-// //             pkttable.appendChild(row);
-// //             selectRow(row, pkts[i].num);
-// //             printPacketDetails(pkts[i].num);
-// //             printPayload(pkts[i].num);
-// //         }
-// //         else
-// //             pkttable.appendChild(printRow(pkts[i]));
-// //         
-// //         draw--;
-// //         if (draw <= 0) {
-// //             draw = 30;
-// //         }
-// //     }
-// }
-
-// // FIXME FIXME FIXME
-// function clearScreen(f) {
-//     return;
-//     var rownum = pkttable.getElementsByClassName('row').length;
-//     var stepSize = Math.min(Math.ceil(rownum / 20), 5000);
-//     
-//     anim = requestAnimationFrame(
-//         function() {
-//             progressBar.className = '';
-//             removeRow();        
-//         });
-//     
-//     pktdetails.innerHTML = '';
-//     pktpayload.innerHTML = '';
-//     
-//     var count = 0;
-//     
-//     function removeRow() {
-//         for (var i = 0; i < stepSize; i++) {
-//             if (!pkttable.firstChild)
-//                 break;
-//             pkttable.removeChild(pkttable.firstChild);
-//             count++;
-//         }
-//         
-//         var percent = (count * 100 / rownum) | 0;
-//         progressBarPercent.innerHTML = percent;
-//         progressBarBox.style.width = percent + '%';
-//         
-//         if (!pkttable.firstChild) {
-//             if (f) {         
-//                 anim = requestAnimationFrame(f);                
-//             }
-//             else {
-//                 progressBar.className = 'hidden';
-//                 cancelAnimationFrame(anim);
-//             }
-//         }  
-//         else
-//             anim = requestAnimationFrame(removeRow);
-//     }
-// }
-
-// var progressBar        = doc.getElementById('progressbar');
-// var progressBarBox     = progressBar.getElementsByTagName('div')[0];
-// var progressBarPercent = progressBar.getElementsByTagName('span')[0];

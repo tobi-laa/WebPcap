@@ -3,8 +3,8 @@
  ************************** TCP HEADER ****************************
  ******************************************************************
  */
-
 function TCPh(data, offset, parent) {
+    var byteView  = new Uint8Array (data, offset, TCPh.HLEN);
     var shortView = new Uint16Array(data, offset, TCPh.HLEN / 2);
     var intView   = new Uint32Array(data, offset, TCPh.HLEN / 4);
     
@@ -13,8 +13,10 @@ function TCPh(data, offset, parent) {
     // note: >>> 0 is a trick to convert the number to an unsigned integer
     this.seqn     = ntohl(intView[1]) >>> 0; // sequence number
     this.ackn     = ntohl(intView[2]) >>> 0; // ACK number
-    // FIXME: maybe split the following in two chars?
-    this.off_flag = shortView[6]; // data offset, reserved portion, flags
+    this.off_rsd  = byteView[12]; // data offset, reserved portion
+    this.flags    = byteView[13]; // various flags
+    this.syn      = byteView[13] & 0x02;
+    this.ack      = byteView[13] & 0x10;
     this.wsize    = ntohs(shortView[7]);     // window size
     this.csum     = ntohs(shortView[8]);     // header checksum
     this.urg      = ntohs(shortView[9]);     // urgent pointer
@@ -50,7 +52,7 @@ function buildPseudoHeader(parent, data, offset) {
     var packet = new Uint16Array(data, offset, len / 2 | 0);
         
     if (parent.src.length === 4) { // IPv4
-        var ph = new ArrayBuffer(12 + packet.length * 2);
+        var ph = new ArrayBuffer(12 + len + (len % 2));
         var byteView = new Uint8Array(ph);
         var shortView = new Uint16Array(ph);
         
@@ -66,20 +68,41 @@ function buildPseudoHeader(parent, data, offset) {
             shortView[i + 6] = packet[i];
         }
         if (len % 2)
-            shortView[shortView.length - 1] = 
-            new Uint8Array(data)[data.byteLength - 1] << 8;
+            byteView[byteView.length - 2] = 
+            new Uint8Array(data)[data.byteLength - 1];
         
         return shortView;
     }
     else { // IPv6
-        alert(6)
-        var ph = new ArrayBuffer(40 + tcph.length * 2);
+        var ph = new ArrayBuffer(40 + len + (len % 2));
+        var byteView = new Uint8Array(ph);
+        var shortView = new Uint16Array(ph);
+        
+        for (var i = 0; i < 8; i++) {
+            shortView[i]     = ntohs(parent.src[i]);
+            shortView[i + 8] = ntohs(parent.dst[i]);
+        }        
+        shortView[16] = ntohs(len); // length
+        shortView[17] = 0;          // length-padding (32 bit)
+        
+        shortView[18] = 0;          // padding
+         byteView[38] = 0;
+         byteView[39] = parent.nh   // next header
+        
+        for (var i = 0; i < packet.length; i++) {
+            shortView[i + 20] = packet[i];
+        }
+        if (len % 2)
+            byteView[byteView.length - 2] = 
+            new Uint8Array(data)[data.byteLength - 1];
+        
+        return shortView;
     }
 }
 
 TCPh.prototype = {
     getHeaderLength: function () {
-        return 4 * (ntohs(this.off_flag) >> 12);
+        return 4 * (this.off_rsd >>> 4);
     },
     printDetails: function (pkt_num, prefix) {
         var details = document.createElement('div');
@@ -113,12 +136,42 @@ TCPh.prototype = {
         return details;
     },
     toString: function () {
-        return 'SRC Port: '+this.sport+
-              ' DST Port: '+this.dport;
+        return (TCP_PORTS[this.sport] || this.sport) + ' ⊳ ' +
+               (TCP_PORTS[this.dport] || this.dport);
     }
 };
 
 TCPh.HLEN = 20; // TCP minimum header length in bytes
+
+var UDP_PORTS = []; // well-known ports
+var TCP_PORTS = []; // well-known ports
+TCP_PORTS[6600] = 'mpd'; // specifying mpd manually
+
+function parseWellKnownPorts() {
+    var lines = this.responseText.split('\n');
+    var tokens, index;
+    for (var i = 0; i < lines.length; i++) {
+        tokens = lines[i].split(/\s* \s*/, 3);
+        if (tokens[0] === '' || tokens[1] === '' || tokens[2] === '')
+            continue;
+        
+        index = Number(tokens[1]);
+         
+        switch (tokens[2]) {
+        case 'tcp':
+            TCP_PORTS[index] = TCP_PORTS[index] || tokens[0];
+            break;
+        case 'udp':
+            UDP_PORTS[index] = UDP_PORTS[index] || tokens[0];
+            break;
+        }
+    }
+}
+
+var portNumbersReq = new XMLHttpRequest();
+portNumbersReq.onload = parseWellKnownPorts;
+portNumbersReq.open("get", "webpcap/dissection/service-names-port-numbers.txt", true);
+portNumbersReq.send();
 
 if (typeof module !== 'undefined')
     module.exports = TCPh;

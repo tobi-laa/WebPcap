@@ -22,38 +22,42 @@ var connectionsByArrival = []; // .. these are stored chronologically
 
 var counter = 1;
 
-function dissect(data, f) {        
-    if (oldPacket !== null) { // consider previously received data
-        data = appendBuffer(oldPacket, data);
-        oldPacket = null;
+function dissect(data, f) {
+    while (true) {
+        if (oldPacket !== null) { // consider previously received data
+            data = appendBuffer(oldPacket, data);
+            oldPacket = null;
+        }
+        
+        if (data.byteLength < 16) { // i.e. not enough for pcap header
+            oldPacket = data;
+            return;
+        }
+        
+        var packet = new Pcaph(data, 0);
+        
+        if (data.byteLength < (packet.incl_len + 16)) { // i.e. packet not complete
+            oldPacket = data; // store for next call to dissect
+            return;
+        }   
+        
+        packet.num = counter;
+        packet.next_header =
+        dissectLinkLayer(packet, data.slice(0, packet.incl_len + 16), Pcaph.HLEN); // dissect further  
+        
+        if(f) f(packet); // callback
+        
+        // store dissected and raw packet
+        dissectedPackets[counter - 1] = packet;
+        rawPackets[counter - 1] = data.slice(0, packet.incl_len + 16);
+        counter++;
+        
+        // see if there is more data to dissect
+        if (packet.incl_len > 0 && data.byteLength > (packet.incl_len + 16))
+            data = data.slice(packet.incl_len + 16);
+        else
+            return;
     }
-    
-    if (data.byteLength < 16) { // i.e. not enough for pcap header
-        oldPacket = data;
-        return null;
-    }
-    
-    var packet = new Pcaph(data, 0);
-    
-    if (data.byteLength < (packet.incl_len + 16)) { // i.e. packet not complete
-        oldPacket = data; // store for next call to dissect
-        return null;
-    }   
-    
-    packet.num = counter;
-    packet.next_header =
-    dissectLinkLayer(packet, data, Pcaph.HLEN); // dissect further  
-    
-    if(f) f(packet); // callback
-    
-    // store dissected and raw packet
-    dissectedPackets[counter - 1] = packet;
-    rawPackets[counter - 1] = data.slice(0, packet.incl_len + 16);
-    counter++;  
-    
-    // see if there is more data to dissect
-    if (packet.incl_len > 0 && data.byteLength > (packet.incl_len + 16))
-        dissect(data.slice(packet.incl_len + 16), f);
 }
 
 var byteView;
@@ -62,7 +66,7 @@ var shortView;
 var infos = [];
 
 // FIXME: performance test
-function simpleDissect(data, f) {        
+function simpleDissect(data, f) {
     if (oldPacket !== null) { // consider previously received data
         data = appendBuffer(oldPacket, data);
         oldPacket = null;
@@ -130,6 +134,10 @@ function simpleDissect(data, f) {
 }
 
 function dissectLinkLayer(packet, data, offset) {
+    if (offset > packet.incl_len + 16) { // bogus value
+        packet.class = 'malformed';
+        return null;
+    }
     // FIXME probably should be variable
     var toReturn = new SLLh(data, offset);       
     packet.src  = printMAC(toReturn.src);
@@ -141,6 +149,10 @@ function dissectLinkLayer(packet, data, offset) {
 }
 
 function dissectNetworkLayer(packet, data, offset, parent) {
+    if (offset > packet.incl_len + 16) { // bogus value
+        packet.class = 'malformed';
+        return null;
+    }
     var toReturn;
     switch(parent.prot) {
     case 0x0800: // IPv4
@@ -150,12 +162,14 @@ function dissectNetworkLayer(packet, data, offset, parent) {
         packet.prot = 'IPv4';
         toReturn.next_header = 
         dissectTransportLayer(packet, data, offset + toReturn.getHeaderLength(), toReturn);
+        if (!toReturn.val)
+            packet.class = 'malformed';
         break;
     case 0x86DD: // IPv6
         toReturn = new IPv6h(data, offset);   
         packet.src  = printIPv6(toReturn.src);
         packet.dst  = printIPv6(toReturn.dst);
-        packet.prot = 'IPv6';        
+        packet.prot = 'IPv6';
         toReturn.next_header = 
         dissectTransportLayer(packet, data, offset + toReturn.getHeaderLength(), toReturn);
         break;
@@ -175,25 +189,33 @@ function dissectNetworkLayer(packet, data, offset, parent) {
 }
 
 function dissectTransportLayer(packet, data, offset, parent) {
+    if (offset > packet.incl_len + 16) { // bogus value
+        packet.class = 'malformed';
+        return null;
+    }
     var toReturn;
-    switch(parent.prot) {
+    switch(parent.prot || parent.nh) {
     case 1: // ICMP
         toReturn = null;      
         packet.prot = 'ICMP';
         break;
     case 6: // TCP
-        toReturn = new TCPh(data, offset, parent);
-        handleConnection(toReturn, packet, parent);
+        toReturn = new TCPh(data, offset, parent);        
         packet.prot = 'TCP';
+        handleConnection(packet, data, offset, parent, toReturn);
         toReturn.next_header = 
         dissectApplicationLayer(packet, data, offset + toReturn.getHeaderLength(), toReturn);
+        if (!toReturn.val)
+            packet.class = 'malformed';
         break;
     case 17: // UDP
-        toReturn = new UDPh(data, offset, parent);
-        handleConnection(toReturn, packet, parent);
+        toReturn = new UDPh(data, offset, parent);        
         packet.prot = 'UDP';
+        handleConnection(packet, data, offset, parent, toReturn);
         toReturn.next_header = 
         dissectApplicationLayer(packet, data, offset + toReturn.getHeaderLength(), toReturn);
+        if (!toReturn.val)
+            packet.class = 'malformed';
         break;
     default:
         toReturn = null;
@@ -202,60 +224,177 @@ function dissectTransportLayer(packet, data, offset, parent) {
     return toReturn;
 }
 
-function handleConnection(toReturn, packet, parent) {
+function handleConnection(packet, data, offset, parent, toReturn) {
     if (!toReturn.id)
         return;
         
     packet.id = toReturn.id;
             
+    var connection;
+    
     if (!connectionsById[toReturn.id]) {
-        var connection = new Object();
+        connection = new Object();
         connection.packets = [packet];        
-        connection.src = printIPv4(parent.src);
-        connection.dst = printIPv4(parent.dst);
+        connection.src = packet.src;
+        connection.dst = packet.dst;
         connection.sport = toReturn.sport;
         connection.dport = toReturn.dport;
         connection.num = 1;
         connection.len = packet.orig_len;
+        connection.prot = packet.prot;
         connection.visible = 0;
-        connection.id = toReturn.id;
-        
+        connection.id = toReturn.id;        
         connectionsById[toReturn.id] = connection;
         connectionsByArrival.push(connection);
+        
+        if (!toReturn.seqn) // no TCP packet
+            return;
+        
+        // otherwise prepare structures for gathering content
+        connection.srcC = new Object();
+        connection.srcC.content = [];
+        connection.srcC.preBuffer = [];  // buffer for segments before the first
+        connection.srcC.postBuffer = []; // buffer for segments after the first
+        
+        connection.dstC = new Object();
+        connection.dstC.content = [];
+        connection.dstC.preBuffer = [];
+        connection.dstC.postBuffer = [];
+                
+        if (toReturn.syn) // skip syn packages; there's no payload
+            return;
+        
+        connection.srcC.start = toReturn.seqn; // sequence number is anchor
+        connection.srcC.end = toReturn.seqn;
+        connection.dstC.start = toReturn.ackn; // ack number is anchor
+        connection.dstC.end = toReturn.ackn;        
     }
     else {
-        connectionsById[toReturn.id].packets.push(packet);
-        connectionsById[toReturn.id].num++;
-        connectionsById[toReturn.id].len += packet.orig_len;
+        connection = connectionsById[toReturn.id];
+        connection.packets.push(packet);
+        connection.num++;
+        connection.len += packet.orig_len;
     }
+    
+    if (!toReturn.seqn) // no TCP packet
+        return;
+    
+    // otherwise try to add this segment to connection's content
+    offset += toReturn.getHeaderLength();
+    var segStart = toReturn.seqn;
+    var segEnd = toReturn.seqn + packet.orig_len + Pcaph.HLEN - offset;
+    
+    if (segStart === segEnd) // no payload 
+        return;
+    
+    var c = connection.dstC; // will point to either srcC or dstC
+    if (connection.sport === toReturn.sport)
+        c = connection.srcC;
+    
+    if (typeof c.start === 'undefined') {
+        c.start = c.end = segStart;
+    }
+            
+    if (segStart === c.end) { // i.e. next expected segment
+        c.content.push([data, offset]);
+        c.end = segEnd;
+        // see if we can process some buffered segments now
+        while (c.postBuffer.length > 0 && c.postBuffer[0][1] === c.end) {
+            c.content.push([c.postBuffer[0][0], c.postBuffer[0][3]]);
+            c.end = c.postBuffer.shift[2];
+        }
+    }
+    else if (segEnd === c.start) { // i.e. directly preceding segment
+        c.content.unshift([data, offset]);
+        c.start = segStart;
+        // see if we can process some buffered segments now
+        while (c.preBuffer.length > 0 && c.preBuffer[0][2] + 1 === c.start) {
+            c.content.unshift([c.postBuffer[0][0], c.postBuffer[0][3]]);
+            c.start = c.preBuffer.shift[1];
+        }
+    }
+    else if (segStart > c.end) { // i.e. still missing stuff inbetween
+        // seek the position at which data should be inserted
+        var start = 0;
+        var end = c.postBuffer.length - 1;
+        var i;
+        
+        if (end < 0) { // i.e. empty buffer
+            c.postBuffer[0] = [data, segStart, segEnd, offset];
+            return;            
+        }
+        
+        while (start < end) {
+            i = ((start + end) / 2) | 0;
+            if (c.postBuffer[i][1] < segStart)
+                start = i + 1;
+            else
+                end = i;
+        }
+        
+        if (c.postBuffer[start][1] < segStart)
+            c.postBuffer.splice(start + 1, 0, [data, segStart, segEnd, offset]);
+        else if (c.postBuffer[start][1] > segStart)
+            c.postBuffer.splice(start, 0, [data, segStart, segEnd, offset]);
+    }
+    else if (segEnd < c.start) { // i.e. still missing stuff inbetween
+        // seek the position at which data should be inserted
+        var start = 0;
+        var end = c.preBuffer.length - 1;
+        var i;
+        
+        if (end < 0) { // i.e. empty buffer
+            c.preBuffer[0] = [data, segStart, segEnd, offset];
+            return;            
+        }
+        
+        while (start < end) {
+            i = ((start + end) / 2) | 0;
+            if (c.preBuffer[i][1] > segStart)
+                start = i + 1;
+            else
+                end = i;
+        }
+        
+        if (c.preBuffer[start][1] < segStart)
+            c.preBuffer.splice(start + 1, 0, [data, segStart, segEnd, offset]);
+        else if (c.preBuffer[start][1] > segStart)
+            c.preBuffer.splice(start, 0, [data, segStart, segEnd, offset]);
+    }
+    // else: segment is a duplicate
 }
 
 function dissectApplicationLayer(packet, data, offset, parent) {
+    if (offset > packet.incl_len + 16) { // bogus value
+        packet.class = 'malformed';
+        return null;
+    }
     var toReturn = null;
-    if (parent.sport === 6600 || parent.dport === 6600)
-        packet.prot = 'MPD';
+    
+    if (parent.sport === 6600 || parent.dport === 6600) {
+        toReturn = new MPDh(data, offset, parent);
+        connectionsById[packet.id].class = 'MPD';
+        packet.class = 'MPD';
+        if (!toReturn.type)
+            toReturn = null;
+        else {
+            connectionsById[packet.id].prot = 'MPD';
+            packet.prot = 'MPD';
+        }
+    }
+    
     else if (parent.sport === 80 || parent.dport === 80) {
         toReturn = new HTTPh(data, offset, parent);
+        connectionsById[packet.id].class = 'HTTP';
         packet.class = 'HTTP';
         if (!toReturn.headers)
             toReturn = null;
-        else
+        else {
+            connectionsById[packet.id].prot = 'HTTP';
             packet.prot = 'HTTP';
+        }
     }
     return toReturn;
-/*  if (offset < ph.incl_len) {
-        var buff = new Uint8Array(msg.data, offset);
-        buff = String.fromCharCode.apply(String, buff);
-        info += buff;
-    }
-    if (tl.sport === 6600 || tl.dport === 6600) {
-        prot = 'MPD';
-        info += buff;
-    }
-    else if(buff === 'GET ' || buff ==='HTTP') {
-        prot = 'HTTP';
-        tr_class = 'http';
-    }*/    
 } 
 
 function getDissectedPacket(num) {
