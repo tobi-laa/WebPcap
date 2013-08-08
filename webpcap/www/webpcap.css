@@ -12,6 +12,7 @@ body {
     font-family: "Dejavu Sans", sans-serif;
     /*font-family: "DejaVu Sans Mono", monospace;*/
     font-size: 0.9vw;
+    overflow-y: hidden;
 }
 
 
@@ -84,6 +85,9 @@ body {
 }
 /* some 'row styles'; these are the same colors as used by wireshark */
 .TCP       { background-color: #e7e6ff;}
+.SYNFIN    { background-color: #a0a0a0;}
+.RST       { background-color: #a40000;
+             color: #fffc9c;}
 .UDP       { background-color: #daeeff;}
 .HTTP      { background-color: #e4ffc7;}
 .ARP       { background-color: #faf0d7;}
@@ -121,7 +125,7 @@ body {
 
 
 /******************************************************************************
- * everything input related, so mostly button styles                          *
+ * everything input/output related, so mostly button styles                   *
  ******************************************************************************/
 .button {
     position: relative; /* so we can visually click the button */
@@ -210,6 +214,7 @@ input[type="checkbox"]:checked ~ div { /* if clicked: show */
 }
 .contextentry:hover {
     background-color: #006ab3;
+    color: white;
 }
 
 
@@ -217,14 +222,12 @@ input[type="checkbox"]:checked ~ div { /* if clicked: show */
 /******************************************************************************
  * everything 'self-made scrollbar' related                                   *
  ******************************************************************************/
-#scrollcontainer { /* this is the root container for everything... */
-    position: relative;
-    float: left; /* keep it next to #output */
+#scrollbar { /* this is the root container for everything... */
+    position: absolute;
     width: 15px; /* taken from chromium, might want to change this */
-    height: 50%; /* same height as #output */
 }
 
-#scrollbox { /* this is the dark-gray background box for the scrollbar */
+#scrollbar-track { /* this is the dark-gray background box for the scrollbar */
     position: absolute;
     top: 15px; /* leave space for the scrollup icon */
     width: 15px;
@@ -237,7 +240,7 @@ input[type="checkbox"]:checked ~ div { /* if clicked: show */
     overflow: hidden; /* don't show messed up scrollbars ;-) */
 }
 
-#scrollbar { /* this is the actual scrollbar */
+#scroll-thumb { /* this is the draggable thumb */
     position: absolute;
     width: 13px; /* no need to redraw borders from scrollbox */
     /* chromium's scrollbar is styled as follows */
@@ -250,7 +253,7 @@ input[type="checkbox"]:checked ~ div { /* if clicked: show */
     border-top: 1px solid #adadad; /* dark gray border */
     border-bottom: 1px solid #adadad;
 }
-#scrollbar:hover { /* brighten on hover */
+#scroll-thumb:hover { /* brighten on hover */
     background: url(img/scrollbar.png),
                -webkit-linear-gradient(left, #fafafa 50%, #efefef 50%);
     background: url(img/scrollbar.png),
@@ -258,7 +261,7 @@ input[type="checkbox"]:checked ~ div { /* if clicked: show */
     background-position: center center;
     background-repeat: no-repeat;
 }
-#scrollbar:active { /* and darken again when clicked */
+#scroll-thumb:active { /* and darken again when clicked */
     background: url(img/scrollbar.png), 
                -webkit-linear-gradient(left, #f0f0f0 50%, #e5e5e5 50%);
     background: url(img/scrollbar.png), 
@@ -267,17 +270,17 @@ input[type="checkbox"]:checked ~ div { /* if clicked: show */
     background-repeat: no-repeat;
 }
 
-.scrollup { /* the upper button to scroll up a bit (upwards triangle) */
+.scrollbar-button-up { /* the upper button to scroll up a bit (upwards triangle) */
     position: absolute;
     top: 0; /* always stay at the top */
     width: 15px;
     height: 15px;
     background: url(img/scroll-up.png); /* chromium's graphics */
 }
-.scrollup:active { /* darken when clicked */
+.scrollbar-button-up:active { /* darken when clicked */
     background: url(img/scroll-up-active.png);
 }
-.scrollupinactive { /* and gray out when no scrolling possible */
+.scrollbar-button-up-inactive { /* and gray out when no scrolling possible */
     position: absolute;
     top: 0;
     width: 15px;
@@ -285,17 +288,17 @@ input[type="checkbox"]:checked ~ div { /* if clicked: show */
     background: url(img/scroll-up-inactive.png);
 }
 
-.scrolldown { /* the same as scrollup... */
+.scrollbar-button-down { /* the same as scrollup... */
     position: absolute;
     bottom: 0; /* always stay at the bottom */
     width: 15px;
     height: 15px;
     background: url(img/scroll-down.png);
 }
-.scrolldown:active {
+.scrollbar-button-down:active {
     background: url(img/scroll-down-active.png);
 }
-.scrolldowninactive {
+.scrollbar-button-down-inactive {
     position: absolute;
     bottom: 0;
     width: 15px;

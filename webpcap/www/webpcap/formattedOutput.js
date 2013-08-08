@@ -3,7 +3,23 @@ var months = ['Jan','Feb','Mar','Apr','May','Jun',
               
 var iecUnits = [' Bit', ' KiB', ' MiB', ' GiB', ' TiB',
                 ' PiB', ' EiB', ' ZiB', ' YiB'];
-              
+          
+function printASCII(charCode) {    
+    if (charCode === 10 || charCode === 13 || // LF and CR
+       (charCode >= 32 && charCode <= 126))
+        return String.fromCharCode(charCode);
+    else
+        return '.';
+}
+
+function printASCIINoLF(charCode) {    
+    if (charCode >= 32 && charCode <= 126)
+        return String.fromCharCode(charCode);
+    else
+        return '.';
+}
+
+                
 function printNum(num, base, len) {
     if(num === null)
         return '%';

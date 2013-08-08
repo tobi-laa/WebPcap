@@ -4,7 +4,7 @@
  ******************************************************************
  */
 
-function IPv4h(data, offset) {   
+function IPv4h(data, offset) {
     var byteView  = new  Uint8Array(data, offset, IPv4h.HLEN);
     var shortView = new Uint16Array(data, offset, IPv4h.HLEN / 2);
     

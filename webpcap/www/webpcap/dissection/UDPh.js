@@ -55,9 +55,12 @@ UDPh.prototype = {
         
         return details;
     },
-    toString: function () {
+    printPorts: function() {
         return (UDP_PORTS[this.sport] || this.sport) + ' ⊳ ' +
                (UDP_PORTS[this.dport] || this.dport);
+    },
+    toString: function () {
+        return this.printPorts();
     }
 };
 

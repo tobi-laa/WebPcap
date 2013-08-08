@@ -54,7 +54,7 @@ SLLh.prototype = {
         return details;
     },
     toString: function () {
-        return 'From: '+printMAC(this.src);
+        return 'From:  ' + printMAC(this.src);
     }
 };
 

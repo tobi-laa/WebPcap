@@ -207,6 +207,10 @@ function dissectTransportLayer(packet, data, offset, parent) {
         dissectApplicationLayer(packet, data, offset + toReturn.getHeaderLength(), toReturn);
         if (!toReturn.val)
             packet.class = 'malformed';
+        else if (toReturn.RST)
+            packet.class = 'RST';
+        else if (toReturn.SYN || toReturn.FIN)
+            packet.class = 'SYNFIN';
         break;
     case 17: // UDP
         toReturn = new UDPh(data, offset, parent);        
@@ -228,140 +232,30 @@ function handleConnection(packet, data, offset, parent, toReturn) {
     if (!toReturn.id)
         return;
         
-    packet.id = toReturn.id;
+    packet.id = toReturn.id; // make TCP/UDP id easily accessible
             
     var connection;
     
     if (!connectionsById[toReturn.id]) {
-        connection = new Object();
-        connection.packets = [packet];        
-        connection.src = packet.src;
-        connection.dst = packet.dst;
-        connection.sport = toReturn.sport;
-        connection.dport = toReturn.dport;
-        connection.num = 1;
-        connection.len = packet.orig_len;
-        connection.prot = packet.prot;
-        connection.visible = 0;
-        connection.id = toReturn.id;        
+        // create a new connection object and store it properly
+        connection = new Connection(connectionsByArrival.length + 1, packet, data, offset, parent, toReturn);
         connectionsById[toReturn.id] = connection;
         connectionsByArrival.push(connection);
-        
-        if (!toReturn.seqn) // no TCP packet
-            return;
-        
-        // otherwise prepare structures for gathering content
-        connection.srcC = new Object();
-        connection.srcC.content = [];
-        connection.srcC.preBuffer = [];  // buffer for segments before the first
-        connection.srcC.postBuffer = []; // buffer for segments after the first
-        
-        connection.dstC = new Object();
-        connection.dstC.content = [];
-        connection.dstC.preBuffer = [];
-        connection.dstC.postBuffer = [];
-                
-        if (toReturn.syn) // skip syn packages; there's no payload
-            return;
-        
-        connection.srcC.start = toReturn.seqn; // sequence number is anchor
-        connection.srcC.end = toReturn.seqn;
-        connection.dstC.start = toReturn.ackn; // ack number is anchor
-        connection.dstC.end = toReturn.ackn;        
     }
     else {
+        // update the already existing connection object
         connection = connectionsById[toReturn.id];
-        connection.packets.push(packet);
-        connection.num++;
-        connection.len += packet.orig_len;
+        connection.update(packet);
     }
     
-    if (!toReturn.seqn) // no TCP packet
+    return;
+    
+    if (!toReturn.seqn) // no TCP packet: we're done here
         return;
     
     // otherwise try to add this segment to connection's content
     offset += toReturn.getHeaderLength();
-    var segStart = toReturn.seqn;
-    var segEnd = toReturn.seqn + packet.orig_len + Pcaph.HLEN - offset;
-    
-    if (segStart === segEnd) // no payload 
-        return;
-    
-    var c = connection.dstC; // will point to either srcC or dstC
-    if (connection.sport === toReturn.sport)
-        c = connection.srcC;
-    
-    if (typeof c.start === 'undefined') {
-        c.start = c.end = segStart;
-    }
-            
-    if (segStart === c.end) { // i.e. next expected segment
-        c.content.push([data, offset]);
-        c.end = segEnd;
-        // see if we can process some buffered segments now
-        while (c.postBuffer.length > 0 && c.postBuffer[0][1] === c.end) {
-            c.content.push([c.postBuffer[0][0], c.postBuffer[0][3]]);
-            c.end = c.postBuffer.shift[2];
-        }
-    }
-    else if (segEnd === c.start) { // i.e. directly preceding segment
-        c.content.unshift([data, offset]);
-        c.start = segStart;
-        // see if we can process some buffered segments now
-        while (c.preBuffer.length > 0 && c.preBuffer[0][2] + 1 === c.start) {
-            c.content.unshift([c.postBuffer[0][0], c.postBuffer[0][3]]);
-            c.start = c.preBuffer.shift[1];
-        }
-    }
-    else if (segStart > c.end) { // i.e. still missing stuff inbetween
-        // seek the position at which data should be inserted
-        var start = 0;
-        var end = c.postBuffer.length - 1;
-        var i;
-        
-        if (end < 0) { // i.e. empty buffer
-            c.postBuffer[0] = [data, segStart, segEnd, offset];
-            return;            
-        }
-        
-        while (start < end) {
-            i = ((start + end) / 2) | 0;
-            if (c.postBuffer[i][1] < segStart)
-                start = i + 1;
-            else
-                end = i;
-        }
-        
-        if (c.postBuffer[start][1] < segStart)
-            c.postBuffer.splice(start + 1, 0, [data, segStart, segEnd, offset]);
-        else if (c.postBuffer[start][1] > segStart)
-            c.postBuffer.splice(start, 0, [data, segStart, segEnd, offset]);
-    }
-    else if (segEnd < c.start) { // i.e. still missing stuff inbetween
-        // seek the position at which data should be inserted
-        var start = 0;
-        var end = c.preBuffer.length - 1;
-        var i;
-        
-        if (end < 0) { // i.e. empty buffer
-            c.preBuffer[0] = [data, segStart, segEnd, offset];
-            return;            
-        }
-        
-        while (start < end) {
-            i = ((start + end) / 2) | 0;
-            if (c.preBuffer[i][1] > segStart)
-                start = i + 1;
-            else
-                end = i;
-        }
-        
-        if (c.preBuffer[start][1] < segStart)
-            c.preBuffer.splice(start + 1, 0, [data, segStart, segEnd, offset]);
-        else if (c.preBuffer[start][1] > segStart)
-            c.preBuffer.splice(start, 0, [data, segStart, segEnd, offset]);
-    }
-    // else: segment is a duplicate
+    connection.processSegment(packet, data, offset, parent, toReturn);
 }
 
 function dissectApplicationLayer(packet, data, offset, parent) {

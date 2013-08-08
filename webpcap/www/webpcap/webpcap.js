@@ -8,10 +8,10 @@ if (!window.requestAnimationFrame) {
     function (callback) {
         return setTimeout(callback, 2);
     }
-    alert('Hi there!\n\
-           Your browser does not support the nifty method \
-           requestAnimationFrame, so I will render your session \
-           via setTimeout.');
+    alert('Hi there!\n' +
+          'Your browser does not support the nifty method ' +
+          'requestAnimationFrame, so I will render your session ' +
+          'via setTimeout.');
 }
                                
 window.cancelAnimationFrame =  window.cancelAnimationFrame ||
@@ -19,7 +19,7 @@ window.cancelAnimationFrame =  window.cancelAnimationFrame ||
 
 var doc = document;
 var pktoutput = doc.getElementById('output');
-var pkttable  = pktoutput.getElementsByTagName('div')[0];
+var pkttable  = doc.getElementById('table');
 var pktdetails = doc.getElementById('details');
 var pktpayload = doc.getElementById('raw');
 
@@ -53,27 +53,28 @@ var pktAnchor = -1;
 
 var shownPackets = 0;
 
-var scrollbox = doc.getElementById('scrollbox');
-var scrollbar = doc.getElementById('scrollbar');
-
 var maxPackets = 0;
 
 var renderNextTime = false;
 
 var filter = false;
 
-var scrollup = doc.getElementById('scrollup');
-var scrolldown = doc.getElementById('scrolldown');
+var scrollbarTrack = doc.getElementById('scrollbar-track');
+var scrollThumb = doc.getElementById('scroll-thumb');
 
-var scrollbarSelected = false;
+var scrollbar = doc.getElementById('scrollbar');
+var scrollbarButtonUp = doc.getElementById('scrollbar-button-up');
+var scrollbarButtonDown = doc.getElementById('scrollbar-button-down');
+
+var scrollThumbSelected = false;
 
 var serverFilter = 'none'; // default filter
 
 var JSEVENTS = 
 [
     ['body', 'onclick', 'closeContextMenu()'],
-    ['body', 'onmouseup', 'deselectScrollbox()'],
-    ['body', 'onmousemove', 'moveScrollbox(event)'],
+    ['body', 'onmouseup', 'deselectScrollThumb()'],
+    ['body', 'onmousemove', 'processMouseMove(event)'],
     ['body', 'onresize', 'processResize()'],
     ['startcap', 'onclick', 'switchConnection()'],
     ['clearscr', 'onclick', 'clearScreen()'],
@@ -85,11 +86,13 @@ var JSEVENTS =
     ['output', 'oncontextmenu', 'return false'],
     ['output', 'onmousewheel', 'processMouseWheel(event)'],
     ['table', 'oncontextmenu', 'return false'],    
-    ['scrollup', 'onmousedown', 'startScrolling(-1)'],
-    ['scrollup', 'onmouseup', 'stopScrolling()'],
-    ['scrollbar', 'onmousedown', 'selectScrollbox()'],
-    ['scrolldown', 'onmousedown', 'startScrolling(1)'],
-    ['scrolldown', 'onmouseup', 'stopScrolling()']
+    ['scrollbar-track', 'onmousedown', 'startTrackScrolling()'],
+    ['scrollbar-track', 'onmouseup', 'stopScrolling()'],
+    ['scroll-thumb', 'onmousedown', 'selectScrollThumb(event)'],
+    ['scrollbar-button-up', 'onmousedown', 'startScrolling(-1)'],
+    ['scrollbar-button-up', 'onmouseup', 'stopScrolling()'],
+    ['scrollbar-button-down', 'onmousedown', 'startScrolling(1)'],
+    ['scrollbar-button-down', 'onmouseup', 'stopScrolling()']
 ];
 
 function initJSEvents() {
@@ -184,14 +187,20 @@ function processResize() {
     doc.body.style.fontSize = '0.9vw';
     
     pktoutput.style.width = '100%';
-    scrollbox.style.height = '100%';
     tableheader.style.width = '100%';
     
     tableheader.style.width = (tableheader.offsetWidth - 15) + 'px';
     pktoutput.style.width = (pktoutput.offsetWidth - 15) + 'px';
-    scrollbox.style.height = (scrollbox.offsetHeight - 30) + 'px';
     
-    MAXSCROLLBARSTART = scrollbox.offsetHeight - MINSCROLLBARSIZE;
+    scrollbar.style.height = pktoutput.offsetHeight + 'px';
+    scrollbar.style.top =  pktoutput.offsetTop + 'px';
+    scrollbar.style.left = pktoutput.offsetLeft + pktoutput.offsetWidth + 'px';
+        
+    scrollbarTrack.style.height = '100%';
+    
+    scrollbarTrack.style.height = (scrollbarTrack.offsetHeight - 30) + 'px';
+    
+    MAXSCROLLBARSTART = scrollbarTrack.offsetHeight - MINSCROLLBARSIZE;
     
     maxPackets = 0;
     pkttable.innerHTML = '';
@@ -222,11 +231,11 @@ function switchView() {
 }
 
 function saveCapture() {
-    downloadFileFromURI(getURL(), 'log.pcap');
+    downloadFileFromURI(getPcapURI(), 'log.pcap');
 } 
 
-function downloadFileFromURI(uri, filename) {
-    if (!uri)
+function downloadFileFromURI(resource, filename) {
+    if (!resource || !resource.URI)
         return;
     
     var tmpLink = document.createElement('a'); // link to be 'clicked' on
@@ -236,13 +245,19 @@ function downloadFileFromURI(uri, filename) {
     
     if (filename)
         tmpLink.download = filename;    
-    tmpLink.href = uri;
+    tmpLink.href = resource.URI;
     
     tmpLink.dispatchEvent(mc); //'click' on the link
+    
+    if (resource.blob) // if we're using blobs, close the blob
+        resource.blob.close();
 }
 
 function clickOnFileInput() {
-    fileInput.dispatchEvent(mc);
+    var mc = document.createEvent('MouseEvents'); // event to 'click'
+    mc.initEvent('click', true, false);
+//     fileInput.dispatchEvent(mc);
+    fileInput.click();
 }
 
 // FIXME: performance test
@@ -299,11 +314,7 @@ function printRow(packet, customClass) {
         row.setAttribute('oncontextmenu','processRightClick(this, ' + packet.num + ', event, "' + packet.id + '")');
     else
         row.setAttribute('oncontextmenu','processRightClick(this, ' + packet.num + ', event)');
-    row.setAttribute('class','row ' + (packet.class || packet.prot));
-    
-    if (customClass) {
-        row.className += ' ' + customClass;
-    }
+    row.setAttribute('class','row ' + (customClass || '') + ' ' + (packet.class || packet.prot));
         
     num.setAttribute('class', 'col 10p tr');    
     src.setAttribute('class', 'col 20p'); 
@@ -353,48 +364,112 @@ function connectionViewLength() {
 
 function calculateScrollbarSize() {
     var packetNumber = 0;
-    var scrollboxStart;
-    var scrollboxSize;
+    var scrollbarTrackStart;
+    var scrollbarTrackSize;
     
     if (packetView) {
         packetNumber = pkts.length;
-        scrollboxStart = scrollanchor;
+        scrollbarTrackStart = scrollanchor;
     }
     else {
         var array = connectionViewLength();
         packetNumber = array[0];
-        scrollboxStart = array[1];
+        scrollbarTrackStart = array[1];
     }
     
-    scrollboxStart = Math.min(scrollboxStart * scrollbox.offsetHeight / packetNumber, MAXSCROLLBARSTART);
-    scrollboxSize = Math.max(maxPackets * scrollbox.offsetHeight / packetNumber, MINSCROLLBARSIZE);
+    scrollbarTrackStart = Math.min(scrollbarTrackStart * scrollbarTrack.offsetHeight / packetNumber, MAXSCROLLBARSTART);
+    scrollbarTrackSize = Math.max(maxPackets * scrollbarTrack.offsetHeight / packetNumber, MINSCROLLBARSIZE);
     
-    if (scrollboxSize >= scrollbox.offsetHeight || packetNumber === 0) {
-        scrollbar.className = 'hidden';
-        scrollup.className = 'scrollupinactive';
-        scrolldown.className = 'scrolldowninactive';
+    if (scrollbarTrackSize >= scrollbarTrack.offsetHeight || packetNumber === 0) {
+        scrollThumb.className = 'hidden';
+        scrollbarButtonUp.className = 'scrollbar-button-up-inactive';
+        scrollbarButtonDown.className = 'scrollbar-button-down-inactive';
         return;
     }
         
     if (autoscroll) {
-        scrollup.className = 'scrollup';
-        scrolldown.className = 'scrolldowninactive';
+        scrollbarButtonUp.className = 'scrollbar-button-up';
+        scrollbarButtonDown.className = 'scrollbar-button-down-inactive';
     }
     else {
-        scrolldown.className = 'scrolldown';
+        scrollbarButtonDown.className = 'scrollbar-button-down';
         // FIXME
         if ((packetView && scrollanchor === 0) || (!packetView && connAnchor === 0 && pktAnchor === -1))
-            scrollup.className = 'scrollupinactive';
+            scrollbarButtonUp.className = 'scrollbar-button-up-inactive';
         else
-            scrollup.className = 'scrollup';
+            scrollbarButtonUp.className = 'scrollbar-button-up';
     }
-    scrollbar.className = '';
-    scrollbar.style.height = scrollboxSize + 'px';
-    scrollbar.style.top = scrollboxStart + 'px';
+    scrollThumb.className = '';
+    scrollThumb.style.height = scrollbarTrackSize + 'px';
+    scrollThumb.style.top = scrollbarTrackStart + 'px';
 }
 
-function selectScrollbox() {
-    scrollbarSelected = true;
+
+
+function processMouseWheel(event) {
+    event = window.event || event;
+    var wheelDelta = event.detail ? event.detail * 5 : event.wheelDelta / -24;
+    scroll(wheelDelta);
+    return false;
+}
+
+var initScrollThumbY;
+var scrollInterval;
+var mouseX;
+var mouseY;
+
+function startScrolling(direction) {
+    clearTimeout(scrollInterval);
+    scrollInterval = setInterval(function() {scroll(direction);}, 20);
+}
+
+function stopScrolling() {
+    clearTimeout(scrollInterval);
+}
+
+function scroll(direction) {
+    if (packetView)
+        scrollPacketView(direction);
+    else
+        scrollConnectionView(direction);
+}
+
+function scrollPacketView(direction) {
+    if (pkts.length === 0)
+        return;
+    
+    autoscroll = false;
+    renderNextTime = true;
+    
+    scrollanchor += direction;
+    
+    if (scrollanchor < 0)
+        scrollanchor = 0
+    else if (scrollanchor >= pkts.length - maxPackets) {
+        // we don't want a negative anchor
+        scrollanchor = Math.max(pkts.length - maxPackets, 0);
+        autoscroll = true;
+    }
+}
+
+function startTrackScrolling() {
+    var relPosY = mouseY - scrollbar.offsetTop - scrollbarTrack.offsetTop;
+    
+    if (relPosY < scrollThumb.offsetTop) {
+        scroll(-50);
+        scrollInterval = setTimeout(startTrackScrolling, 20);        
+    }
+    else if (relPosY > scrollThumb.offsetTop + scrollThumb.offsetHeight) {
+        scroll(50);
+        scrollInterval = setTimeout(startTrackScrolling, 20);        
+    }
+    else
+        stopScrolling();
+}
+
+function selectScrollThumb(event) {
+    scrollThumbSelected = true;
+    initScrollThumbY = scrollThumb.offsetTop - event.pageY;
     doc.body.className = 'suppressselection'; // so we don't select text
     pktoutput.unselectable = 'on';
     pktdetails.unselectable = 'on';
@@ -402,8 +477,8 @@ function selectScrollbox() {
     return false;
 }
 
-function deselectScrollbox() {
-    scrollbarSelected = false;
+function deselectScrollThumb() {
+    scrollThumbSelected = false;
     doc.body.className = ''; // re-enable (text) selection
     pktoutput.unselectable = 'off';
     pktdetails.unselectable = 'off';
@@ -411,13 +486,20 @@ function deselectScrollbox() {
     return false;
 }
 
-function moveScrollbox(event) {
-    if (!scrollbarSelected)
+function processMouseMove(event) {
+    mouseX = event.pageX;
+    mouseY = event.pageY;
+    moveScrollThumb(event);
+}
+
+function moveScrollThumb(event) {   
+    if (!scrollThumbSelected)
         return true;
     
     autoscroll = false;
-    var newPos = (event.pageY - doc.getElementById('scrollcontainer').offsetTop - 15)
-                    / scrollbox.offsetHeight;
+    
+    var newPos = (event.pageY + initScrollThumbY)
+                    / scrollbarTrack.offsetHeight;
     
     if (packetView) {
         newPos = (pkts.length * newPos) | 0;
@@ -474,6 +556,7 @@ function processClick(row, num) {
     
     if (getConnectionById(num)) {
         printConnectionDetails(num);
+        pktpayload.innerHTML = '';
         return;
     }
     
@@ -484,7 +567,8 @@ function processClick(row, num) {
 function processRightClick(row, num, event, id) {
     processClick(row, num);
     
-    if (!id)
+    // skip non-UDP, non-TCP packets
+    if (!id || !connectionsById[id])
         return false;
     
     contextMenu.className = '';
@@ -496,46 +580,98 @@ function processRightClick(row, num, event, id) {
     follow.setAttribute('onclick','followStream("' + id + '")');
     follow.setAttribute('class', 'contextentry');
     
-    var srcContent = doc.createElement('span');
-    srcContent.setAttribute('onclick','downloadContent("' + id + '", 1)');
-    srcContent.setAttribute('class', 'contextentry');
-    srcContent.innerHTML = 'Save source content';
-
-    var dstContent = doc.createElement('span');
-    dstContent.setAttribute('onclick','downloadContent("' + id + '", 0)');
-    dstContent.setAttribute('class', 'contextentry');
-    dstContent.innerHTML = 'Save destination content';
-    
     if (filter === id)
         follow.innerHTML = 'Unfollow';
     else
         follow.innerHTML = 'Follow this stream';
     
     contextMenu.appendChild(follow);
-    contextMenu.appendChild(doc.createElement('br'));
-    contextMenu.appendChild(srcContent);
-    contextMenu.appendChild(doc.createElement('br'));
-    contextMenu.appendChild(dstContent);
     
-    if (!connectionsById[id] || !connectionsById[id].contents)
+    // no content? don't show download entries for it
+    if (!connectionsById[id].content ||
+        !connectionsById[id].content.length)
         return false;
+    
+    var showContent = doc.createElement('span');
+    
+    showContent.setAttribute('onclick','showContent("' + id + '")');
+    showContent.setAttribute('class', 'contextentry');
+    showContent.innerHTML = 'Show content';
+    
+    var downloadContent = doc.createElement('span');
+    
+    downloadContent.setAttribute('onclick','downloadContent("' + id + '")');
+    downloadContent.setAttribute('class', 'contextentry');
+    downloadContent.innerHTML = 'Download content';
+    
+    contextMenu.appendChild(doc.createElement('br'));
+    contextMenu.appendChild(showContent);
+    contextMenu.appendChild(doc.createElement('br'));
+    contextMenu.appendChild(downloadContent);
     
     return false;
 }
 
-function downloadContent(id, src) {
-    var contents = src ? connectionsById[id].srcC.content : connectionsById[id].dstC.content;
+function downloadContent(id) {
+    var contents = connectionsById[id].content;
+    
     if (contents.length === 0)
         return;
     
     var data = [];
     
     for (var i = 0; i < contents.length; i++)
-        data[i] = contents[i][0].slice(contents[i][1]);
+        data[i] = contents[i].data.slice(contents[i].offset);
     
     data = mergeBuffers(data);
     
     downloadFileFromURI(createURI('application/x-download', data), id);
+}
+
+function showContent(id) {
+    var contents = connectionsById[id].content;
+    
+    if (contents.length === 0)
+        return;
+    
+    var data = [];
+    var srcOrDst = contents[0].srcOrDst;
+        
+    var op = doc.createElement('div');
+    
+    for (var i = 0; i < contents.length; i++) {
+        if (srcOrDst !== contents[i].srcOrDst) {
+            data = new Uint8Array(mergeBuffers(data));
+            
+            var text = '';
+            for (var j = 0; j < data.length; j++)
+                text += printASCII(data[j]);
+
+            var span = doc.createElement('div');
+            span.className = ((srcOrDst && 'src') || 'dst') + 'content';
+            span.appendChild(doc.createTextNode(text));
+            
+            op.appendChild(span);
+            
+            data = [];
+            srcOrDst = contents[i].srcOrDst;
+        }
+        data.push(contents[i].data.slice(contents[i].offset));
+    }
+    data = new Uint8Array(mergeBuffers(data));
+    
+    var text = '';
+    for (var j = 0; j < data.length; j++)
+        text += printASCII(data[j]);
+
+    var span = doc.createElement('div');
+    span.className = ((srcOrDst && 'src') || 'dst') + 'content';
+    span.appendChild(doc.createTextNode(text));
+    
+    op.appendChild(span);
+    
+    var w = window.open('tcpcontent.html', 'content', 'width=640, height=480, status=yes, resizable=yes');
+    w.onload = function() {w.document.body.appendChild(op);};
 }
 
 function render() {    
@@ -553,16 +689,19 @@ function renderPacketView() {
     if (pkts.length === 0 || !renderNextTime)
         return;
     
-    pkttable.innerHTML = '';
+    var buffer = doc.createDocumentFragment();    
     
     for (var i = scrollanchor; i <= scrollanchor + maxPackets; i++) {
         if (i >= pkts.length)
             break;
         row = printRow(pkts[i]);
-        pkttable.appendChild(row);
+        buffer.appendChild(row);
         if (pkts[i].num === selectedPacketRow.num)
             selectRow(row, pkts[i].num);
     }
+    
+    pkttable.innerHTML = '';
+    pkttable.appendChild(buffer);
     
     if (autoscroll)
         pktoutput.scrollTop = pktoutput.scrollHeight;
@@ -633,23 +772,19 @@ function printPayload(pkt_num) {
     var i, j;
     
     for (i = 0; i < payload.byteLength - 16; i += 16) {
-        output += printNum(i, 16, 4)+'  ';
+        output += printNum(i, 16, 4) + '  ';
         for (j = 0; j < 16; j++) {
             output += printNum(payload[i + j], 16, 2) + ' ';
             if (j === 7)
                 output += ' ';
         }
         output += ' ';
-        for (j = 0; j < 16; j++) {
-            if (payload[i + j] >= 32 && payload[i + j] <= 126)
-                output += String.fromCharCode(payload[i + j]);
-            else
-                output += '.';
-        }
+        for (j = 0; j < 16; j++)
+            output += printASCIINoLF(payload[i + j]);
         output += '\n';
     }
     
-    output += printNum(i, 16, 4)+'  ';
+    output += printNum(i, 16, 4) + '  ';
     for (j = 0; j < remainder; j++) {
         output += printNum(payload[i + j], 16, 2) + ' ';
         if (j === 7)
@@ -663,12 +798,8 @@ function printPayload(pkt_num) {
     }
     output += ' ';
     
-    for (j = 0; j < remainder; j++) {
-        if (payload[i + j] >= 32 && payload[i + j] <= 126)
-            output += String.fromCharCode(payload[i + j]);
-        else
-            output += '.';
-    }
+    for (j = 0; j < remainder; j++)
+        output += printASCIINoLF(payload[i + j]);
     
     //pktpayload.innerHTML = output;
     pktpayload.innerHTML = '';
@@ -700,48 +831,7 @@ function switchConnection() {
 
 
 
-function processMouseWheel(event) {
-    event = window.event || event;
-    var wheelDelta = event.detail ? event.detail * 5 : event.wheelDelta / -24;
-    scroll(wheelDelta);
-    return false;
-}
 
-var scrollInterval;
-
-function startScrolling(direction) {
-    clearTimeout(scrollInterval);
-    scrollInterval = setInterval(function() {scroll(direction);}, 20);
-}
-
-function stopScrolling() {
-    clearTimeout(scrollInterval);
-}
-
-function scroll(direction) {
-    if (packetView)
-        scrollPacketView(direction);
-    else
-        scrollConnectionView(direction);
-}
-
-function scrollPacketView(direction) {
-    if (pkts.length === 0)
-        return;
-    
-    autoscroll = false;
-    renderNextTime = true;
-    
-    scrollanchor += direction;
-    
-    if (scrollanchor < 0)
-        scrollanchor = 0
-    else if (scrollanchor >= pkts.length - maxPackets) {
-        // we don't want a negative anchor
-        scrollanchor = Math.max(pkts.length - maxPackets, 0);
-        autoscroll = true;
-    }
-}
 
 function connectionViewSeek(direction) {
     var tuple = connectionViewLength();
@@ -823,6 +913,10 @@ function updateConnectionView() {
 function renderConnectionView() {
     if (conns.length === 0)
         return;
+    
+    if (selectedConnectionRow.num)
+        printConnectionDetails(selectedConnectionRow.num);
+    
     if (!renderNextTime) {
         updateConnectionView();
         return;
@@ -905,12 +999,12 @@ function printConnectionHeader(connectionNumber) {
     drop.appendChild(icon);    
     
     num.innerHTML  = connection.num;
-    src.innerHTML  = connection.src + ':' + connection.sport;
-    dst.innerHTML  = connection.dst + ':' + connection.dport;
+    src.innerHTML  = connection.src;
+    dst.innerHTML  = connection.dst;
     prot.innerHTML = connection.prot;
     len.innerHTML  = printSize(connection.len);
-    if (filter === connection.id)
-        info.innerHTML = 'Following';
+    info.innerHTML = ((filter === connection.id) && '[Following] ' || '')
+                   + connection.info + ' [' + connection.packets.length + ' packets]';
     
     row.appendChild(drop);
     row.appendChild(num);
@@ -934,11 +1028,13 @@ function updateConnectionHeader(connectionNumber, row) {
     
     var cols = row.getElementsByTagName('div');
     
-    cols[1].innerHTML  = connection.num;
-    cols[2].innerHTML  = connection.src + ':' + connection.sport;
-    cols[3].innerHTML  = connection.dst + ':' + connection.dport;
-    cols[4].innerHTML  = connection.prot;
-    cols[5].innerHTML  = printSize(connection.len);
+    cols[1].innerHTML = connection.num;
+    cols[2].innerHTML = connection.src;
+    cols[3].innerHTML = connection.dst;
+    cols[4].innerHTML = connection.prot;
+    cols[5].innerHTML = printSize(connection.len);
+    cols[6].innerHTML = ((filter === connection.id) && '[Following] ' || '')
+                      + connection.info + ' [' + connection.packets.length + ' packets]';
 }
 
 function switchVisibility(dropdown, connectionNumber) {

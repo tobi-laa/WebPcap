@@ -22,7 +22,7 @@
             <img class="glow buttonicon" src="img/save.svgz" alt="Save capture">
         </div>
         
-        <div id="loadcap" class="button" otitle="Open pcap file">                 
+        <div id="loadcap" class="button" title="Open pcap file">                 
             <img class="glow buttonicon" src="img/document-open.svgz" alt="Save capture">       
             <div class="hidebox">
                 <input id="fileInput" type="file" onchange="readPcapFile(this.files[0], printRow)">
@@ -66,12 +66,12 @@
         </div>            
     </div>
     
-    <div id="scrollcontainer" class="suppressselection">
-        <div id="scrollup" class="scrollupinactive"></div>
-        <div id="scrollbox">
-            <div id="scrollbar" class="hidden"></div>
+    <div id="scrollbar" class="suppressselection">
+        <div id="scrollbar-button-up" class="scrollbar-button-up-inactive"></div>
+        <div id="scrollbar-track">
+            <div id="scroll-thumb" class="hidden"></div>
         </div>
-        <div id="scrolldown" class="scrolldowninactive"></div>
+        <div id="scrollbar-button-down" class="scrollbar-button-down-inactive"></div>
     </div>
     
     <div id="details">
@@ -98,6 +98,7 @@
     <script src="./webpcap/dissection/UDPh.js"></script>
     <script src="./webpcap/dissection/HTTPh.js"></script>
     <script src="./webpcap/dissection/MPDh.js"></script>
+    <script src="./webpcap/dissection/Connection.js"></script>
     <script src="./webpcap/dissection/dissection.js"></script>
     
     <script src="./webpcap/webpcap.js"></script>

@@ -1,0 +1,23 @@
+/******************************************************************************
+ * styling of html objects                                                    *
+ ******************************************************************************/
+body { 
+    background-color: #006ab3; /* blue-ish, old color: #79b0e8 */
+    padding: 0.1%;
+    font-family: "Dejavu Sans", sans-serif;
+    /*font-family: "DejaVu Sans Mono", monospace;*/
+}
+
+/******************************************************************************
+/*                  style/coloring of TCP content                             *
+ ******************************************************************************/
+.srccontent { /* red row */
+    white-space: pre-wrap;
+    background-color: #fbeded;
+    color: #7f0000;
+}
+.dstcontent { /* blue row */
+    white-space: pre-wrap;
+    background-color: #ededfb;
+    color: #00007f;
+}

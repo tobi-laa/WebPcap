@@ -3,21 +3,19 @@ if (typeof require !== 'undefined') {
     var switchByteOrder = require('./dissection/byteOrder').switchByteOrder;
 }
 
-var createURI, getURL, appendPacketData;
+var createURI;
 var MAGIC_NUMBER = (0xa1b2c3d4 >>> 0);
 var MIMETYPE = 'application/vnd.tcpdump.pcap';
 
 if (typeof window !== 'undefined') {
     if (Blob && window.URL && URL.createObjectURL) {
-        getURL = getBlobURL; 
         createURI = createBlobURI;
     }
     else {
-        getURL = getDataURL;
         createURI = createDataURI;
-        alert('Hi there!\n\
-               Your browser does not support Blobs, so I have to make you \
-               download your capture session via a data URI.');
+        alert('Hi there!\n' +
+              'Your browser does not support Blobs, so I have to make you ' +
+              'download your capture session via a data URI.');
     }
 }
 
@@ -44,24 +42,25 @@ function createPcapGlobalHeader() {
 }
 
 function createDataURI(mimetype, data) {
-    return 'data:' + mimetype + ';base64,' + base64ArrayBuffer(data);
+    return {URI: 'data:' + mimetype + ';base64,' + 
+                 base64ArrayBuffer(mergeBuffers(data))};
 }
 
-function getDataURL() {
-    return 'data:' + MIMETYPE + ';base64,' + 
-           base64ArrayBuffer(createPcapGlobalHeader()) + 
-           base64ArrayBuffer(mergeBuffers(getRawPackets()));
+function getPcapURI() {
+    return createURI(MIMETYPE, 
+                         [createPcapGlobalHeader()].concat(getRawPackets()));
 }
 
 function createBlobURI(mimetype, data) {
-    var blob = new Blob([data], {type: mimetype, size: data.byteLength});
-    return URL.createObjectURL(blob);
-}
-
-function getBlobURL() {
-    var content = appendBuffer(createPcapGlobalHeader(), mergeBuffers(getRawPackets()));
-    var blob = new Blob([content], {type: MIMETYPE, size: content.byteLength});
-    return URL.createObjectURL(blob);
+    var size = 0;
+    for (var i = 0; i < data.length; i++)
+        size += data[i].byteLength;
+    
+    var blob = new Blob(data, {type: mimetype, size: size});
+    
+    console.log('Created blob of size ' + blob.size + 'bytes');
+    
+    return {URI: URL.createObjectURL(blob), blob: blob};
 }
 
 function readPcapFile(file) {
@@ -71,25 +70,22 @@ function readPcapFile(file) {
     var fr = new FileReader();
     fr.readAsArrayBuffer(file.slice(0, 24));
     fr.onload = function(evt) {readPcapGlobalHeader(evt.target.result);};
-    
-    var len = file.size - 24;
-    var off = 24;
-    
-    readPcapFilePiece(file, fr, off, len);
+        
+    readPcapFilePiece(file.slice(24), fr);
 }
 
-var CHUNKSIZE = 1024 * 1024;
+var CHUNKSIZE = 1024 * 1024; // 1 Mib
 
-function readPcapFilePiece(file, fr, off, len) {
-    if (len <= 0)
+function readPcapFilePiece(file, fr) {
+    if (file.size <= 0)
         return;
     
     fr = new FileReader();
     fr.onloadend = function(evt) {
         dissectMessage(evt.target.result);
-        readPcapFilePiece(file, fr, off + CHUNKSIZE, len - CHUNKSIZE);
+        readPcapFilePiece(file.slice(CHUNKSIZE), fr);
     };
-    fr.readAsArrayBuffer(file.slice(off, off + CHUNKSIZE));
+    fr.readAsArrayBuffer(file.slice(0, CHUNKSIZE));
 }
 
 function readPcapGlobalHeader(data) {

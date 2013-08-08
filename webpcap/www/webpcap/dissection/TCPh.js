@@ -13,10 +13,8 @@ function TCPh(data, offset, parent) {
     // note: >>> 0 is a trick to convert the number to an unsigned integer
     this.seqn     = ntohl(intView[1]) >>> 0; // sequence number
     this.ackn     = ntohl(intView[2]) >>> 0; // ACK number
-    this.off_rsd  = byteView[12]; // data offset, reserved portion
-    this.flags    = byteView[13]; // various flags
-    this.syn      = byteView[13] & 0x02;
-    this.ack      = byteView[13] & 0x10;
+    this.off_rsd  = byteView[12] & 0xfe; // data offset, reserved portion
+    this.flags    = ntohs(shortView[6]) & 0x1ff; // various flags
     this.wsize    = ntohs(shortView[7]);     // window size
     this.csum     = ntohs(shortView[8]);     // header checksum
     this.urg      = ntohs(shortView[9]);     // urgent pointer
@@ -30,6 +28,16 @@ function TCPh(data, offset, parent) {
     }
 
     this.id = createID(parent.src, this.sport, parent.dst, this.dport, 't');
+    
+    this.NS       = this.flags & 0x100;
+    this.CWR      = this.flags & 0x080;
+    this.ECE      = this.flags & 0x040;
+    this.URG      = this.flags & 0x020;
+    this.ACK      = this.flags & 0x010;
+    this.PSH      = this.flags & 0x008;
+    this.RST      = this.flags & 0x004;
+    this.SYN      = this.flags & 0x002;
+    this.FIN      = this.flags & 0x001;
     
     this.next_header = null;
 }
@@ -135,9 +143,30 @@ TCPh.prototype = {
         
         return details;
     },
-    toString: function () {
+    printPorts: function() {
         return (TCP_PORTS[this.sport] || this.sport) + ' ⊳ ' +
                (TCP_PORTS[this.dport] || this.dport);
+    },
+    printFlags: function() {
+        if (!this.flags)
+            return '';
+        
+        var toReturn = [];
+        
+        if (this.NS)  toReturn.push('NS');
+        if (this.CWR) toReturn.push('CWR');
+        if (this.ECE) toReturn.push('ECE');
+        if (this.URG) toReturn.push('URG');
+        if (this.ACK) toReturn.push('ACK');
+        if (this.PSH) toReturn.push('PSH');
+        if (this.RST) toReturn.push('RST');
+        if (this.SYN) toReturn.push('SYN');
+        if (this.FIN) toReturn.push('FIN');
+        
+        return '[' + toReturn.join(', ') + ']';
+    },
+    toString: function () {
+        return this.printPorts() + ' ' + this.printFlags();
     }
 };
 
