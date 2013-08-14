@@ -1,8 +1,13 @@
 /******************************************************************************
  * styling of html objects                                                    *
  ******************************************************************************/
+html {
+    height: 100%; /* specify height so children can do the same */
+    width: 100%;
+}
 body { 
     background-color: #006ab3; /* blue-ish, old color: #79b0e8 */
+    height: 98%; /* as with html tag but less to avoid scrolling */
     padding: 0.1%;
     font-family: "Dejavu Sans", sans-serif;
     /*font-family: "DejaVu Sans Mono", monospace;*/
@@ -11,13 +16,20 @@ body {
 /******************************************************************************
 /*                  style/coloring of TCP content                             *
  ******************************************************************************/
+.contentbox { /* white background box */
+    background-color: white;
+    overflow-y: scroll;
+    height: 100%;
+}
 .srccontent { /* red row */
     white-space: pre-wrap;
+    word-wrap: break-word;
     background-color: #fbeded;
     color: #7f0000;
 }
 .dstcontent { /* blue row */
     white-space: pre-wrap;
+    word-wrap: break-word;
     background-color: #ededfb;
     color: #00007f;
 }

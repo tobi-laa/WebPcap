@@ -39,6 +39,7 @@ var packetView = false; // makes connection view the default
 var connRows = {};
 
 var contextMenu = doc.getElementById('contextmenu');
+var contextMenuBuffer = doc.createDocumentFragment();
 
 var anim;
 
@@ -68,7 +69,7 @@ var scrollbarButtonDown = doc.getElementById('scrollbar-button-down');
 
 var scrollThumbSelected = false;
 
-var serverFilter = 'none'; // default filter
+var serverFilter = 'none\0'; // default filter
 
 var JSEVENTS = 
 [
@@ -104,10 +105,12 @@ function initJSEvents() {
 function onFirstMessage(msg) {
     switch(String.fromCharCode(new Uint8Array(msg.data, 0, 1)[0])) {
     case 'O':  
-        if (serverFilter !== 'none')
+        if (serverFilter !== 'none\0')
             filterField.style.backgroundColor = '#afffaf';
-        ws.onmessage = onWSMessage;
-        dissectMessage(msg.data.slice(1));
+        ws.onmessage = onSecondMessage;
+        msg.data = msg.data.slice(1);
+        onSecondMessage(msg);
+        // dissectMessage(msg.data.slice(1));
         return;
     case 'E':
     default:
@@ -115,6 +118,18 @@ function onFirstMessage(msg) {
         switchConnection();
         return;
     }
+}
+
+var cache = null;
+
+function onSecondMessage(msg) {
+    cache = appendBuffer(cache, msg.data);
+    if (cache.byteLength < 24)
+        return;
+    
+    readPcapGlobalHeader(msg.data);
+    ws.onmessage = onWSMessage;
+    dissectMessage(msg.data.slice(24));
 }
 
 function onWSMessage(msg) {
@@ -221,7 +236,7 @@ function processResize() {
 }
 
 function processFilter() {
-    serverFilter = filterField.value;
+    serverFilter = filterField.value + '\0';
     return false;
 }
 
@@ -250,7 +265,7 @@ function downloadFileFromURI(resource, filename) {
     tmpLink.dispatchEvent(mc); //'click' on the link
     
     if (resource.blob) // if we're using blobs, close the blob
-        resource.blob.close();
+        delete blob;
 }
 
 function clickOnFileInput() {
@@ -571,12 +586,11 @@ function processRightClick(row, num, event, id) {
     if (!id || !connectionsById[id])
         return false;
     
-    contextMenu.className = '';
-    contextMenu.innerHTML = '';
-    contextMenu.style.left = event.pageX + 'px';
-    contextMenu.style.top = event.pageY + 'px';
+    var follow, showContent, downloadSrcContent, downloadDstContent;
     
-    var follow = doc.createElement('span');
+
+    
+    follow = doc.createElement('div');
     follow.setAttribute('onclick','followStream("' + id + '")');
     follow.setAttribute('class', 'contextentry');
     
@@ -585,35 +599,50 @@ function processRightClick(row, num, event, id) {
     else
         follow.innerHTML = 'Follow this stream';
     
-    contextMenu.appendChild(follow);
+    contextMenuBuffer.innerHTML = '';
+    contextMenuBuffer.appendChild(follow);
     
-    // no content? don't show download entries for it
-    if (!connectionsById[id].content ||
-        !connectionsById[id].content.length)
-        return false;
-    
-    var showContent = doc.createElement('span');
-    
-    showContent.setAttribute('onclick','showContent("' + id + '")');
-    showContent.setAttribute('class', 'contextentry');
-    showContent.innerHTML = 'Show content';
-    
-    var downloadContent = doc.createElement('span');
-    
-    downloadContent.setAttribute('onclick','downloadContent("' + id + '")');
-    downloadContent.setAttribute('class', 'contextentry');
-    downloadContent.innerHTML = 'Download content';
-    
-    contextMenu.appendChild(doc.createElement('br'));
-    contextMenu.appendChild(showContent);
-    contextMenu.appendChild(doc.createElement('br'));
-    contextMenu.appendChild(downloadContent);
+    if (connectionsById[id].contents) {
+        showContent = doc.createElement('div');
+        
+        showContent.setAttribute('onclick','showContent("' + id + '")');
+        showContent.setAttribute('class', 'contextentry');
+        showContent.innerHTML = 'Show content';
+        
+        contextMenuBuffer.appendChild(showContent);
+        
+        if (connectionsById[id].contents[0].length) {
+            downloadSrcContent = doc.createElement('div');
+            
+            downloadSrcContent.setAttribute('onclick','downloadContent("' + id + '", 0)');
+            downloadSrcContent.setAttribute('class', 'contextentry');
+            downloadSrcContent.innerHTML = 'Download source content';
+                    
+            contextMenuBuffer.appendChild(downloadSrcContent);
+        }
+        
+        if (connectionsById[id].contents[1].length) {
+            downloadDstContent = doc.createElement('div');
+            
+            downloadDstContent.setAttribute('onclick','downloadContent("' + id + '", 1)');
+            downloadDstContent.setAttribute('class', 'contextentry');
+            downloadDstContent.innerHTML = 'Download destination content';
+            
+            contextMenuBuffer.appendChild(downloadDstContent);            
+        }
+    }
+
+    contextMenu.className = '';
+    contextMenu.innerHTML = '';
+    contextMenu.style.left = event.pageX + 'px';
+    contextMenu.style.top = event.pageY + 'px';
+    contextMenu.appendChild(contextMenuBuffer);
     
     return false;
 }
 
-function downloadContent(id) {
-    var contents = connectionsById[id].content;
+function downloadContent(id, srcOrDst) {
+    var contents = connectionsById[id].contents[srcOrDst];
     
     if (contents.length === 0)
         return;
@@ -622,14 +651,12 @@ function downloadContent(id) {
     
     for (var i = 0; i < contents.length; i++)
         data[i] = contents[i].data.slice(contents[i].offset);
-    
-    data = mergeBuffers(data);
-    
+        
     downloadFileFromURI(createURI('application/x-download', data), id);
 }
 
 function showContent(id) {
-    var contents = connectionsById[id].content;
+    var contents = connectionsById[id].mergeContent();
     
     if (contents.length === 0)
         return;
@@ -637,7 +664,8 @@ function showContent(id) {
     var data = [];
     var srcOrDst = contents[0].srcOrDst;
         
-    var op = doc.createElement('div');
+    var box = doc.createElement('div');
+    box.className = 'contentbox';
     
     for (var i = 0; i < contents.length; i++) {
         if (srcOrDst !== contents[i].srcOrDst) {
@@ -647,11 +675,11 @@ function showContent(id) {
             for (var j = 0; j < data.length; j++)
                 text += printASCII(data[j]);
 
-            var span = doc.createElement('div');
+            var span = doc.createElement('span');
             span.className = ((srcOrDst && 'src') || 'dst') + 'content';
             span.appendChild(doc.createTextNode(text));
             
-            op.appendChild(span);
+            box.appendChild(span);
             
             data = [];
             srcOrDst = contents[i].srcOrDst;
@@ -664,14 +692,14 @@ function showContent(id) {
     for (var j = 0; j < data.length; j++)
         text += printASCII(data[j]);
 
-    var span = doc.createElement('div');
+    var span = doc.createElement('span');
     span.className = ((srcOrDst && 'src') || 'dst') + 'content';
     span.appendChild(doc.createTextNode(text));
     
-    op.appendChild(span);
+    box.appendChild(span);
     
     var w = window.open('tcpcontent.html', 'content', 'width=640, height=480, status=yes, resizable=yes');
-    w.onload = function() {w.document.body.appendChild(op);};
+    w.onload = function() {w.document.body.appendChild(box); w.connection = connectionsById[id]};
 }
 
 function render() {    

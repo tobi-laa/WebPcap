@@ -248,8 +248,6 @@ function handleConnection(packet, data, offset, parent, toReturn) {
         connection.update(packet);
     }
     
-    return;
-    
     if (!toReturn.seqn) // no TCP packet: we're done here
         return;
     
