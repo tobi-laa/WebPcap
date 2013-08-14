@@ -13,14 +13,10 @@ function Connection(num, packet, data, offset, parent, tlHeader) {
     
     if (!tlHeader.seqn) // no TCP packet, so we're done here
         return;
-    
-    // otherwise prepare structures for gathering content
-    this.content = []; // 'unified' buffer for collecting content
-    this.srcOrDst = -1; // tells us for which side we are collecting content
-    // -1 is undefined, 0 is for source, 1 is for destination
-    // also serves as index for the following:
-    this.contentBuffer = [[], []]; // buffer for segments to be processed later
-    this.seqn = []; // sequence number of next expected segment
+
+    this.contents = [[], []]; // buffers for collecting content
+    this.contentBuffer = [[], []]; // buffers for segments to be processed later
+    // this.seqn = []; // sequence numbers of next expected segments
 }
 
 Connection.prototype = {
@@ -31,7 +27,8 @@ Connection.prototype = {
     processSegment: _processSegment,
     addSegment: _addSegment,
     addBufferedSegments: _addBufferedSegments,
-    bufferSegment: _bufferSegment
+    bufferSegment: _bufferSegment,
+    mergeContent: _mergeContent
 };
 
 function _processSegment(packet, data, offset, parent, tlHeader) {
@@ -48,72 +45,58 @@ function _processSegment(packet, data, offset, parent, tlHeader) {
     if (parent.tlen) // IPv4, total length
         nextSeqn += parent.tlen - tlHeader.getHeaderLength() - parent.getHeaderLength();
     else if (parent.plen) // IPv6, payload length
-        nextSeqn += parent.plen - tlHeader.getHeaderLength();        
+        nextSeqn += parent.plen - tlHeader.getHeaderLength();
     else // as a last resort, calculate it like this
         nextSeqn += packet.orig_len + Pcaph.HLEN - offset;
     
     ackn = tlHeader.ackn;
     
-    srcOrDst = (this.dport === tlHeader.dport) | 0;
+    srcOrDst = (this.sport === tlHeader.dport) | 0;
     
-    if (this.srcOrDst === -1) { // we have not collected anything so far
-        // init variables
-        this.srcOrDst = srcOrDst;
-        this.seqn[srcOrDst]      = seqn;
-        this.seqn[!srcOrDst | 0] = ackn;
+    if (!this.seqn) { // nothing processed so far, initialize seqns
+        this.seqn = [];
+        this.seqn[srcOrDst]      = tlHeader.seqn;
+        this.seqn[!srcOrDst | 0] = tlHeader.ackn;
     }
-    
-    // i.e. this packet is for the side we're collecting for
-    if (srcOrDst === this.srcOrDst) {
-        // check if there is data from the other side to be processed first
-        if (ackn > this.seqn[!srcOrDst | 0]) { // .. there is
-            // buffer this segment
-            this.bufferSegment(srcOrDst, data, seqn, nextSeqn, offset);
-            
-            this.srcOrDst = !srcOrDst | 0; // collect for other side now 
-            this.addBufferedSegments();
-        }
-        else { // no data for other side, keep collecting..
-            if (seqn === this.seqn[srcOrDst]) { // i.e. next expected segment
-                this.addSegment(data, seqn, nextSeqn, offset);
-                this.addBufferedSegments();   
-            }
-            else if (seqn > this.seqn[srcOrDst]) // i.e. will be needed later
-                this.bufferSegment(srcOrDst, data, seqn, nextSeqn, offset);
-            // else: this is a duplicate
-        }        
+        
+    if (seqn === this.seqn[srcOrDst]) { // i.e. next expected segment
+        this.addSegment(srcOrDst, data, ackn, seqn, nextSeqn, offset);
+        this.addBufferedSegments(srcOrDst);
     }
-    else // add this segment to buffer
-        this.bufferSegment(srcOrDst, data, seqn, nextSeqn, offset);
+    else if (seqn > this.seqn[srcOrDst]) // i.e. will be needed later
+        this.bufferSegment(srcOrDst, data, ackn, seqn, nextSeqn, offset);
+    // else: this is a duplicate
 }
 
-function _addSegment(data, seqn, nextSeqn, offset) {
+function _addSegment(srcOrDst, data, ackn, seqn, nextSeqn, offset) {
     if (seqn === nextSeqn) // no payload, we're done
         return;
     
     var segment; // segment to be collected
     
     segment = new Object();
+    segment.srcOrDst = srcOrDst;
     segment.data = data;
+    segment.ackn = ackn;
+    segment.seqn = seqn;
     segment.offset = offset;
-    segment.srcOrDst = this.srcOrDst;
     
-    this.content.push(segment);
-    this.seqn[this.srcOrDst] = nextSeqn;         
+    this.contents[srcOrDst].push(segment);
+    this.seqn[srcOrDst] = nextSeqn;         
 }
 
-function _addBufferedSegments() {    
-    var buffer = this.contentBuffer[this.srcOrDst];
+function _addBufferedSegments(srcOrDst) {    
+    var buffer = this.contentBuffer[srcOrDst];
+    var s = buffer[0];
     
-    while (buffer.length > 0 && buffer[0].seqn === this.seqn[this.srcOrDst]) {
-        this.addSegment(buffer[0].data, buffer[0].seqn, buffer[0].nextSeqn,
-                        buffer[0].offset);
-        
+    while (buffer.length > 0 && s.seqn === this.seqn[srcOrDst]) {
+        this.addSegment(srcOrDst, s.data, s.ackn, s.seqn, s.nextSeqn, s.offset);
         buffer.shift(); // remove this element
+        s = buffer[0];
     }   
 }
 
-function _bufferSegment(srcOrDst, data, seqn, nextSeqn, offset) {
+function _bufferSegment(srcOrDst, data, ackn, seqn, nextSeqn, offset) {
     if (seqn === nextSeqn) // no payload, we're done
         return;
     
@@ -126,7 +109,9 @@ function _bufferSegment(srcOrDst, data, seqn, nextSeqn, offset) {
     buffer = this.contentBuffer[srcOrDst];
     
     segment = new Object();
+    segment.srcOrDst = srcOrDst;
     segment.data = data;
+    segment.ackn = ackn;
     segment.seqn = seqn;
     segment.nextSeqn = nextSeqn;
     segment.offset = offset;
@@ -153,4 +138,30 @@ function _bufferSegment(srcOrDst, data, seqn, nextSeqn, offset) {
     else if (buffer[start].seqn > seqn)
         buffer.splice(start, 0, segment);
     // else: this is a duplicate
+}
+
+function _mergeContent() {
+    var srcOrDst;
+    var i;
+    var mergedContent;
+    
+    srcOrDst = (this.contents[1].length && 
+                (!this.contents[0].length || 
+                 this.contents[1][0].ackn === this.contents[0][0].seqn)) | 0;
+    i = [0, 0];
+    mergedContent = [];
+    
+    while (i[0] < this.contents[0].length || i[1] < this.contents[1].length) {
+        var oldAckn = this.contents[srcOrDst][i[srcOrDst]].ackn;
+        
+        while (i[srcOrDst] < this.contents[srcOrDst].length 
+            && this.contents[srcOrDst][i[srcOrDst]].ackn === oldAckn) {
+            mergedContent.push(this.contents[srcOrDst][i[srcOrDst]]);
+            i[srcOrDst]++;
+        }
+        
+        srcOrDst = !srcOrDst | 0;
+    }
+    
+    return mergedContent;
 }
