@@ -20,32 +20,19 @@
 #define OKAY "O"
 #define ERROR "E"
 
-typedef struct pcaprec_hdr_s {
-        guint32 ts_sec;         /* timestamp seconds */
-        guint32 ts_usec;        /* timestamp microseconds */
-        guint32 incl_len;       /* number of octets of packet saved in file */
-        guint32 orig_len;       /* actual length of packet */
-} pcaprec_hdr_t;
-
 int setSocketUp();
-void sendPacket(u_char *user, const struct pcap_pkthdr *h, const u_char *sp);
 char *createDefaultFilter();
 
 /* FIXME: check if first buffer is actually needed... */
 char *buffer;       /* arbitrary buffer */
 char *errbuf;       /* pcap error buffer */
 char *user_filter = "none";
-pcaprec_hdr_t *pktbuff;
 
 /* FIXME: redirect stdout & stderr to a logfile */
 
 int server, client; /* server & client sockets */
 
 pcap_t *sdescr; /* session descriptor */
-
-int pkthdrsz;
-
-int count = 1;
 
 int main() {    
     /* create socket */
@@ -71,12 +58,9 @@ int main() {
     fprintf(stdout,"New client accepted!\n");       
     fflush(stdout);
 
-    /* initialize all three buffers */
+    /* initialize all buffers */
     buffer = malloc(BUFSIZE);
     errbuf = malloc(sizeof(char) * PCAP_ERRBUF_SIZE);   
-    pktbuff = malloc(sizeof(pcaprec_hdr_t));
-    
-    pkthdrsz = sizeof(pcaprec_hdr_t);
     
     char *filter;
     
@@ -86,20 +70,17 @@ int main() {
         strncpy(user_filter, buffer, flen);
     }
     filter = createDefaultFilter();
-    
-    char *dev;
-    dev = "any";
-    
-    if ((sdescr = pcap_open_live(dev, SNAP_LEN, PROMISC, TO_MS, errbuf)) == NULL) {
-        fprintf(stderr, "ERROR: Unable to open %s for capturing: %s\n", dev, errbuf);
+        
+    if ((sdescr = pcap_open_live("any", SNAP_LEN, PROMISC, TO_MS, errbuf)) == NULL) {
+        fprintf(stderr, "ERROR: Unable to open 'any' for capturing: %s\n", errbuf);
         return close_session(-1);
     }
 
     guint32 net;  /* network address */
     guint32 mask; /* subnet mask */
     
-    if (pcap_lookupnet(dev, &net, &mask, errbuf) == -1) {
-        fprintf(stderr, "ERROR: Unable to detect IP address settings for device %s: %s\n", dev, errbuf);
+    if (pcap_lookupnet("any", &net, &mask, errbuf) == -1) {
+        fprintf(stderr, "ERROR: Unable to detect IP address settings for 'any' device: %s\n", errbuf);
         net = mask = 0; /* use default values instead */
     }
     
@@ -116,13 +97,19 @@ int main() {
         write(client, ERROR, 1);
         return close_session(-1);
     }
-  
-    fprintf(stdout,"Successfully opened interface %s for capturing.\n", dev);
+    
+    FILE * client_file = fdopen(client, "w");
+    pcap_t * client_pcap_t = pcap_open_dead(pcap_datalink(sdescr), SNAP_LEN);
+    pcap_dumper_t * client_dumper_t = pcap_dump_fopen(client_pcap_t, client_file);
+    
+    fprintf(stdout,"Successfully opened interface %s for capturing.\n", "any");
+    fflush(stdout);
+    
     write(client, OKAY, 1);
-
    
     /* FIXME: this is basically an infinte loop atm */
-    pcap_loop(sdescr, -1, sendPacket, NULL);    
+    /*pcap_loop(sdescr, -1, sendPacket, NULL);   */ 
+    pcap_loop(sdescr, -1, pcap_dump, client_dumper_t);
     
     return close_session(1);
 }
@@ -134,7 +121,6 @@ int close_session(exit_code) {
     
     free(buffer);
     free(errbuf);
-    free(pktbuff);
     
     return exit_code;
 }
@@ -155,7 +141,7 @@ int setSocketUp() {
     /* convert IP and port-no to network format */
     server->sin_addr.s_addr = htonl(INADDR_ANY); /* any network interface is okay */
     server->sin_port = htons(PORT);
-    if(bind(server_sock, (struct sockaddr*)server, sizeof(*server))<0){
+    if(bind(server_sock, (struct sockaddr*)server, sizeof(*server)) < 0){
         free(server);
         fprintf(stderr, "ERROR: Socket could not be bound to Port %hu. %s\n",PORT, strerror(errno));
         return -1;        
@@ -167,16 +153,6 @@ int setSocketUp() {
     }
     free(server);
     return server_sock;    
-}
-
-void sendPacket(u_char *user, const struct pcap_pkthdr *h, const u_char *sp) {
-    pktbuff->ts_sec   = (guint32) h->ts.tv_sec;
-    pktbuff->ts_usec  = (guint32) h->ts.tv_usec;
-    pktbuff->incl_len = h->caplen;
-    pktbuff->orig_len = h->len;
-    
-    write(client, pktbuff, pkthdrsz);   /* send pcap header */
-    write(client, sp, h->caplen);       /* send actual captured packet */
 }
 
 /* FIXME */
