@@ -1,14 +1,25 @@
-function Connection(num, packet, data, offset, parent, tlHeader) {
+/**
+ * Class describing Connection objects. These bundle information
+ * for either TCP or UDP connections. All packets with the same
+ * ID will be processed by the same Connection object. Also
+ * offers methods to extract TCP content.
+ * @param {number} num Number of this connection
+ * @param {Packet} packet Dissected packet
+ * @param {ArrayBuffer} data Raw packet
+ * @param {TCPh|UDPh} tlHeader Transport layer header of packet
+ * @constructor
+ */
+function Connection(num, packet, data, tlHeader) {
+    this.num = num;
+    this.id = id;
     this.packets = [packet];        
     this.src = packet.src;
     this.dst = packet.dst;
     this.sport = tlHeader.sport;
     this.dport = tlHeader.dport;
-    this.num = num;
     this.len = packet.orig_len;
     this.prot = packet.prot;
     this.visible = 0;
-    this.id = tlHeader.id;
     this.info = tlHeader.printPorts();
     
     if (!tlHeader.seqn) // no TCP packet, so we're done here
@@ -19,19 +30,12 @@ function Connection(num, packet, data, offset, parent, tlHeader) {
     // this.seqn = []; // sequence numbers of next expected segments
 }
 
-Connection.prototype = {
-    update: function (newPacket) {
-        this.packets.push(newPacket);
-        this.len += newPacket.orig_len;
-    },
-    processSegment: _processSegment,
-    addSegment: _addSegment,
-    addBufferedSegments: _addBufferedSegments,
-    bufferSegment: _bufferSegment,
-    mergeContent: _mergeContent
+Connection.prototype.update: function (newPacket) {
+    this.packets.push(newPacket);
+    this.len += newPacket.orig_len;
 };
 
-function _processSegment(packet, data, offset, parent, tlHeader) {
+Connection.prototype.processSegment: function (packet, data, offset, parent, tlHeader) {
     if (tlHeader.SYN) // skip syn packages; there's no payload
         return;
     
@@ -68,24 +72,25 @@ function _processSegment(packet, data, offset, parent, tlHeader) {
     // else: this is a duplicate
 }
 
-function _addSegment(srcOrDst, data, ackn, seqn, nextSeqn, offset) {
+Connection.prototype.addSegment: function (srcOrDst, data, ackn, seqn, nextSeqn, offset) {
     if (seqn === nextSeqn) // no payload, we're done
         return;
     
     var segment; // segment to be collected
     
-    segment = new Object();
-    segment.srcOrDst = srcOrDst;
-    segment.data = data;
-    segment.ackn = ackn;
-    segment.seqn = seqn;
-    segment.offset = offset;
+    segment = {
+        srcOrDst: srcOrDst;
+        data: data;
+        ackn: ackn;
+        seqn: seqn;
+        offset: offset;
+    };
     
     this.contents[srcOrDst].push(segment);
     this.seqn[srcOrDst] = nextSeqn;         
 }
 
-function _addBufferedSegments(srcOrDst) {    
+Connection.prototype.addBufferedSegments: function (srcOrDst) {    
     var buffer = this.contentBuffer[srcOrDst];
     var s = buffer[0];
     
@@ -96,7 +101,7 @@ function _addBufferedSegments(srcOrDst) {
     }   
 }
 
-function _bufferSegment(srcOrDst, data, ackn, seqn, nextSeqn, offset) {
+Connection.prototype.bufferSegment: function (srcOrDst, data, ackn, seqn, nextSeqn, offset) {
     if (seqn === nextSeqn) // no payload, we're done
         return;
     
@@ -108,13 +113,14 @@ function _bufferSegment(srcOrDst, data, ackn, seqn, nextSeqn, offset) {
         
     buffer = this.contentBuffer[srcOrDst];
     
-    segment = new Object();
-    segment.srcOrDst = srcOrDst;
-    segment.data = data;
-    segment.ackn = ackn;
-    segment.seqn = seqn;
-    segment.nextSeqn = nextSeqn;
-    segment.offset = offset;
+    segment = {
+        srcOrDst: srcOrDst;
+        data: data;
+        ackn: ackn;
+        seqn: seqn;
+        nextSeqn: nextSeqn;
+        offset: offset;
+    };
     
     // seek the position at which data should be inserted (binary search)
     start = 0;
@@ -140,7 +146,7 @@ function _bufferSegment(srcOrDst, data, ackn, seqn, nextSeqn, offset) {
     // else: this is a duplicate
 }
 
-function _mergeContent() {
+Connection.prototype.mergeContent: function () {
     var srcOrDst;
     var i;
     var mergedContent;

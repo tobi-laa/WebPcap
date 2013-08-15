@@ -238,7 +238,7 @@ function handleConnection(packet, data, offset, parent, toReturn) {
     
     if (!connectionsById[toReturn.id]) {
         // create a new connection object and store it properly
-        connection = new Connection(connectionsByArrival.length + 1, packet, data, offset, parent, toReturn);
+        connection = new Connection(packet, data, offset, toReturn);
         connectionsById[toReturn.id] = connection;
         connectionsByArrival.push(connection);
     }
