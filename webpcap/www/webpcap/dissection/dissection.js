@@ -142,7 +142,7 @@ function dissectLinkLayer(packet, data, offset) {
     var toReturn = new SLLh(data, offset);       
     packet.src  = printMAC(toReturn.src);
     // packet.dst  = printMAC(toReturn.dst);
-    packet.prot = 'Ethernet';
+    packet.prot = 'SLL';
     toReturn.next_header = 
     dissectNetworkLayer(packet, data, offset + toReturn.getHeaderLength(), toReturn);    
     return toReturn;
@@ -189,11 +189,13 @@ function dissectNetworkLayer(packet, data, offset, parent) {
 }
 
 function dissectTransportLayer(packet, data, offset, parent) {
+    var toReturn = null;
+    
     if (offset > packet.incl_len + 16) { // bogus value
         packet.class = 'malformed';
-        return null;
+        return toReturn;
     }
-    var toReturn;
+    
     switch(parent.prot || parent.nh) {
     case 1: // ICMP
         toReturn = null;      
@@ -221,9 +223,6 @@ function dissectTransportLayer(packet, data, offset, parent) {
         if (!toReturn.val)
             packet.class = 'malformed';
         break;
-    default:
-        toReturn = null;
-        break;
     }  
     return toReturn;
 }
@@ -238,7 +237,7 @@ function handleConnection(packet, data, offset, parent, toReturn) {
     
     if (!connectionsById[toReturn.id]) {
         // create a new connection object and store it properly
-        connection = new Connection(packet, data, offset, toReturn);
+        connection = new Connection(packet, data, toReturn);
         connectionsById[toReturn.id] = connection;
         connectionsByArrival.push(connection);
     }

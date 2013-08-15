@@ -1,8 +1,7 @@
 /**
- * Class describing Connection objects. These bundle information
- * for either TCP or UDP connections. All packets with the same
- * ID will be processed by the same Connection object. Also
- * offers methods to extract TCP content.
+ * Class describing Connection objects. These bundle information for either TCP
+ * or UDP connections. All packets with the same ID will be processed by the
+ * same Connection object. Also offers methods to extract TCP content.
  * @param {number} num Number of this connection
  * @param {Packet} packet Dissected packet
  * @param {ArrayBuffer} data Raw packet
