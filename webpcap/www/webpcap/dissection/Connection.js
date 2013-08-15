@@ -10,7 +10,7 @@
  */
 function Connection(num, packet, data, tlHeader) {
     this.num = num;
-    this.id = id;
+    this.id = packet.id;    
     this.packets = [packet];        
     this.src = packet.src;
     this.dst = packet.dst;
@@ -29,12 +29,12 @@ function Connection(num, packet, data, tlHeader) {
     // this.seqn = []; // sequence numbers of next expected segments
 }
 
-Connection.prototype.update: function (newPacket) {
+Connection.prototype.update = function (newPacket) {
     this.packets.push(newPacket);
     this.len += newPacket.orig_len;
 };
 
-Connection.prototype.processSegment: function (packet, data, offset, parent, tlHeader) {
+Connection.prototype.processSegment = function (packet, data, offset, parent, tlHeader) {
     if (tlHeader.SYN) // skip syn packages; there's no payload
         return;
     
@@ -71,25 +71,25 @@ Connection.prototype.processSegment: function (packet, data, offset, parent, tlH
     // else: this is a duplicate
 }
 
-Connection.prototype.addSegment: function (srcOrDst, data, ackn, seqn, nextSeqn, offset) {
+Connection.prototype.addSegment = function (srcOrDst, data, ackn, seqn, nextSeqn, offset) {
     if (seqn === nextSeqn) // no payload, we're done
         return;
     
     var segment; // segment to be collected
     
     segment = {
-        srcOrDst: srcOrDst;
-        data: data;
-        ackn: ackn;
-        seqn: seqn;
-        offset: offset;
+        srcOrDst: srcOrDst,
+        data: data,
+        ackn: ackn,
+        seqn: seqn,
+        offset: offset
     };
     
     this.contents[srcOrDst].push(segment);
     this.seqn[srcOrDst] = nextSeqn;         
 }
 
-Connection.prototype.addBufferedSegments: function (srcOrDst) {    
+Connection.prototype.addBufferedSegments = function (srcOrDst) {    
     var buffer = this.contentBuffer[srcOrDst];
     var s = buffer[0];
     
@@ -100,7 +100,7 @@ Connection.prototype.addBufferedSegments: function (srcOrDst) {
     }   
 }
 
-Connection.prototype.bufferSegment: function (srcOrDst, data, ackn, seqn, nextSeqn, offset) {
+Connection.prototype.bufferSegment = function (srcOrDst, data, ackn, seqn, nextSeqn, offset) {
     if (seqn === nextSeqn) // no payload, we're done
         return;
     
@@ -113,12 +113,12 @@ Connection.prototype.bufferSegment: function (srcOrDst, data, ackn, seqn, nextSe
     buffer = this.contentBuffer[srcOrDst];
     
     segment = {
-        srcOrDst: srcOrDst;
-        data: data;
-        ackn: ackn;
-        seqn: seqn;
-        nextSeqn: nextSeqn;
-        offset: offset;
+        srcOrDst: srcOrDst,
+        data: data,
+        ackn: ackn,
+        seqn: seqn,
+        nextSeqn: nextSeqn,
+        offset: offset
     };
     
     // seek the position at which data should be inserted (binary search)
@@ -145,7 +145,7 @@ Connection.prototype.bufferSegment: function (srcOrDst, data, ackn, seqn, nextSe
     // else: this is a duplicate
 }
 
-Connection.prototype.mergeContent: function () {
+Connection.prototype.mergeContent = function () {
     var srcOrDst;
     var i;
     var mergedContent;

@@ -4,7 +4,10 @@ if (typeof require !== 'undefined') {
 }
 
 var createURI;
-var MAGIC_NUMBER = (0xa1b2c3d4 >>> 0);
+var MAGIC_NUMBER_MS = (0xa1b2c3d4 >>> 0);
+var MAGIC_NUMBER_NS = (0xa1b23c4d >>> 0);
+var SLL = 113;
+var ETHERNET = 1;
 var MIMETYPE = 'application/vnd.tcpdump.pcap';
 
 if (typeof window !== 'undefined') {
@@ -89,13 +92,47 @@ function readPcapFilePiece(file, fr) {
 }
 
 function readPcapGlobalHeader(data) {
-    var magic_number = new Uint32Array(data, 0, 1)[0] >>> 0;
-    if (magic_number === ntohl(MAGIC_NUMBER))
+    var pcapGlobalHeader;
+    var intView, shortView;
+    var magicNumber;
+    var versionMajor, versionMinor;
+    var network;
+    
+    pcapGlobalHeader = data.slice(0, 24);
+    intView   = new Uint32Array(pcapGlobalHeader);
+    shortView = new Uint16Array(pcapGlobalHeader);
+    
+    magicNumber  =   intView[0] >>> 0;
+    versionMajor = shortView[2] >>> 0;
+    versionMinor = shortView[3] >>> 0;
+    network      =   intView[5] >>> 0;
+    
+    switch (magicNumber) {
+    case MAGIC_NUMBER_NS:
+    case MAGIC_NUMBER_MS:
+        switchByteOrder(true);
+        break;
+    case ntohl(MAGIC_NUMBER_NS):
+    case ntohl(MAGIC_NUMBER_MS):
         switchByteOrder(false);
-    else if (magic_number !== MAGIC_NUMBER) {
-        alert('Invalid Magic Number'); // FIXME
-        return false;
+        break;
+    default:
+        alert('Invalid Magic Number.');
+        return -1;
     }
+    
+    switch (network) {
+    case SLL:
+        break;
+    case ETHERNET:
+        break;
+    default:
+        alert('Unsupported link-layer header type (' + network + ').');
+        return -1;
+    }
+    
+    console.log('Read pcap global header, file format ' + 
+                'v' + versionMajor + '.' + versionMinor);
 }
 
 if (typeof module !== 'undefined') {

@@ -88,7 +88,7 @@ function simpleDissect(data, f) {
     infos[0] = counter;
     infos[1] = ' ';
     infos[2] = ' ';
-    infos[3] = "LCC";
+    infos[3] = 'SLL';
     infos[4] = intView[2];
     infos[5] = ' ';
     var offset = 16;
@@ -237,7 +237,10 @@ function handleConnection(packet, data, offset, parent, toReturn) {
     
     if (!connectionsById[toReturn.id]) {
         // create a new connection object and store it properly
-        connection = new Connection(packet, data, toReturn);
+        connection = new Connection(connectionsByArrival.length + 1, 
+                                    packet,
+                                    data,
+                                    toReturn);
         connectionsById[toReturn.id] = connection;
         connectionsByArrival.push(connection);
     }

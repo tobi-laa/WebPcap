@@ -73,10 +73,10 @@ var serverFilter = 'none\0'; // default filter
 
 var JSEVENTS = 
 [
-    ['body', 'onclick', 'closeContextMenu()'],
-    ['body', 'onmouseup', 'deselectScrollThumb()'],
-    ['body', 'onmousemove', 'processMouseMove(event)'],
-    ['body', 'onresize', 'processResize()'],
+    ['html', 'onclick', 'closeContextMenu()'],
+    ['html', 'onmouseup', 'deselectScrollThumb()'],
+    ['html', 'onmousemove', 'processMouseMove(event)'],
+    ['html', 'onresize', 'processResize()'],
     ['startcap', 'onclick', 'switchConnection()'],
     ['clearscr', 'onclick', 'clearScreen()'],
     ['savecap', 'onclick', 'saveCapture()'],
@@ -103,7 +103,7 @@ function initJSEvents() {
 }
 
 function onFirstMessage(msg) {
-    switch(String.fromCharCode(new Uint8Array(msg.data, 0, 1)[0])) {
+    switch (String.fromCharCode(new Uint8Array(msg.data, 0, 1)[0])) {
     case 'O':  
         if (serverFilter !== 'none\0')
             filterField.style.backgroundColor = '#afffaf';
