@@ -29,6 +29,7 @@ function IPv4h(data, offset) {
                                                     this.getHeaderLength() / 2));
         
     this.next_header = null;
+    byteView = shortView = null;
 }
 
 IPv4h.prototype = {

@@ -4,7 +4,6 @@
  ******************************************************************
  */
 
-//note: this is basically copied over from the wireshark wiki
 function Pcaph(data, offset) {
     var intView  = new Uint32Array(data, offset, Pcaph.HLEN / 4);
 
@@ -23,6 +22,7 @@ function Pcaph(data, offset) {
     this.id;
     
     this.next_header = null;
+    intView = shortView = null;
 }
 
 Pcaph.prototype = {

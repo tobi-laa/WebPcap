@@ -20,7 +20,8 @@ function SLLh(data, offset) {
     this.src     = byteView.subarray(6, 6 + this.llal); // source (MAC) address    
     this.prot    = ntohs(shortView[7]);                 // protocol (i.e. IPv4)
     
-    this.next_header = null;    
+    this.next_header = null;
+    byteView = shortView = null;
 }
 
 SLLh.prototype = {

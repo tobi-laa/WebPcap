@@ -24,6 +24,7 @@ function UDPh(data, offset, parent) {
     }
         
     this.next_header = null;
+    shortView = null;
 }
 
 UDPh.prototype = {

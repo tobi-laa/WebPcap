@@ -15,7 +15,8 @@ function Ethh(data, offset) {
     this.src  = byteView.subarray(6, 12); // source MAC address    
     this.prot = ntohs(shortView[0]);      // protocol (i.e. IPv4)
     
-    this.next_header = null;    
+    this.next_header = null;   
+    byteView = shortView = null;
 }
 
 Ethh.prototype = {

@@ -30,6 +30,7 @@ function ARPh(data, offset) {
     this.tpa = new Uint8Array(data, offset, this.plen);
         
     this.next_header = null;
+    byteView = shortView = null;
 }
 
 ARPh.prototype = {

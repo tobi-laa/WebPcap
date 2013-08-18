@@ -22,7 +22,7 @@ var connectionsByArrival = []; // .. these are stored chronologically
 
 var counter = 1;
 
-function dissect(data, f) {
+function dissect(data) {
     while (true) {
         if (oldPacket !== null) { // consider previously received data
             data = appendBuffer(oldPacket, data);
@@ -44,9 +44,7 @@ function dissect(data, f) {
         packet.num = counter;
         packet.next_header =
         dissectLinkLayer(packet, data.slice(0, packet.incl_len + 16), Pcaph.HLEN); // dissect further  
-        
-        if(f) f(packet); // callback
-        
+                
         // store dissected and raw packet
         dissectedPackets[counter - 1] = packet;
         rawPackets[counter - 1] = data.slice(0, packet.incl_len + 16);
@@ -58,79 +56,6 @@ function dissect(data, f) {
         else
             return;
     }
-}
-
-var byteView;
-var intView;
-var shortView;
-var infos = [];
-
-// FIXME: performance test
-function simpleDissect(data, f) {
-    if (oldPacket !== null) { // consider previously received data
-        data = appendBuffer(oldPacket, data);
-        oldPacket = null;
-    }
-    
-    if (data.byteLength < 16) { // i.e. not enough for pcap header
-        oldPacket = data;
-        return null;
-    }
-        
-    intView = new Uint32Array(data, 0, 4);
-    byteView = new Uint8Array(data, 0);
-    
-    if (data.byteLength < (intView[2] + 16)) { // i.e. packet not complete
-        oldPacket = data; // store for next call to dissect
-        return null;
-    }   
-    
-    infos[0] = counter;
-    infos[1] = ' ';
-    infos[2] = ' ';
-    infos[3] = 'SLL';
-    infos[4] = intView[2];
-    infos[5] = ' ';
-    var offset = 16;
-    
-    // link layer      
-    shortView = new Uint16Array(data, offset, 8);
-    
-    infos[1] = printMAC(byteView.subarray(offset + 6, offset + 6 + ntohs(shortView[2])));
-        
-    offset += 16;
-    
-    // network layer
-    switch(ntohs(shortView[7])) {
-    case 0x0800: // IPv4
-        infos[1]  = printIPv4(byteView.subarray(offset + 12, offset + 16));
-        infos[2]  = printIPv4(byteView.subarray(offset + 16, offset + 20));
-        infos[3] = "IPv4";
-        
-        var prot = byteView[offset + 9];
-        
-        offset += (4 * (byteView[offset] & 0x0F));
-        
-        switch(prot) {
-        case 6: 
-            shortView = new Uint16Array(data, offset, 10);
-            infos[3] = "TCP";
-    
-            infos[5] = "SPORT: " + ntohs(shortView[0]) + " DPORT: " + ntohs(shortView[1]);
-            break;
-        }
-        break;
-    }
-    
-    if(f) f(infos); // callback
-    
-    // store raw packet
-    rawPackets[counter - 1] = data.slice(0, intView[2] + 16);
-    counter++;  
-    
-    // see if there is more data to dissect
-    if (intView[2] > 0 && data.byteLength > (intView[2] + 16))
-        simpleDissect(data.slice(intView[2] + 16), f);
 }
 
 function dissectLinkLayer(packet, data, offset) {

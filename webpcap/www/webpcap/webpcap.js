@@ -35,7 +35,7 @@ var MAXSCROLLBARSTART;
 var currentRow = 0;
 var rows = [];
 
-var packetView = false; // makes connection view the default
+var packetView = true; // makes connection view the default
 var connRows = {};
 
 var contextMenu = doc.getElementById('contextmenu');
@@ -58,6 +58,8 @@ var maxPackets = 0;
 
 var renderNextTime = false;
 
+var doubleBuffer = doc.createDocumentFragment();
+
 var filter = false;
 
 var scrollbarTrack = doc.getElementById('scrollbar-track');
@@ -69,7 +71,7 @@ var scrollbarButtonDown = doc.getElementById('scrollbar-button-down');
 
 var scrollThumbSelected = false;
 
-var serverFilter = 'none\0'; // default filter
+var serverFilter = null;
 
 var JSEVENTS = 
 [
@@ -105,7 +107,7 @@ function initJSEvents() {
 function onFirstMessage(msg) {
     switch (String.fromCharCode(new Uint8Array(msg.data, 0, 1)[0])) {
     case 'O':  
-        if (serverFilter !== 'none\0')
+        if (serverFilter)
             filterField.style.backgroundColor = '#afffaf';
         ws.onmessage = onSecondMessage;
         msg.data = msg.data.slice(1);
@@ -114,7 +116,8 @@ function onFirstMessage(msg) {
         return;
     case 'E':
     default:
-        filterField.style.backgroundColor = '#ffafaf';
+        if (serverFilter)
+            filterField.style.backgroundColor = '#ffafaf';
         switchConnection();
         return;
     }
@@ -181,7 +184,7 @@ function dissectMessage(data) {
 }  
 
 function onWSOpen() {
-    ws.send(serverFilter);
+    ws.send(serverFilter || 'none\0');
     conn_button.setAttribute('title', 'Stop the running live capture');
     conn_button.innerHTML =
     '<img class="glow buttonicon" src="img/media-playback-stop.svgz" alt="Start capture">';
@@ -315,7 +318,7 @@ function simplePrint(infos) {
     return row;
 }
 
-function printRow(packet, customClass) {   
+function printRow(packet, customClass) {
     var row = doc.createElement('div');
     var num   = doc.createElement('div');
     var src  = doc.createElement('div');
@@ -717,19 +720,19 @@ function renderPacketView() {
     if (pkts.length === 0 || !renderNextTime)
         return;
     
-    var buffer = doc.createDocumentFragment();    
+    doubleBuffer.innerHTML = '';
     
     for (var i = scrollanchor; i <= scrollanchor + maxPackets; i++) {
         if (i >= pkts.length)
             break;
         row = printRow(pkts[i]);
-        buffer.appendChild(row);
+        doubleBuffer.appendChild(row);
         if (pkts[i].num === selectedPacketRow.num)
             selectRow(row, pkts[i].num);
     }
     
     pkttable.innerHTML = '';
-    pkttable.appendChild(buffer);
+    pkttable.appendChild(doubleBuffer);
     
     if (autoscroll)
         pktoutput.scrollTop = pktoutput.scrollHeight;
@@ -846,6 +849,7 @@ function switchConnection() {
     ws.binaryType = 'arraybuffer';
     ws.onopen = onWSOpen;
     ws.onclose = onWSClose;
+    ws.onerror = onWSClose;
     ws.onmessage = onFirstMessage;        
 }
 
@@ -953,8 +957,8 @@ function renderConnectionView() {
     var c = connAnchor;
     var p = pktAnchor;
    
-    pkttable.innerHTML = '';
-    
+    doubleBuffer.innerHTML = '';
+        
     var row, num;
     
     for (var i = 0; i <= maxPackets; i++) {
@@ -966,7 +970,7 @@ function renderConnectionView() {
             row = printRow(conns[c].packets[p], 'gray');
             num = conns[c].packets[p].num;
         }
-        pkttable.appendChild(row);
+        doubleBuffer.appendChild(row);
         if (num === selectedConnectionRow.num)
             selectRow(row, num);
         
@@ -979,6 +983,9 @@ function renderConnectionView() {
                 break;
         }
     }
+    
+    pkttable.innerHTML = '';
+    pkttable.appendChild(doubleBuffer);
     
     if (autoscroll)
         pktoutput.scrollTop = pktoutput.scrollHeight;

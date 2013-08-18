@@ -40,6 +40,7 @@ function TCPh(data, offset, parent) {
     this.FIN      = this.flags & 0x001;
     
     this.next_header = null;
+    byteView = shortView = intView = null;
 }
 
 function createID(src, sport, dst, dport, prefix) {

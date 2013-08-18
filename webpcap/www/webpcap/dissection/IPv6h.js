@@ -20,6 +20,7 @@ function IPv6h(data, offset) {
     this.dst = ntohsa(shortView.subarray(12, 20)); // destination IPv6 address
         
     this.next_header = null;
+    byteView = shortView = null;
 }
 
 IPv6h.prototype = {
