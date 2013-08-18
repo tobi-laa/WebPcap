@@ -244,30 +244,24 @@ input[type="checkbox"]:checked ~ div { /* if clicked: show */
     position: absolute;
     width: 13px; /* no need to redraw borders from scrollbox */
     /* chromium's scrollbar is styled as follows */
-    background: url(img/scrollbar.png),
-               -webkit-linear-gradient(left, #f0f0f0 50%, #e5e5e5 50%);
-    background: url(img/scrollbar.png), 
-                linear-gradient(left, #f0f0f0 50%, #e5e5e5 50%);
-    background-position: center center;
-    background-repeat: no-repeat;
+    background: url('img/scroll-thumb-center.png'), 
+                url('img/scroll-thumb.png');
+    background-position: center center, left top;
+    background-repeat: no-repeat, repeat;
     border-top: 1px solid #adadad; /* dark gray border */
     border-bottom: 1px solid #adadad;
 }
 #scroll-thumb:hover { /* brighten on hover */
-    background: url(img/scrollbar.png),
-               -webkit-linear-gradient(left, #fafafa 50%, #efefef 50%);
-    background: url(img/scrollbar.png),
-                linear-gradient(left, #fafafa 50%, #efefef 50%);
-    background-position: center center;
-    background-repeat: no-repeat;
+    background: url('img/scroll-thumb-center.png'), 
+                url('img/scroll-thumb-hover.png');
+    background-position: center center, left top;
+    background-repeat: no-repeat, repeat;
 }
 #scroll-thumb:active { /* and darken again when clicked */
-    background: url(img/scrollbar.png), 
-               -webkit-linear-gradient(left, #f0f0f0 50%, #e5e5e5 50%);
-    background: url(img/scrollbar.png), 
-                linear-gradient(left, #f0f0f0 50%, #e5e5e5 50%);
-    background-position: center center;
-    background-repeat: no-repeat;
+    background: url('img/scroll-thumb-center.png'), 
+                url('img/scroll-thumb.png');
+    background-position: center center, left top;
+    background-repeat: no-repeat, repeat;
 }
 
 .scrollbar-button-up { /* the upper button to scroll up a bit (upwards triangle) */

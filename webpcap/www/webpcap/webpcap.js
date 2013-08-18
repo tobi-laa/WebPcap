@@ -88,6 +88,7 @@ var JSEVENTS =
     ['filterForm', 'onsubmit', 'return processFilter()'],
     ['output', 'oncontextmenu', 'return false'],
     ['output', 'onmousewheel', 'processMouseWheel(event)'],
+    ['output', 'onwheel', 'processMouseWheel(event)'],
     ['table', 'oncontextmenu', 'return false'],    
     ['scrollbar-track', 'onmousedown', 'startTrackScrolling()'],
     ['scrollbar-track', 'onmouseup', 'stopScrolling()'],
@@ -426,7 +427,8 @@ function calculateScrollbarSize() {
 
 function processMouseWheel(event) {
     event = window.event || event;
-    var wheelDelta = event.detail ? event.detail * 5 : event.wheelDelta / -24;
+    console.log(event)
+    var wheelDelta = event.deltaY ? event.deltaY * 2 : event.wheelDelta / -20;
     scroll(wheelDelta);
     return false;
 }
