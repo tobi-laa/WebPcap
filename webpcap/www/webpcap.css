@@ -45,22 +45,18 @@ body {
     float: left;
 }
 #details { /* this holds details for selected packets */
-    width: 50%;
+    width: 49.6%;
     height: 35%;
     padding: 0.2%;
-    box-sizing: border-box; /* so padding is inwards */
-    -moz-box-sizing: border-box;
     background-color: white;
     float: left;
     overflow: scroll;
     white-space: pre; /* want to display spaces, tabs etc */    
 }
 #raw { /* this shows the selected packet in hex and ascii */
-    width: 50%;
+    width: 49.6%;
     height: 35%;
     padding: 0.2%;
-    box-sizing: border-box; /* so padding is inwards */
-    -moz-box-sizing: border-box;
     background-color: white;
     float: left;
     overflow: scroll;
@@ -105,22 +101,20 @@ body {
     overflow: hidden; /* so everything stays on one line */
     white-space: pre;
     padding-right: 0.6%; /* leave some space for readability */
-    box-sizing: border-box;
-    -moz-box-sizing: border-box;
 }
 /* some fixed widths for columns; the \3 is for escaping the preceding nums */
-.\31 p  { width: 1%;}
-.\32 p  { width: 2%;}
-.\35 p  { width: 5%;}
-.\38 p  { width: 8%;}
-.\39 p  { width: 9%;}
-.\31 0p { width: 10%;}
-.\31 5p { width: 15%;}
-.\32 0p { width: 20%;}
-.\32 5p { width: 25%;}
-.\33 0p { width: 30%;}
-.\34 0p { width: 40%;}
-.\35 0p { width: 50%;}
+.\31 p  { width: 0.4%;}
+.\32 p  { width: 1.4%;}
+.\35 p  { width: 4.4%;}
+.\38 p  { width: 7.4%;}
+.\39 p  { width: 8.4%;}
+.\31 0p { width: 9.4%;}
+.\31 5p { width: 14.4%;}
+.\32 0p { width: 19.4%;}
+.\32 5p { width: 24.4%;}
+.\33 0p { width: 29.4%;}
+.\34 0p { width: 39.4%;}
+.\35 0p { width: 49.4%;}
 
 
 
@@ -230,11 +224,9 @@ input[type="checkbox"]:checked ~ div { /* if clicked: show */
 #scrollbar-track { /* this is the dark-gray background box for the scrollbar */
     position: absolute;
     top: 15px; /* leave space for the scrollup icon */
-    width: 15px;
+    width: 13px;
     height: 100%; /* will be 100% - 30px via javascript */
     background-color: #d3d3d3; /* chromium colors */
-    box-sizing: border-box; /* so the border is inwards */
-    -moz-box-sizing: border-box;
     border-left: 1px solid #adadad; /* dark gray border */
     border-right: 1px solid #adadad;
     overflow: hidden; /* don't show messed up scrollbars ;-) */
@@ -306,12 +298,11 @@ input[type="checkbox"]:checked ~ div { /* if clicked: show */
  * general display modifiers/keyword                                          *
  ******************************************************************************/
 .suppressselection { /* if this is active, text etc. will not be selected */
-    user-select: none;
     -webkit-user-select: none;
     -khtml-user-select: none;
     -moz-user-select: none;
     -o-user-select: none;
-    user-select: none;
+    -ms-user-select: none;
     cursor: default;
 }
 
