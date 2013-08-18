@@ -2,12 +2,11 @@ Requirements:
 
 - gcc
 - libpcap
-- glib
 - make
 
 For instance, if you're using Debian or Ubuntu, run the following command (as root):
 
-# apt-get install build-essential libpcap glib2.0
+# apt-get install build-essential libpcap
 
 Build instructions:
 
