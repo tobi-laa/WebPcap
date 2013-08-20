@@ -1,15 +1,15 @@
-if (typeof require !== 'undefined') {
-    var dissect = require('./dissection/dissection').dissect;
-    var switchByteOrder = require('./dissection/byteOrder').switchByteOrder;
-}
-
 var createURI;
+var pcapGlobalHeader = null;
 var MAGIC_NUMBER_MS = (0xa1b2c3d4 >>> 0);
 var MAGIC_NUMBER_NS = (0xa1b23c4d >>> 0);
 var SLL = 113;
 var ETHERNET = 1;
-var MIMETYPE = 'application/vnd.tcpdump.pcap';
+var PCAP_MIMETYPE = 'application/vnd.tcpdump.pcap';
 
+if (typeof require !== 'undefined') {
+    var dissect = require('./dissection/dissection').dissect;
+    var switchByteOrder = require('./dissection/byteOrder').switchByteOrder;
+}
 if (typeof window !== 'undefined') {
     if (Blob && window.URL && URL.createObjectURL) {
         createURI = createBlobURI;
@@ -23,8 +23,10 @@ if (typeof window !== 'undefined') {
 }
 
 function createPcapGlobalHeader() {
-    // 24 bytes for the global pcap header
-    var pcap_global_header = new ArrayBuffer(24);
+    if (pcapGlobalHeader) // always prefer a previously received/read header
+        return pcapGlobalHeader;
+    // otherwise create one yourself
+    var pcap_global_header = new ArrayBuffer(24); // 24 bytes long
     
     // we need to fill it with integers and shorts
     var shortView = new Uint16Array(pcap_global_header);
@@ -37,8 +39,6 @@ function createPcapGlobalHeader() {
     intView[2]   = 0;            // diff between local time & UTC
     intView[3]   = 0;            // timestamp accuracy
     intView[4]   = 65535;        // snaplen
-    // FIXME: Variable
-    // intView[5]   = 1;            // Ethernet    
     intView[5]   = 113;          // linux cooked capture
     
     return pcap_global_header;
@@ -50,8 +50,8 @@ function createDataURI(mimetype, data) {
 }
 
 function getPcapURI() {
-    return createURI(MIMETYPE, 
-                         [createPcapGlobalHeader()].concat(getRawPackets()));
+    return createURI(PCAP_MIMETYPE,
+                     [createPcapGlobalHeader()].concat(getRawPackets()));
 }
 
 function createBlobURI(mimetype, data) {
@@ -92,7 +92,6 @@ function readPcapFilePiece(file, fr) {
 }
 
 function readPcapGlobalHeader(data) {
-    var pcapGlobalHeader;
     var intView, shortView;
     var magicNumber;
     var versionMajor, versionMinor;
@@ -106,6 +105,8 @@ function readPcapGlobalHeader(data) {
     versionMajor = shortView[2] >>> 0;
     versionMinor = shortView[3] >>> 0;
     network      =   intView[5] >>> 0;
+    // FIXME
+    linkLayerType = network;
     
     switch (magicNumber) {
     case MAGIC_NUMBER_NS:
@@ -117,7 +118,7 @@ function readPcapGlobalHeader(data) {
         switchByteOrder(false);
         break;
     default:
-        alert('Invalid Magic Number.');
+        alert('Invalid Magic Number: 0x' + printNum(magicNumber, 16, 8));
         return -1;
     }
     
@@ -133,6 +134,8 @@ function readPcapGlobalHeader(data) {
     
     console.log('Read pcap global header, file format ' + 
                 'v' + versionMajor + '.' + versionMinor);
+    
+    return 1;
 }
 
 if (typeof module !== 'undefined') {

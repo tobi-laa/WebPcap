@@ -22,4 +22,3 @@ cd ../lighttpd-1.4.32 &&
 ./configure --with-websocket=RFC-6455 &&
 make &&
 sudo make install
-

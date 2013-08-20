@@ -37,17 +37,17 @@ ARPh.prototype = {
     getHeaderLength: function () {
         return ARPh.HLEN + 2*this.hlen + 2*this.plen;
     },
-    printDetails: function (pkt_num, prefix) {
+    printDetails: function (pkt_num) {
         var details = document.createElement('div');
         details.setAttribute('class','arp');
         var check = document.createElement('input');
         check.setAttribute('type','checkbox');  
-        check.setAttribute('id', prefix + 'ad');
+        check.setAttribute('id', 'ad');
         var hidden = document.createElement('div');
         var label = document.createElement('label');
         var icon = document.createElement('span');
         icon.setAttribute('class', 'dropdown glow');
-        label.setAttribute('for', prefix + 'ad');
+        label.setAttribute('for', 'ad');
         label.appendChild(icon);
         label.innerHTML += 'Address Resolution Protocol';
         details.appendChild(check);

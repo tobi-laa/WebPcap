@@ -15,7 +15,7 @@ function Ethh(data, offset) {
     this.src  = byteView.subarray(6, 12); // source MAC address    
     this.prot = ntohs(shortView[0]);      // protocol (i.e. IPv4)
     
-    this.next_header = null;   
+    this.next_header = null;
     byteView = shortView = null;
 }
 
@@ -23,17 +23,17 @@ Ethh.prototype = {
     getHeaderLength: function () {
         return Ethh.HLEN;
     },
-    printDetails: function (pkt_num, prefix) {
+    printDetails: function (pkt_num) {
         var details = document.createElement('div');
         details.setAttribute('class','eth');
         var check = document.createElement('input');
         check.setAttribute('type','checkbox');  
-        check.setAttribute('id', prefix + 'ed');
+        check.setAttribute('id', 'ed');
         var hidden = document.createElement('div');
         var label = document.createElement('label');
         var icon = document.createElement('span');
         icon.setAttribute('class', 'dropdown glow');
-        label.setAttribute('for', prefix + 'ed');
+        label.setAttribute('for', 'ed');
         label.appendChild(icon);
         label.innerHTML += 'Ethernet II';
         details.appendChild(check);

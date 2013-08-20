@@ -26,8 +26,8 @@ function ntohs(num) {
 /**
  * Switches the byte order of a 16-bit integer array.
  *
- * @param {Typed|Array} array Numbers whose byte order is to be switched
- * @returns {Typed|Array} Numbers with switched byte order
+ * @param {TypedArray} array Numbers whose byte order is to be switched
+ * @returns {TypedArray} Numbers with switched byte order
  */
 function ntohsa(array) {
     if (!sbo) return array;

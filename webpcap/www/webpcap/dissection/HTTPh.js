@@ -46,17 +46,17 @@ HTTPh.prototype = {
             this.headers.push(tokens[i]);
         }
     },
-    printDetails: function (pkt_num, prefix) {
+    printDetails: function (pkt_num) {
         var details = document.createElement('div');
         details.setAttribute('class','http');
         var check = document.createElement('input');
         check.setAttribute('type','checkbox');  
-        check.setAttribute('id', prefix + 'hd');
+        check.setAttribute('id', 'hd');
         var hidden = document.createElement('div');
         var label = document.createElement('label');
         var icon = document.createElement('span');
         icon.setAttribute('class', 'dropdown glow');
-        label.setAttribute('for', prefix + 'hd');
+        label.setAttribute('for', 'hd');
         label.appendChild(icon);
         label.innerHTML += 'Hypertext Transfer Protocol';
         details.appendChild(check);

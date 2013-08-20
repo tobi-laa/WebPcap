@@ -21,6 +21,7 @@ var connectionsById = {};      // .. these will be accessible via their ID
 var connectionsByArrival = []; // .. these are stored chronologically
 
 var counter = 1;
+var linkLayerType = 113; // default is SLL
 
 function dissect(data) {
     while (true) {
@@ -29,52 +30,66 @@ function dissect(data) {
             oldPacket = null;
         }
         
-        if (data.byteLength < 16) { // i.e. not enough for pcap header
+        if (data.byteLength < Pcaph.HLEN) { // i.e. not enough for pcap header
             oldPacket = data;
             return;
         }
         
         var packet = new Pcaph(data, 0);
         
-        if (data.byteLength < (packet.incl_len + 16)) { // i.e. packet not complete
+        if (data.byteLength < (packet.incl_len + Pcaph.HLEN)) { // i.e. packet not complete
             oldPacket = data; // store for next call to dissect
             return;
         }   
         
         packet.num = counter;
         packet.next_header =
-        dissectLinkLayer(packet, data.slice(0, packet.incl_len + 16), Pcaph.HLEN); // dissect further  
+        dissectLinkLayer(packet, data.slice(0, packet.incl_len + Pcaph.HLEN), Pcaph.HLEN); // dissect further  
                 
         // store dissected and raw packet
         dissectedPackets[counter - 1] = packet;
-        rawPackets[counter - 1] = data.slice(0, packet.incl_len + 16);
+        rawPackets[counter - 1] = data.slice(0, packet.incl_len + Pcaph.HLEN);
         counter++;
         
         // see if there is more data to dissect
-        if (packet.incl_len > 0 && data.byteLength > (packet.incl_len + 16))
-            data = data.slice(packet.incl_len + 16);
+        if (packet.incl_len > 0 && data.byteLength > (packet.incl_len + Pcaph.HLEN))
+            data = data.slice(packet.incl_len + Pcaph.HLEN);        
         else
             return;
     }
 }
 
 function dissectLinkLayer(packet, data, offset) {
-    if (offset > packet.incl_len + 16) { // bogus value
+    var toReturn = null;
+    if (offset > packet.incl_len + Pcaph.HLEN) { // bogus value
         packet.class = 'malformed';
-        return null;
+        return toReturn;
     }
-    // FIXME probably should be variable
-    var toReturn = new SLLh(data, offset);       
-    packet.src  = printMAC(toReturn.src);
-    // packet.dst  = printMAC(toReturn.dst);
-    packet.prot = 'SLL';
-    toReturn.next_header = 
-    dissectNetworkLayer(packet, data, offset + toReturn.getHeaderLength(), toReturn);    
+    switch(linkLayerType) {
+    case SLL:
+        toReturn = new SLLh(data, offset);       
+        packet.src  = printMAC(toReturn.src);
+        // packet.dst  = printMAC(toReturn.dst);
+        packet.prot = 'SLL';
+        break;
+    case ETHERNET:
+        toReturn = new Ethh(data, offset);       
+        packet.src  = printMAC(toReturn.src);
+        packet.dst  = printMAC(toReturn.dst);
+        packet.prot = 'Ethernet';
+        break;
+    default:
+        return toReturn; // i.e. return null
+    }
+    toReturn.next_header = dissectNetworkLayer(packet, data, 
+                                               offset + 
+                                               toReturn.getHeaderLength(), 
+                                               toReturn);
     return toReturn;
 }
 
 function dissectNetworkLayer(packet, data, offset, parent) {
-    if (offset > packet.incl_len + 16) { // bogus value
+    if (offset > packet.incl_len + Pcaph.HLEN) { // bogus value
         packet.class = 'malformed';
         return null;
     }
@@ -116,7 +131,7 @@ function dissectNetworkLayer(packet, data, offset, parent) {
 function dissectTransportLayer(packet, data, offset, parent) {
     var toReturn = null;
     
-    if (offset > packet.incl_len + 16) { // bogus value
+    if (offset > packet.incl_len + Pcaph.HLEN) { // bogus value
         packet.class = 'malformed';
         return toReturn;
     }
@@ -184,7 +199,7 @@ function handleConnection(packet, data, offset, parent, toReturn) {
 }
 
 function dissectApplicationLayer(packet, data, offset, parent) {
-    if (offset > packet.incl_len + 16) { // bogus value
+    if (offset > packet.incl_len + Pcaph.HLEN) { // bogus value
         packet.class = 'malformed';
         return null;
     }

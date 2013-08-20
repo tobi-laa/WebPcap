@@ -297,15 +297,6 @@ input[type="checkbox"]:checked ~ div { /* if clicked: show */
 /******************************************************************************
  * general display modifiers/keyword                                          *
  ******************************************************************************/
-.suppressselection { /* if this is active, text etc. will not be selected */
-    -webkit-user-select: none;
-    -khtml-user-select: none;
-    -moz-user-select: none;
-    -o-user-select: none;
-    -ms-user-select: none;
-    cursor: default;
-}
-
 .hidebox { /* nice trick: hide something but let it be 'clickable' */
     width: 0;
     height: 0;
@@ -321,3 +312,4 @@ input[type="checkbox"]:checked ~ div { /* if clicked: show */
 .tr {text-align: right;}
 .mono {font-family: "DejaVu Sans Mono", monospace;}
 .fontsized {height: 1rem;}
+.defaultcursor {cursor: default;}

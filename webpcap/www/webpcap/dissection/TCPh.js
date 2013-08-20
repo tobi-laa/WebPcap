@@ -6,13 +6,13 @@
 function TCPh(data, offset, parent) {
     var byteView  = new Uint8Array (data, offset, TCPh.HLEN);
     var shortView = new Uint16Array(data, offset, TCPh.HLEN / 2);
-    var intView   = new Uint32Array(data, offset, TCPh.HLEN / 4);
+    var intView   = new DataView(data, offset, TCPh.HLEN);
     
     this.sport    = ntohs(shortView[0]);     // source port
     this.dport    = ntohs(shortView[1]);     // destination port
     // note: >>> 0 is a trick to convert the number to an unsigned integer
-    this.seqn     = ntohl(intView[1]) >>> 0; // sequence number
-    this.ackn     = ntohl(intView[2]) >>> 0; // ACK number
+    this.seqn     = intView.getUint32(4, !sbo); // sequence number
+    this.ackn     = intView.getUint32(8, !sbo); // ACK number
     this.off_rsd  = byteView[12] & 0xfe; // data offset, reserved portion
     this.flags    = ntohs(shortView[6]) & 0x1ff; // various flags
     this.wsize    = ntohs(shortView[7]);     // window size
@@ -113,17 +113,17 @@ TCPh.prototype = {
     getHeaderLength: function () {
         return 4 * (this.off_rsd >>> 4);
     },
-    printDetails: function (pkt_num, prefix) {
+    printDetails: function (pkt_num) {
         var details = document.createElement('div');
         details.setAttribute('class','tcp');
         var check = document.createElement('input');
         check.setAttribute('type','checkbox');  
-        check.setAttribute('id', prefix + 'td');
+        check.setAttribute('id', 'td');
         var hidden = document.createElement('div');
         var label = document.createElement('label');
         var icon = document.createElement('span');
         icon.setAttribute('class', 'dropdown glow');
-        label.setAttribute('for', prefix + 'td');
+        label.setAttribute('for', 'td');
         label.appendChild(icon);
         label.innerHTML += 'Transmission Control Protocol';
         details.appendChild(check);
@@ -134,8 +134,7 @@ TCPh.prototype = {
                          + 'Sequence number: ' + this.seqn + '</br>'
                          + 'Acknowledgment number: ' + this.ackn + '</br>'
                          + 'Header length: ' + this.getHeaderLength() + '</br>'
-                         // FIXME
-                         // + 'Flags: ' +  + '</br>'
+                         + 'Flags: ' + printNum(this.flags, 16, 3) + ' ' + this.printFlags() + '</br>'
                          + 'Window size value: ' + this.wsize + '</br>'                         
                          + 'Checksum: 0x' + printNum(this.csum, 16, 4) + ' [' + (this.val ? 'correct' : 'incorrect') + ']</br>';
                          // FIXME options

@@ -31,17 +31,17 @@ UDPh.prototype = {
     getHeaderLength: function () {
         return UDPh.HLEN;
     },
-    printDetails: function (pkt_num, prefix) {
+    printDetails: function (pkt_num) {
         var details = document.createElement('div');
         details.setAttribute('class','udp');
         var check = document.createElement('input');
         check.setAttribute('type','checkbox');  
-        check.setAttribute('id', prefix + 'ud');
+        check.setAttribute('id', 'ud');
         var hidden = document.createElement('div');
         var label = document.createElement('label');
         var icon = document.createElement('span');
         icon.setAttribute('class', 'dropdown glow');
-        label.setAttribute('for', prefix + 'ud');
+        label.setAttribute('for', 'ud');
         label.appendChild(icon);
         label.innerHTML += 'User Datagram Protocol';
         details.appendChild(check);
