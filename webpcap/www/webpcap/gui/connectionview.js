@@ -1,4 +1,4 @@
-var conns = getConnectionsByArrival();
+var conns;
 var connAnchor = 0;
 var pktAnchor = -1;
 
@@ -210,7 +210,7 @@ function updateConnectionHeader(connectionNumber, row) {
 }
 
 function printConnectionDetails(id) {
-    var conn = getConnectionById(id);
+    var conn = dissector.getConnectionById(id);
     
     if (!conn)
         return;

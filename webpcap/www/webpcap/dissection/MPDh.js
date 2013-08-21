@@ -67,3 +67,7 @@ MPDh.prototype = {
         return this.type;
     }
 };
+
+if (typeof module !== 'undefined') {
+    module.exports.MPDh = MPDh;
+}

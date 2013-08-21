@@ -87,5 +87,29 @@ function base64ArrayBuffer(arrayBuffer) {
   return base64
 }
 
-if (typeof module !== 'undefined')
+// convert between nodejs's buffers and arrayBuffers
+
+function bufferToArrayBuffer(buff) {
+    var newBuff = new ArrayBuffer(buff.length);
+    var byteView = new Uint8Array(newBuff);
+    for (var i = 0; i < buff.length; i++) {
+        byteView[i] = buff[i];
+    }
+    return newBuff;
+} 
+
+function arrayBufferToBuffer(arrBuff) {
+    var newBuff = new Buffer(arrBuff.byteLength);
+    var byteView = new Uint8Array(arrBuff);
+    for (var i = 0; i < arrBuff.byteLength; i++) {
+        newBuff[i] = byteView[i];
+    }
+    return newBuff;
+}
+
+if (typeof module !== 'undefined') {
     module.exports.appendBuffer = appendBuffer;
+    module.exports.mergeBuffers = mergeBuffers;
+    module.exports.bufferToArrayBuffer = bufferToArrayBuffer;
+    module.exports.arrayBufferToBuffer = arrayBufferToBuffer;
+}

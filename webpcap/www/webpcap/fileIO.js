@@ -1,3 +1,9 @@
+if (typeof require !== 'undefined') {
+    var dissect = require('./dissection/dissection').dissect;
+    var setLinkLayerType = require('./dissection/dissection').setLinkLayerType;
+    var setSwitchByteOrder = require('./dissection/byteOrder').setSwitchByteOrder;
+}
+
 var createURI;
 var pcapGlobalHeader = null;
 var MAGIC_NUMBER_MS = (0xa1b2c3d4 >>> 0);
@@ -6,10 +12,6 @@ var SLL = 113;
 var ETHERNET = 1;
 var PCAP_MIMETYPE = 'application/vnd.tcpdump.pcap';
 
-if (typeof require !== 'undefined') {
-    var dissect = require('./dissection/dissection').dissect;
-    var switchByteOrder = require('./dissection/byteOrder').switchByteOrder;
-}
 if (typeof window !== 'undefined') {
     if (Blob && window.URL && URL.createObjectURL) {
         createURI = createBlobURI;
@@ -49,9 +51,9 @@ function createDataURI(mimetype, data) {
                  base64ArrayBuffer(mergeBuffers(data))};
 }
 
-function getPcapURI() {
-    return createURI(PCAP_MIMETYPE,
-                     [createPcapGlobalHeader()].concat(getRawPackets()));
+function getPcapURI(dissector) {
+    return createURI(PCAP_MIMETYPE, [createPcapGlobalHeader()].concat(
+                                                    dissector.getRawPackets()));
 }
 
 function createBlobURI(mimetype, data) {
@@ -66,13 +68,14 @@ function createBlobURI(mimetype, data) {
     return {URI: URL.createObjectURL(blob), blob: blob};
 }
 
-function readPcapFile(file) {
+function readPcapFile(file, dissector) {
     if (file.size < 24)
         return;
     
     var fr = new FileReader();
     fr.readAsArrayBuffer(file.slice(0, 24));
-    fr.onload = function(evt) {readPcapGlobalHeader(evt.target.result);};
+    fr.onload = function(evt) {
+        readPcapGlobalHeader(evt.target.result, dissector);};
         
     readPcapFilePiece(file.slice(24), fr);
 }
@@ -91,12 +94,12 @@ function readPcapFilePiece(file, fr) {
     fr.readAsArrayBuffer(file.slice(0, CHUNKSIZE));
 }
 
-function readPcapGlobalHeader(data) {
+function readPcapGlobalHeader(data, dissector) {
     var intView, shortView;
     var magicNumber;
     var versionMajor, versionMinor;
     var network;
-    
+        
     pcapGlobalHeader = data.slice(0, 24);
     intView   = new Uint32Array(pcapGlobalHeader);
     shortView = new Uint16Array(pcapGlobalHeader);
@@ -105,17 +108,16 @@ function readPcapGlobalHeader(data) {
     versionMajor = shortView[2] >>> 0;
     versionMinor = shortView[3] >>> 0;
     network      =   intView[5] >>> 0;
-    // FIXME
-    linkLayerType = network;
+    dissector.setLinkLayerType(network);
     
     switch (magicNumber) {
     case MAGIC_NUMBER_NS:
     case MAGIC_NUMBER_MS:
-        switchByteOrder(true);
+        setSwitchByteOrder(false);
         break;
     case ntohl(MAGIC_NUMBER_NS):
     case ntohl(MAGIC_NUMBER_MS):
-        switchByteOrder(false);
+        setSwitchByteOrder(true);
         break;
     default:
         alert('Invalid Magic Number: 0x' + printNum(magicNumber, 16, 8));
@@ -140,5 +142,5 @@ function readPcapGlobalHeader(data) {
 
 if (typeof module !== 'undefined') {
     module.exports.readPcapFile = readPcapFile;
-    module.exports.dissectPcapFile = dissectPcapFile;
+    module.exports.readPcapGlobalHeader = readPcapGlobalHeader;
 }

@@ -5,11 +5,12 @@ var webSocketURL = 'ws://' + window.location.host + '/binary';
 var webSocket = null;  
 
 var startCapture = document.getElementById('startcap');
-var startCaptureImage = startCapture.getElementsByTagName('img')[0];
 
 var serverFilter = null;
 
 var cache = null;
+
+var dissector = null;
 
 var JSEVENTS = 
 [
@@ -21,7 +22,7 @@ var JSEVENTS =
     ['clearscr', 'onclick', 'clearScreen()'],
     ['savecap', 'onclick', 'saveCapture()'],
     ['loadcap', 'onclick', 'fileInput.click()'],
-    ['fileInput', 'onchange', 'readPcapFile(this.files[0])'],
+    ['fileInput', 'onchange', 'readPcapFile(this.files[0], dissector)'],
     ['switchview', 'onclick', 'switchView()'],
     ['filterForm', 'onsubmit', 'return processFilter()'],
     ['output', 'oncontextmenu', 'return false'],
@@ -37,11 +38,41 @@ var JSEVENTS =
 initWebPcapJS();
 
 function initWebPcapJS () {
+    dissector = new Dissector();
+    pkts = dissector.getDissectedPackets();
+    conns = dissector.getConnectionsByArrival();
+    initWellKnownPorts();
     initGUI();
     initJSEvents();
     processResize();
     startRendering();
     switchConnection();    
+}
+
+function initWellKnownPorts() {
+    var portNumbersReq = new XMLHttpRequest();    
+    portNumbersReq.open("get", "webpcap/dissection/service-names-port-numbers.txt", true);
+    portNumbersReq.send();    
+    portNumbersReq.onload = function () {
+        var lines = this.responseText.split('\n');
+        var tokens, index;
+        for (var i = 0; i < lines.length; i++) {
+            tokens = lines[i].split(/\s* \s*/, 3);
+            if (tokens[0] === '' || tokens[1] === '' || tokens[2] === '')
+                continue;
+            
+            index = Number(tokens[1]);
+            
+            switch (tokens[2]) {
+            case 'tcp':
+                TCP_PORTS[index] = TCP_PORTS[index] || tokens[0];
+                break;
+            case 'udp':
+                UDP_PORTS[index] = UDP_PORTS[index] || tokens[0];
+                break;
+            }
+        }
+    }
 }
 
 function initJSEvents() {
@@ -72,7 +103,7 @@ function onSecondMessage(msg) {
     if (cache.byteLength < 24)
         return;
     
-    readPcapGlobalHeader(cache);
+    readPcapGlobalHeader(cache, dissector);
     webSocket.onmessage = onWebSocketMessage;
     dissectMessage(cache.slice(24));
 }
@@ -91,7 +122,7 @@ function dissectMessage(data) {
         oldAnchor = tuple[1];
     }
     
-    dissect(data);
+    dissector.dissect(data);
     // simpleDissect(msg.data, simplePrint);
     
     if (packetView)
@@ -126,15 +157,15 @@ function dissectMessage(data) {
 function onWebSocketOpen() {
     webSocket.send(serverFilter || 'none\0');
     startCapture.setAttribute('title', 'Stop the running live capture');
-    startCaptureImage.src = 'img/media-playback-stop.svgz';
-    startCaptureImage.alt = 'Stop capture';
+    startCapture.innerHTML = '<img class="glow buttonicon" src="img/media-' + 
+                             'playback-stop.svgz" alt="Stop capture">';
 }
-
+    
 function onWebSocketClose() {
     webSocket = null;
     startCapture.setAttribute('title', 'Start a new live capture');
-    startCaptureImage.src = 'img/media-record.svgz';
-    startCaptureImage.alt = 'Start capture';
+    startCapture.innerHTML = '<img class="glow buttonicon" src="img/media-' +
+                             'record.svgz" alt="Start capture">';
     cache = null;
 }
 
@@ -186,7 +217,7 @@ function switchView() {
 }
 
 function saveCapture() {
-    downloadFileFromURI(getPcapURI(), 'log.pcap');
+    downloadFileFromURI(getPcapURI(dissector), 'log.pcap');
 } 
 
 function downloadFileFromURI(resource, filename) {

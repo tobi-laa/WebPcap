@@ -1,8 +1,8 @@
+var pkts;
 var scrollanchor = 0;
-var pkts = getDissectedPackets();
 
 function printPacketDetails(packetNum) {
-    var packet = getDissectedPacket(packetNum);
+    var packet = dissector.getDissectedPacket(packetNum);
     if (!packet) return;
 
     
@@ -15,7 +15,7 @@ function printPacketDetails(packetNum) {
 }
 
 function printPayload(packetNum) {   
-    var bytes = getRawPacket(packetNum);
+    var bytes = dissector.getRawPacket(packetNum);
     if (!bytes) return;
     
     bytes = new Uint8Array(bytes);

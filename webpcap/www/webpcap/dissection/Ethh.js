@@ -1,4 +1,4 @@
-if (typeof require !== 'undefined')
+if (typeof require !== 'undefined') 
     var printNum = require('../formattedOutput').printNum;
 
 /*
@@ -48,8 +48,8 @@ Ethh.prototype = {
         return details;
     },
     toString: function () {
-        return 'From: '+printMAC(this.src)+
-               ' To: ' +printMAC(this.dst);
+        return 'From: ' + printMAC(this.src)+
+               ' To: '  + printMAC(this.dst);
     }
 };
 

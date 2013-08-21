@@ -79,7 +79,7 @@ function processClick(row, num) {
         return;
     }
     
-    if (getConnectionById(num)) {
+    if (dissector.getConnectionById(num)) {
         printConnectionDetails(num);
         bytesOutput.innerHTML = '';
         return;
@@ -93,7 +93,7 @@ function processRightClick(row, num, event, id) {
     processClick(row, num);
     
     // skip non-UDP, non-TCP packets
-    if (!id || !connectionsById[id])
+    if (!id || !dissector.getConnectionsById()[id])
         return false;
     
     var follow, showContent, downloadSrcContent, downloadDstContent;
@@ -112,7 +112,7 @@ function processRightClick(row, num, event, id) {
     doubleBuffer.innerHTML = '';
     doubleBuffer.appendChild(follow);
     
-    if (connectionsById[id].contents) {
+    if (dissector.getConnectionsById()[id].contents) {
         showContent = document.createElement('div');
         
         showContent.setAttribute('onclick','showContent("' + id + '")');
@@ -121,7 +121,7 @@ function processRightClick(row, num, event, id) {
         
         doubleBuffer.appendChild(showContent);
         
-        if (connectionsById[id].contents[0].length) {
+        if (dissector.getConnectionsById()[id].contents[0].length) {
             downloadSrcContent = document.createElement('div');
             
             downloadSrcContent.setAttribute('onclick','downloadContent("' + id + '", 0)');
@@ -131,7 +131,7 @@ function processRightClick(row, num, event, id) {
             doubleBuffer.appendChild(downloadSrcContent);
         }
         
-        if (connectionsById[id].contents[1].length) {
+        if (dissector.getConnectionsById()[id].contents[1].length) {
             downloadDstContent = document.createElement('div');
             
             downloadDstContent.setAttribute('onclick','downloadContent("' + id + '", 1)');
@@ -152,7 +152,7 @@ function processRightClick(row, num, event, id) {
 }
 
 function downloadContent(id, srcOrDst) {
-    var contents = connectionsById[id].contents[srcOrDst];
+    var contents = dissector.getConnectionsById()[id].contents[srcOrDst];
     
     if (contents.length === 0)
         return;
@@ -166,7 +166,7 @@ function downloadContent(id, srcOrDst) {
 }
 
 function showContent(id) {
-    var contents = connectionsById[id].mergeContent();
+    var contents = dissector.getConnectionsById()[id].mergeContent();
     
     if (contents.length === 0)
         return;
@@ -209,7 +209,7 @@ function showContent(id) {
     box.appendChild(span);
     
     var w = window.open('tcpcontent.html', 'content', 'width=640, height=480, status=yes, resizable=yes');
-    w.onload = function() {w.document.body.appendChild(box); w.connection = connectionsById[id]};
+    w.onload = function() {w.document.body.appendChild(box); w.connection = dissector.getConnectionsById()[id]};
 }
 
 function render() {    
@@ -226,12 +226,12 @@ function render() {
 function followStream(id) {  
     if (followID === id) {
         followID = false;
-        pkts = getDissectedPackets();
+        pkts = dissector.getDissectedPackets();
     }
     else {
         packetView = true;
         followID = id;
-        pkts = getConnectionById(id).packets;
+        pkts = dissector.getConnectionById(id).packets;
     }
     // we don't want a negative anchor
     scrollanchor = Math.max(0, pkts.length - maxPackets);

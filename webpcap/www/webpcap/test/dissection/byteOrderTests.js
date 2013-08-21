@@ -1,6 +1,6 @@
 var assert = require('assert');
-ntohl = require('../../dissection/byteOrder').ntohl;
-ntohs = require('../../dissection/byteOrder').ntohs;
+var ntohl = require('../../dissection/byteOrder').ntohl;
+var ntohs = require('../../dissection/byteOrder').ntohs;
 
 test('magic number byte order changed correctly (ntohl)', function () {
     var magic_num_ho = 0xa1b2c3d4 >> 0;

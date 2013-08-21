@@ -75,3 +75,7 @@ HTTPh.prototype = {
         return this.headers[0];
     }
 };
+
+if (typeof module !== 'undefined') {
+    module.exports.HTTPh = HTTPh;
+}

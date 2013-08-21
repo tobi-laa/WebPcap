@@ -98,4 +98,5 @@ function validateChecksum(shortView) {
 if (typeof module !== 'undefined') {
     module.exports.printIPv4 = printIPv4;
     module.exports.IPv4h = IPv4h;
+    module.exports.validateChecksum = validateChecksum;
 }

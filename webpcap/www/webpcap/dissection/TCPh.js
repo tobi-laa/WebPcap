@@ -1,18 +1,24 @@
+if (typeof require !== 'undefined') {
+    var getSwitchByteOrder = require('./byteOrder').getSwitchByteOrder;
+    var validateChecksum = require('./IPv4h').validateChecksum;
+}
 /*
  ******************************************************************
  ************************** TCP HEADER ****************************
  ******************************************************************
  */
+var TCP_PORTS = []; // well-known ports
+TCP_PORTS[6600] = 'mpd'; // specifying mpd manually
+
 function TCPh(data, offset, parent) {
     var byteView  = new Uint8Array (data, offset, TCPh.HLEN);
-    var shortView = new Uint16Array(data, offset, TCPh.HLEN / 2);
+    var shortView = new Uint16Array(data, offset, TCPh.HLEN / 2);/
     var intView   = new DataView(data, offset, TCPh.HLEN);
     
-    this.sport    = ntohs(shortView[0]);     // source port
-    this.dport    = ntohs(shortView[1]);     // destination port
-    // note: >>> 0 is a trick to convert the number to an unsigned integer
-    this.seqn     = intView.getUint32(4, !sbo); // sequence number
-    this.ackn     = intView.getUint32(8, !sbo); // ACK number
+    this.sport    = data.getUint16(0, getSwitchByteOrder()); // source port
+    this.dport    = data.getUint16(2, getSwitchByteOrder()); // destination port
+    this.seqn     = data.getUint32(4, getSwitchByteOrder()); // sequence number
+    this.ackn     = data.getUint32(8, getSwitchByteOrder()); // ACK number
     this.off_rsd  = byteView[12] & 0xfe; // data offset, reserved portion
     this.flags    = ntohs(shortView[6]) & 0x1ff; // various flags
     this.wsize    = ntohs(shortView[7]);     // window size
@@ -21,8 +27,8 @@ function TCPh(data, offset, parent) {
     /* various options may follow */
     
     if (offset + this.getHeaderLength() > data.byteLength)
-        this.val = false;
-    else {
+        this.val = false; // already bogus
+    else { // calculate checksum
         var ph = buildPseudoHeader(parent, data, offset);
         this.val = validateChecksum(ph);
     }
@@ -46,7 +52,6 @@ function TCPh(data, offset, parent) {
 function createID(src, sport, dst, dport, prefix) {
     if (sport === 0 || dport === 0)
         return false;
-    // FIXME find a more elegant way than strings
     var toSort = ['' + sport, '' + dport];
     for (var i = 0; i < src.length; i++) {
         toSort[0] += src[i];
@@ -172,35 +177,8 @@ TCPh.prototype = {
 
 TCPh.HLEN = 20; // TCP minimum header length in bytes
 
-var UDP_PORTS = []; // well-known ports
-var TCP_PORTS = []; // well-known ports
-TCP_PORTS[6600] = 'mpd'; // specifying mpd manually
-
-function parseWellKnownPorts() {
-    var lines = this.responseText.split('\n');
-    var tokens, index;
-    for (var i = 0; i < lines.length; i++) {
-        tokens = lines[i].split(/\s* \s*/, 3);
-        if (tokens[0] === '' || tokens[1] === '' || tokens[2] === '')
-            continue;
-        
-        index = Number(tokens[1]);
-         
-        switch (tokens[2]) {
-        case 'tcp':
-            TCP_PORTS[index] = TCP_PORTS[index] || tokens[0];
-            break;
-        case 'udp':
-            UDP_PORTS[index] = UDP_PORTS[index] || tokens[0];
-            break;
-        }
-    }
+if (typeof module !== 'undefined') {
+    module.exports.TCPh = TCPh;
+    module.exports.createID = createID;
+    module.exports.buildPseudoHeader = buildPseudoHeader;
 }
-
-var portNumbersReq = new XMLHttpRequest();
-portNumbersReq.onload = parseWellKnownPorts;
-portNumbersReq.open("get", "webpcap/dissection/service-names-port-numbers.txt", true);
-portNumbersReq.send();
-
-if (typeof module !== 'undefined')
-    module.exports = TCPh;

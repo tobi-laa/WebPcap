@@ -1,3 +1,7 @@
+if (typeof require !== 'undefined') {
+    var mergeBuffers = require('../arrayBuffers').mergeBuffers;
+}
+
 /**
  * Class describing Connection objects. These bundle information for either TCP
  * or UDP connections. All packets with the same ID will be processed by the
@@ -52,6 +56,9 @@ Connection.prototype.processSegment = function (packet, data, offset, parent, tl
     else // as a last resort, calculate it like this
         nextSeqn += packet.orig_len + Pcaph.HLEN - offset;
     
+    if (seqn === nextSeqn) // no payload, we're done
+        return;
+    
     ackn = tlHeader.ackn;
     
     srcOrDst = (this.sport === tlHeader.dport) | 0;
@@ -60,6 +67,7 @@ Connection.prototype.processSegment = function (packet, data, offset, parent, tl
         this.seqn = [];
         this.seqn[srcOrDst]      = tlHeader.seqn;
         this.seqn[!srcOrDst | 0] = tlHeader.ackn;
+        this.srcOrDst = srcOrDst;
     }
         
     if (seqn === this.seqn[srcOrDst]) { // i.e. next expected segment
@@ -71,10 +79,7 @@ Connection.prototype.processSegment = function (packet, data, offset, parent, tl
     // else: this is a duplicate
 }
 
-Connection.prototype.addSegment = function (srcOrDst, data, ackn, seqn, nextSeqn, offset) {
-    if (seqn === nextSeqn) // no payload, we're done
-        return;
-    
+Connection.prototype.addSegment = function (srcOrDst, data, ackn, seqn, nextSeqn, offset) {    
     var segment; // segment to be collected
     
     segment = {
@@ -100,10 +105,7 @@ Connection.prototype.addBufferedSegments = function (srcOrDst) {
     }   
 }
 
-Connection.prototype.bufferSegment = function (srcOrDst, data, ackn, seqn, nextSeqn, offset) {
-    if (seqn === nextSeqn) // no payload, we're done
-        return;
-    
+Connection.prototype.bufferSegment = function (srcOrDst, data, ackn, seqn, nextSeqn, offset) {    
     var buffer; // easier access
     var segment; // segment to be buffered
     var start; // variables for binary search
@@ -145,18 +147,26 @@ Connection.prototype.bufferSegment = function (srcOrDst, data, ackn, seqn, nextS
     // else: this is a duplicate
 }
 
+Connection.prototype.getContent = function (srcOrDst) {
+    var data = [];
+    
+    for (var i = 0; i < this.contents[srcOrDst].length; i++)
+        data[i] = this.contents[srcOrDst][i].data.slice(
+                    this.contents[srcOrDst][i].offset);
+    
+    return mergeBuffers(data);
+}
+
 Connection.prototype.mergeContent = function () {
     var srcOrDst;
     var i;
     var mergedContent;
     
-    srcOrDst = (this.contents[1].length && 
-                (!this.contents[0].length || 
-                 this.contents[1][0].ackn === this.contents[0][0].seqn)) | 0;
+    srcOrDst = this.srcOrDst;
     i = [0, 0];
     mergedContent = [];
     
-    while (i[0] < this.contents[0].length || i[1] < this.contents[1].length) {
+    while (i[0] < this.contents[0].length && i[1] < this.contents[1].length) {        
         var oldAckn = this.contents[srcOrDst][i[srcOrDst]].ackn;
         
         while (i[srcOrDst] < this.contents[srcOrDst].length 
@@ -167,6 +177,18 @@ Connection.prototype.mergeContent = function () {
         
         srcOrDst = !srcOrDst | 0;
     }
+    while (i[0] < this.contents[0].length) {
+        mergedContent.push(this.contents[0][i[0]]);
+        i[0]++;
+    }
+    while (i[1] < this.contents[1].length) {
+        mergedContent.push(this.contents[1][i[1]]);
+        i[1]++;
+    }
     
     return mergedContent;
+}
+
+if (typeof module !== 'undefined') {
+    module.exports.Connection = Connection;
 }

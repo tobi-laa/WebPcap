@@ -1,4 +1,4 @@
-var sbo = true; // if false, byte order won't be switched
+var switchByteOrder = true; // if false, byte order won't be switched
 
 /**
  * Switches the byte order of a 32-bit integer.
@@ -7,7 +7,7 @@ var sbo = true; // if false, byte order won't be switched
  * @returns {number} Number with switched byte order
  */
 function ntohl(num) {
-    if (!sbo) return num;
+    if (!switchByteOrder) return num;
     return ((num >>>  8)  & 0x0000ff00) | ((num <<  8)  & 0x00ff0000) |
            ((num >>>  24) & 0x000000ff) | ((num <<  24) & 0xff000000);
 }
@@ -19,7 +19,7 @@ function ntohl(num) {
  * @returns {number} Number with switched byte order
  */
 function ntohs(num) {
-    if (!sbo) return num;
+    if (!switchByteOrder) return num;
     return ((num >>  8) & 0x00ff) | ((num <<  8) & 0xff00);
 }
 
@@ -30,7 +30,7 @@ function ntohs(num) {
  * @returns {TypedArray} Numbers with switched byte order
  */
 function ntohsa(array) {
-    if (!sbo) return array;
+    if (!switchByteOrder) return array;
     for (var i = 0; i < array.length; i++)
         array[i] = ntohs(array[i]);
     return array;
@@ -41,8 +41,17 @@ function ntohsa(array) {
  *
  * @param {boolean} bool If true, methods will switch byte order
  */
-function switchByteOrder(bool) {
-    sbo = bool;
+function setSwitchByteOrder(bool) {
+    switchByteOrder = bool;
+}
+
+/**
+ * Gets the behavior for byte order switching methods.
+ *
+ * @returns {boolean} bool true if methods switch byte order
+ */
+function getSwitchByteOrder(bool) {
+    return switchByteOrder;
 }
 
 if (typeof module !== 'undefined') {
@@ -50,5 +59,6 @@ if (typeof module !== 'undefined') {
     module.exports.ntohs = ntohs;
     module.exports.htonl = ntohl;
     module.exports.htons = ntohs;
-    module.exports.switchByteOrder = switchByteOrder;
+    module.exports.setSwitchByteOrder = setSwitchByteOrder;
+    module.exports.getSwitchByteOrder = getSwitchByteOrder;
 }

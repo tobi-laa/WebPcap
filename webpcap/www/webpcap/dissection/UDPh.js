@@ -1,8 +1,14 @@
+if (typeof require !== 'undefined') {
+    var createID = require('./TCPh').createID;
+    var buildPseudoHeader = require('./TCPh').buildPseudoHeader;
+    var validateChecksum = require('./IPv4h').validateChecksum;
+}
 /*
  ******************************************************************
  ************************** UDP HEADER ****************************
  ******************************************************************
  */
+var UDP_PORTS = []; // well-known ports
 
 function UDPh(data, offset, parent) {
     var shortView = new Uint16Array(data, offset, UDPh.HLEN / 2);

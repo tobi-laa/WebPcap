@@ -1,5 +1,5 @@
 if (typeof require !== 'undefined') {
-    var Pcaph = require('./Pcaph');
+    var Pcaph = require('./Pcaph').Pcaph;
     var Ethh = require('./Ethh').Ethh;
     var SLLh = require('./SLLh').SLLh;
     var printMAC = require('./Ethh').printMAC;
@@ -8,71 +8,83 @@ if (typeof require !== 'undefined') {
     var IPv4h = require('./IPv4h').IPv4h;
     var IPv6h = require('./IPv6h').IPv6h;
     var ARPh = require('./ARPh');
-    var TCPh = require('./TCPh');
+    var TCPh = require('./TCPh').TCPh;
     var UDPh = require('./UDPh');
+    var HTTPh = require('./HTTPh').HTTPh;
+    var MPDh = require('./MPDh').MPDh;
+    var Connection = require('./Connection').Connection;
     var appendBuffer = require('./../arrayBuffers').appendBuffer;
 }
 
-var oldPacket = null; // cache for previously received data
-var dissectedPackets = [];
-var rawPackets = [];
-// the following two variables will hold the same objects, but...
-var connectionsById = {};      // .. these will be accessible via their ID
-var connectionsByArrival = []; // .. these are stored chronologically
+var PCAP_HEADER_LENGTH = 16;
 
-var counter = 1;
-var linkLayerType = 113; // default is SLL
+function Dissector() {
+    this.cache = null; // cache for previously received data
+    this.dissectedPackets = [];
+    this.rawPackets = [];
+    
+    // the following two variables will hold the same objects, but...
+    this.connectionsById = {};      // .. these will be accessible via their ID
+    this.connectionsByArrival = []; // .. these are stored chronologically
 
-function dissect(data) {
-    while (true) {
-        if (oldPacket !== null) { // consider previously received data
-            data = appendBuffer(oldPacket, data);
-            oldPacket = null;
+    this.counter = 1;
+    this.linkLayerType = 113; // default is SLL
+}
+
+Dissector.prototype.setLinkLayerType = function (newType) {
+    this.linkLayerType = newType;
+}
+
+Dissector.prototype.dissect = function (data) {
+    while (data.byteLength > 0) {
+        if (this.cache !== null) { // consider previously received data
+            data = appendBuffer(this.cache, data);
+            this.cache = null;
         }
         
-        if (data.byteLength < Pcaph.HLEN) { // i.e. not enough for pcap header
-            oldPacket = data;
+        if (data.byteLength < PCAP_HEADER_LENGTH) { // i.e. not enough for pcap header
+            this.cache = data;
             return;
         }
         
         var packet = new Pcaph(data, 0);
         
-        if (data.byteLength < (packet.incl_len + Pcaph.HLEN)) { // i.e. packet not complete
-            oldPacket = data; // store for next call to dissect
+        if (data.byteLength < (packet.incl_len + PCAP_HEADER_LENGTH)) { // i.e. packet not complete
+            this.cache = data; // store for next call to dissect
             return;
-        }   
-        
-        packet.num = counter;
+        }
+                
+        packet.num = this.counter;
         packet.next_header =
-        dissectLinkLayer(packet, data.slice(0, packet.incl_len + Pcaph.HLEN), Pcaph.HLEN); // dissect further  
+        this.dissectLinkLayer(packet, data.slice(0, packet.incl_len + PCAP_HEADER_LENGTH), PCAP_HEADER_LENGTH); // dissect further  
                 
         // store dissected and raw packet
-        dissectedPackets[counter - 1] = packet;
-        rawPackets[counter - 1] = data.slice(0, packet.incl_len + Pcaph.HLEN);
-        counter++;
+        this.dissectedPackets[this.counter - 1] = packet;
+        this.rawPackets[this.counter - 1] = data.slice(0, packet.incl_len + PCAP_HEADER_LENGTH);
+        this.counter++;
         
         // see if there is more data to dissect
-        if (packet.incl_len > 0 && data.byteLength > (packet.incl_len + Pcaph.HLEN))
-            data = data.slice(packet.incl_len + Pcaph.HLEN);        
+        if (packet.incl_len > 0 && data.byteLength > (packet.incl_len + PCAP_HEADER_LENGTH))
+            data = data.slice(packet.incl_len + PCAP_HEADER_LENGTH);        
         else
             return;
     }
 }
 
-function dissectLinkLayer(packet, data, offset) {
+Dissector.prototype.dissectLinkLayer = function (packet, data, offset) {
     var toReturn = null;
-    if (offset > packet.incl_len + Pcaph.HLEN) { // bogus value
+    if (offset > packet.incl_len + PCAP_HEADER_LENGTH) { // bogus value
         packet.class = 'malformed';
         return toReturn;
     }
-    switch(linkLayerType) {
-    case SLL:
+    switch(this.linkLayerType) {
+    case 113: // SLL
         toReturn = new SLLh(data, offset);       
         packet.src  = printMAC(toReturn.src);
         // packet.dst  = printMAC(toReturn.dst);
         packet.prot = 'SLL';
         break;
-    case ETHERNET:
+    case 1: // Ethernet
         toReturn = new Ethh(data, offset);       
         packet.src  = printMAC(toReturn.src);
         packet.dst  = printMAC(toReturn.dst);
@@ -81,15 +93,15 @@ function dissectLinkLayer(packet, data, offset) {
     default:
         return toReturn; // i.e. return null
     }
-    toReturn.next_header = dissectNetworkLayer(packet, data, 
+    toReturn.next_header = this.dissectNetworkLayer(packet, data, 
                                                offset + 
                                                toReturn.getHeaderLength(), 
                                                toReturn);
     return toReturn;
 }
 
-function dissectNetworkLayer(packet, data, offset, parent) {
-    if (offset > packet.incl_len + Pcaph.HLEN) { // bogus value
+Dissector.prototype.dissectNetworkLayer = function (packet, data, offset, parent) {
+    if (offset > packet.incl_len + PCAP_HEADER_LENGTH) { // bogus value
         packet.class = 'malformed';
         return null;
     }
@@ -101,7 +113,7 @@ function dissectNetworkLayer(packet, data, offset, parent) {
         packet.dst  = printIPv4(toReturn.dst);
         packet.prot = 'IPv4';
         toReturn.next_header = 
-        dissectTransportLayer(packet, data, offset + toReturn.getHeaderLength(), toReturn);
+        this.dissectTransportLayer(packet, data, offset + toReturn.getHeaderLength(), toReturn);
         if (!toReturn.val)
             packet.class = 'malformed';
         break;
@@ -111,7 +123,7 @@ function dissectNetworkLayer(packet, data, offset, parent) {
         packet.dst  = printIPv6(toReturn.dst);
         packet.prot = 'IPv6';
         toReturn.next_header = 
-        dissectTransportLayer(packet, data, offset + toReturn.getHeaderLength(), toReturn);
+        this.dissectTransportLayer(packet, data, offset + toReturn.getHeaderLength(), toReturn);
         break;
     case 0x0806: // ARP    
         toReturn = new ARPh(data, offset);
@@ -128,10 +140,10 @@ function dissectNetworkLayer(packet, data, offset, parent) {
     return toReturn;
 }
 
-function dissectTransportLayer(packet, data, offset, parent) {
+Dissector.prototype.dissectTransportLayer = function (packet, data, offset, parent) {
     var toReturn = null;
     
-    if (offset > packet.incl_len + Pcaph.HLEN) { // bogus value
+    if (offset > packet.incl_len + PCAP_HEADER_LENGTH) { // bogus value
         packet.class = 'malformed';
         return toReturn;
     }
@@ -144,9 +156,9 @@ function dissectTransportLayer(packet, data, offset, parent) {
     case 6: // TCP
         toReturn = new TCPh(data, offset, parent);        
         packet.prot = 'TCP';
-        handleConnection(packet, data, offset, parent, toReturn);
+        this.handleConnection(packet, data, offset, parent, toReturn);
         toReturn.next_header = 
-        dissectApplicationLayer(packet, data, offset + toReturn.getHeaderLength(), toReturn);
+        this.dissectApplicationLayer(packet, data, offset + toReturn.getHeaderLength(), toReturn);
         if (!toReturn.val)
             packet.class = 'malformed';
         else if (toReturn.RST)
@@ -157,9 +169,9 @@ function dissectTransportLayer(packet, data, offset, parent) {
     case 17: // UDP
         toReturn = new UDPh(data, offset, parent);        
         packet.prot = 'UDP';
-        handleConnection(packet, data, offset, parent, toReturn);
+        this.handleConnection(packet, data, offset, parent, toReturn);
         toReturn.next_header = 
-        dissectApplicationLayer(packet, data, offset + toReturn.getHeaderLength(), toReturn);
+        this.dissectApplicationLayer(packet, data, offset + toReturn.getHeaderLength(), toReturn);
         if (!toReturn.val)
             packet.class = 'malformed';
         break;
@@ -167,7 +179,7 @@ function dissectTransportLayer(packet, data, offset, parent) {
     return toReturn;
 }
 
-function handleConnection(packet, data, offset, parent, toReturn) {
+Dissector.prototype.handleConnection = function (packet, data, offset, parent, toReturn) {
     if (!toReturn.id)
         return;
         
@@ -175,18 +187,18 @@ function handleConnection(packet, data, offset, parent, toReturn) {
             
     var connection;
     
-    if (!connectionsById[toReturn.id]) {
+    if (!this.connectionsById[toReturn.id]) {
         // create a new connection object and store it properly
-        connection = new Connection(connectionsByArrival.length + 1, 
+        connection = new Connection(this.connectionsByArrival.length + 1, 
                                     packet,
                                     data,
                                     toReturn);
-        connectionsById[toReturn.id] = connection;
-        connectionsByArrival.push(connection);
+        this.connectionsById[toReturn.id] = connection;
+        this.connectionsByArrival.push(connection);
     }
     else {
         // update the already existing connection object
-        connection = connectionsById[toReturn.id];
+        connection = this.connectionsById[toReturn.id];
         connection.update(packet);
     }
     
@@ -198,8 +210,8 @@ function handleConnection(packet, data, offset, parent, toReturn) {
     connection.processSegment(packet, data, offset, parent, toReturn);
 }
 
-function dissectApplicationLayer(packet, data, offset, parent) {
-    if (offset > packet.incl_len + Pcaph.HLEN) { // bogus value
+Dissector.prototype.dissectApplicationLayer = function (packet, data, offset, parent) {
+    if (offset > packet.incl_len + PCAP_HEADER_LENGTH) { // bogus value
         packet.class = 'malformed';
         return null;
     }
@@ -207,59 +219,62 @@ function dissectApplicationLayer(packet, data, offset, parent) {
     
     if (parent.sport === 6600 || parent.dport === 6600) {
         toReturn = new MPDh(data, offset, parent);
-        connectionsById[packet.id].class = 'MPD';
+        this.connectionsById[packet.id].class = 'MPD';
         packet.class = 'MPD';
         if (!toReturn.type)
             toReturn = null;
         else {
-            connectionsById[packet.id].prot = 'MPD';
+            this.connectionsById[packet.id].prot = 'MPD';
             packet.prot = 'MPD';
         }
     }
     
     else if (parent.sport === 80 || parent.dport === 80) {
         toReturn = new HTTPh(data, offset, parent);
-        connectionsById[packet.id].class = 'HTTP';
+        this.connectionsById[packet.id].class = 'HTTP';
         packet.class = 'HTTP';
         if (!toReturn.headers)
             toReturn = null;
         else {
-            connectionsById[packet.id].prot = 'HTTP';
+            this.connectionsById[packet.id].prot = 'HTTP';
             packet.prot = 'HTTP';
         }
     }
     return toReturn;
 } 
 
-function getDissectedPacket(num) {
-    return dissectedPackets[num - 1];
+Dissector.prototype.getConnectionById = function (id) {
+    return this.connectionsById[id];
 }
 
-function getDissectedPackets() {
-    return dissectedPackets;
+Dissector.prototype.getConnectionsById = function () {
+    return this.connectionsById;
 }
 
-function getConnectionById(id) {
-    return connectionsById[id];
+Dissector.prototype.getConnectionByArrival = function (num) {
+    return this.connectionsByArrival[num];
 }
 
-function getConnectionsById() {
-    return connectionsById;
+Dissector.prototype.getConnectionsByArrival = function () {
+    return this.connectionsByArrival;
 }
 
-function getConnectionsByArrival() {
-    return connectionsByArrival;
+Dissector.prototype.getRawPacket = function (num) {
+    return this.rawPackets[num - 1];
 }
 
-function getRawPacket(num) {
-    return rawPackets[num - 1];
+Dissector.prototype.getRawPackets = function () {
+    return this.rawPackets;
 }
 
-function getRawPackets() {
-    return rawPackets;
+Dissector.prototype.getDissectedPacket = function (num) {
+    return this.dissectedPackets[num - 1];
+}
+
+Dissector.prototype.getDissectedPackets = function () {
+    return this.dissectedPackets;
 }
 
 if (typeof module !== 'undefined') {
-    module.exports.dissect = dissect;
-    module.exports.getConnectionsById = getConnectionsById;
+    module.exports.Dissector = Dissector;
 }
