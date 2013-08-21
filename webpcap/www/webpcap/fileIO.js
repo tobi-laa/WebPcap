@@ -80,7 +80,7 @@ function readPcapFile(file, dissector) {
     readPcapFilePiece(file.slice(24), fr);
 }
 
-var CHUNKSIZE = 1024 * 1024; // 1 Mib
+var CHUNKSIZE = 1024 * 1024; // 1 MiB
 
 function readPcapFilePiece(file, fr) {
     if (file.size <= 0)
@@ -113,11 +113,11 @@ function readPcapGlobalHeader(data, dissector) {
     switch (magicNumber) {
     case MAGIC_NUMBER_NS:
     case MAGIC_NUMBER_MS:
-        setSwitchByteOrder(false);
+        setSwitchByteOrder(true);
         break;
     case ntohl(MAGIC_NUMBER_NS):
     case ntohl(MAGIC_NUMBER_MS):
-        setSwitchByteOrder(true);
+        setSwitchByteOrder(false);
         break;
     default:
         alert('Invalid Magic Number: 0x' + printNum(magicNumber, 16, 8));

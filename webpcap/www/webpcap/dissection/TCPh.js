@@ -12,13 +12,13 @@ TCP_PORTS[6600] = 'mpd'; // specifying mpd manually
 
 function TCPh(data, offset, parent) {
     var byteView  = new Uint8Array (data, offset, TCPh.HLEN);
-    var shortView = new Uint16Array(data, offset, TCPh.HLEN / 2);/
+    var shortView = new Uint16Array(data, offset, TCPh.HLEN/ 2);
     var intView   = new DataView(data, offset, TCPh.HLEN);
     
-    this.sport    = data.getUint16(0, getSwitchByteOrder()); // source port
-    this.dport    = data.getUint16(2, getSwitchByteOrder()); // destination port
-    this.seqn     = data.getUint32(4, getSwitchByteOrder()); // sequence number
-    this.ackn     = data.getUint32(8, getSwitchByteOrder()); // ACK number
+    this.sport    = ntohs(shortView[0]); // source port
+    this.dport    = ntohs(shortView[1]); // destination port
+    this.seqn     = intView.getUint32(4, !getSwitchByteOrder()); // sequence number
+    this.ackn     = intView.getUint32(8, !getSwitchByteOrder()); // ACK number
     this.off_rsd  = byteView[12] & 0xfe; // data offset, reserved portion
     this.flags    = ntohs(shortView[6]) & 0x1ff; // various flags
     this.wsize    = ntohs(shortView[7]);     // window size

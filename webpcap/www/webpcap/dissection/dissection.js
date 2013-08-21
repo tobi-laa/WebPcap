@@ -37,10 +37,8 @@ Dissector.prototype.setLinkLayerType = function (newType) {
 
 Dissector.prototype.dissect = function (data) {
     while (data.byteLength > 0) {
-        if (this.cache !== null) { // consider previously received data
-            data = appendBuffer(this.cache, data);
-            this.cache = null;
-        }
+        data = appendBuffer(this.cache, data); // consider previously received data
+        this.cache = null;
         
         if (data.byteLength < PCAP_HEADER_LENGTH) { // i.e. not enough for pcap header
             this.cache = data;
@@ -57,7 +55,8 @@ Dissector.prototype.dissect = function (data) {
         packet.num = this.counter;
         packet.next_header =
         this.dissectLinkLayer(packet, data.slice(0, packet.incl_len + PCAP_HEADER_LENGTH), PCAP_HEADER_LENGTH); // dissect further  
-                
+        
+        
         // store dissected and raw packet
         this.dissectedPackets[this.counter - 1] = packet;
         this.rawPackets[this.counter - 1] = data.slice(0, packet.incl_len + PCAP_HEADER_LENGTH);

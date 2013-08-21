@@ -6,7 +6,7 @@ var webSocket = null;
 
 var startCapture = document.getElementById('startcap');
 
-var serverFilter = null;
+var serverFilter;
 
 var cache = null;
 

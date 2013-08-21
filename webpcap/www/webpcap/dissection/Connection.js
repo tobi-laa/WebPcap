@@ -145,6 +145,9 @@ Connection.prototype.bufferSegment = function (srcOrDst, data, ackn, seqn, nextS
     else if (buffer[start].seqn > seqn)
         buffer.splice(start, 0, segment);
     // else: this is a duplicate
+    
+    if (buffer.length > 20) // keep the buffer small
+        buffer.shift();
 }
 
 Connection.prototype.getContent = function (srcOrDst) {
