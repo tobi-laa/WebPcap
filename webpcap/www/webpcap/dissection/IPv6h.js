@@ -7,20 +7,16 @@ if (typeof require !== 'undefined')
  ******************************************************************
  */
 
-function IPv6h(data, offset) {
-    var byteView  = new  Uint8Array(data, offset, IPv6h.HLEN);
-    var shortView = new Uint16Array(data, offset, IPv6h.HLEN / 2);
-    
-    this.v = (byteView[0] & 0xF0) >> 4;            // version
-    this.v_tc_fl = byteView.subarray(0, 4);        // version, traffic class, flow label
-    this.plen = ntohs(shortView[2]);               // payload length
-    this.nh = byteView[6];                         // next header; same as protocol for ipv4h
-    this.hlim = byteView[7];                       // hop limit
-    this.src = ntohsa(shortView.subarray(4, 12));  // source IPv6 address
-    this.dst = ntohsa(shortView.subarray(12, 20)); // destination IPv6 address
+function IPv6h(dataView, offset) {    
+    this.v = (dataView.getUint8(offset) & 0xF0) >> 4; // version
+    // this.v_tc_fl = ;        // version, traffic class, flow label
+    this.plen = dataView.getUint16(offset + 4, !getSwitchByteOrder()); // payload length
+    this.nh = dataView.getUint8(offset + 6); // next header; same as protocol for ipv4h
+    this.hlim = dataView.getUint8(offset + 7); // hop limit
+    this.src = new DataView(dataView.buffer, offset + 8, IPv6h.ALEN);  // source IPv6 address
+    this.dst = new DataView(dataView.buffer, offset + 24, IPv6h.ALEN); // destination IPv6 address
         
     this.next_header = null;
-    byteView = shortView = null;
 }
 
 IPv6h.prototype = {
@@ -61,14 +57,51 @@ IPv6h.prototype = {
 };
 
 IPv6h.HLEN = 40; // IPv6 header length in bytes
-IPv6h.ALEN = 8;  // IPv6 address length in shorts
+IPv6h.ALEN = 16;  // IPv6 address length in bytes
 
-// FIXME: check params for consistency
 function printIPv6(ip) {
-    var output = printNum(ip[0], 16, 2);
-    for (i = 1; i < ip.length; i++)
-        output += ':' + printNum(ip[i], 16, 0);
-    return output;
+    var start, tempStart;
+    var end, tempEnd;
+    var ipFragments;
+    
+    // check param for consistency
+    if (!ip.getUint16)
+        throw 'IPv6 address param has to be a DataView object.';
+    if (ip.byteLength !== IPv6h.ALEN)
+        console.log('Warning: Incorrect IPv6 address length.');
+    
+    // search longest 0 subsequence
+    start = tempStart = end = tempEnd = ip.byteLength / 2; //
+    
+    for (var i = 0; i < ip.byteLength; i += 2) {
+        if (ip.getUint16(i, !getSwitchByteOrder()) === 0) {
+            tempStart = i;
+            while (i < ip.byteLength && ip.getUint16(i, !getSwitchByteOrder()) === 0)
+                i += 2;
+            tempEnd = i;
+            if (tempEnd - tempStart > end - start) {
+                end = tempEnd;
+                start = tempStart;
+            }
+        }
+    }
+    
+    // print IPv6 address
+    ipFragments = [];
+    for (var i = 0; i < start; i += 2) {
+        ipFragments.push(ip.getUint16(i, !getSwitchByteOrder()).toString(16));
+    }
+    if (end > start) {
+        if (end === ip.byteLength || start === 0)
+            ipFragments.push(':'); // explicitly add when prefix or suffix
+        else
+            ipFragments.push(''); // induces a double ::
+    }
+    for (var i = end; i < ip.byteLength; i += 2) {
+        ipFragments.push(ip.getUint16(i, !getSwitchByteOrder()).toString(16));        
+    }
+    
+    return ipFragments.join(':');
 }
 
 if (typeof module !== 'undefined') {
