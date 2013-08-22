@@ -1,3 +1,4 @@
+'use strict';
 if (typeof require !== 'undefined') 
     var printNum = require('../formattedOutput').printNum;
 
@@ -7,10 +8,10 @@ if (typeof require !== 'undefined')
  ******************************************************************
  */
 
-function Ethh(dataView, offset) {   
-    this.dst  = new Uint8Array(dataView.buffer, offset, Ethh.ALEN);  // destination MAC address
-    this.src  = new Uint8Array(dataView.buffer, offset + 6, Ethh.ALEN); // source MAC address    
-    this.prot = dataView.getUint16(offset + 12, !getSwitchByteOrder()); // protocol (i.e. IPv4)
+function Ethh(littleEndian, dataView, offset) {   
+    this.dst  = new DataView(dataView.buffer, offset, Ethh.ALEN);  // destination MAC address
+    this.src  = new DataView(dataView.buffer, offset + 6, Ethh.ALEN); // source MAC address    
+    this.prot = dataView.getUint16(offset + 12, littleEndian); // protocol (i.e. IPv4)
     
     this.next_header = null;
 }
@@ -52,12 +53,29 @@ Ethh.prototype = {
 Ethh.HLEN = 14; // Ethernet frame length in bytes
 Ethh.ALEN = 6;  // MAC address length in bytes
 
-// FIXME: check params for consistency
+function printIPv4(ip) {
+    // check param for consistency
+    if (!ip.getUint8)
+        throw 'IPv4 address param has to be a DataView object.';
+    if (ip.byteLength !== IPv4h.ALEN)
+        console.log('Warning: Incorrect IPv4 address length.');
+    
+    var ipFragments = [];
+    for (var i = 0; i < ip.byteLength; i++)
+        ipFragments[i] = ip.getUint8(i);
+    return ipFragments.join('.');
+}
 function printMAC(mac) {
-    var output = printNum(mac[0], 16, 2);
-    for (i = 1; i < mac.length; i++)
-        output += ':' + printNum(mac[i], 16, 2);
-    return output;
+    // check param for consistency
+    if (!mac.getUint8)
+        throw 'MAC address param has to be a DataView object.';
+    if (mac.byteLength !== Ethh.ALEN)
+        console.log('Warning: Incorrect MAC address length.');
+    
+    var macFragments = [];
+    for (var i = 0; i < mac.byteLength; i++)
+        macFragments[i] = printNum(mac.getUint8(i), 16, 2);
+    return macFragments.join(':');
 }
 
 function printEtherType(type) {

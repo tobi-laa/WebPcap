@@ -1,10 +1,11 @@
+'use strict';
 /*
  ******************************************************************
  ************************* HTTP HEADER ****************************
  ******************************************************************
  */
 
-function HTTPh(data, offset, parent) {
+function HTTPh(littleEndian, data, offset, parent) {
     data = data.buffer; // FIXME ?
     if (data.byteLength - offset < 4)
         return;

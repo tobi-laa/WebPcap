@@ -1,3 +1,12 @@
+/*
+ *******************************************************************************
+ * Please note: The methods below are deprecated and currently unused. The     *
+ * only reason they were not removed is to have a fallback in case the current *
+ * way of switching byte order stops working.                                  *
+ *******************************************************************************
+ */
+
+'use strict';
 var switchByteOrder = true; // if false, byte order won't be switched
 
 /**

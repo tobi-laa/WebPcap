@@ -1,3 +1,5 @@
+'use strict';
+
 var selectedPacketRow = {};
 var selectedConnectionRow = {};
 
@@ -12,53 +14,52 @@ var cache = null;
 
 var dissector = null;
 
-var JSEVENTS = 
-[
-    ['html', 'onclick', 'closeContextMenu()'],
-    ['html', 'onmouseup', 'processMouseUp()'],
-    ['html', 'onmousemove', 'processMouseMove(event)'],
-    ['html', 'onresize', 'processResize()'],
-    ['startcap', 'onclick', 'switchConnection()'],
-    ['clearscr', 'onclick', 'clearScreen()'],
-    ['savecap', 'onclick', 'saveCapture()'],
-    ['loadcap', 'onclick', 'fileInput.click()'],
-    ['fileInput', 'onchange', 'readPcapFile(this.files[0], dissector)'],
-    ['switchview', 'onclick', 'switchView()'],
-    ['filterForm', 'onsubmit', 'return processFilter()'],
-    ['output', 'oncontextmenu', 'return false'],
-    ['output', 'onmousewheel', 'processMouseWheel(event)'],
-    ['output', 'onwheel', 'processMouseWheel(event)'],
-    ['table', 'oncontextmenu', 'return false'],    
-    ['scrollbar-track', 'onmousedown', 'startTrackScrolling(true)'],
-    ['scroll-thumb', 'onmousedown', 'selectScrollThumb(event)'],
-    ['scrollbar-button-up', 'onmousedown', 'startScrolling(-1)'],
-    ['scrollbar-button-down', 'onmousedown', 'startScrolling(1)'],
-    ['contextmenu', 'onselectstart', 'return false;']
-];
+var mainOutput = document.getElementById('output');
+var mainOutputTable  = document.getElementById('table');
+var detailsOutput = document.getElementById('details');
+var bytesOutput = document.getElementById('raw');
+
+var packetView = false; // connection view as default
+var contextMenu = document.getElementById('contextmenu');
+
+var renderThread;
+var renderNextTime = false;
+
+var autoscroll = true;
+
+var maxRows = 0;
+
+var doubleBuffer = document.createDocumentFragment();
+
+var followID = false;
 
 initWebPcapJS();
 
 function initWebPcapJS () {
-    dissector = new Dissector();
-    pkts = dissector.getDissectedPackets();
-    conns = dissector.getConnectionsByArrival();
-    initWellKnownPorts();
+    initWellKnownPortNames();
+    initFileIO();
     initGUI();
-    initJSEvents();
     processResize();
+    dissector = new Dissector();
+    initJSEvents();    
     startRendering();
-    switchConnection();    
+    switchConnection();
+    packets = dissector.getDissectedPackets();
+    conns = dissector.getConnectionsByArrival();
 }
 
-function initWellKnownPorts() {
-    var portNumbersReq = new XMLHttpRequest();    
-    portNumbersReq.open("get", "webpcap/dissection/service-names-port-numbers.txt", true);
-    portNumbersReq.send();    
-    portNumbersReq.onload = function () {
+function initWellKnownPortNames() {
+    // open the file below and parse well-known ports
+    var req = new XMLHttpRequest();    
+    req.open('get', 'webpcap/dissection/service-names-port-numbers.txt', true);
+    req.send();    
+    req.onload = function () {
         var lines = this.responseText.split('\n');
         var tokens, index;
         for (var i = 0; i < lines.length; i++) {
-            tokens = lines[i].split(/\s* \s*/, 3);
+            tokens = lines[i].split(/\s* \s*/, 3); //regexp: split at whitespace
+            
+            // skip empty lines/comments/and so forth
             if (tokens[0] === '' || tokens[1] === '' || tokens[2] === '')
                 continue;
             
@@ -66,10 +67,12 @@ function initWellKnownPorts() {
             
             switch (tokens[2]) {
             case 'tcp':
-                TCP_PORTS[index] = TCP_PORTS[index] || tokens[0];
+                // some ports are listed more than once; the || always keeps
+                // the first read port name
+                TCP.PORTS[index] = TCP.PORTS[index] || tokens[0];
                 break;
             case 'udp':
-                UDP_PORTS[index] = UDP_PORTS[index] || tokens[0];
+                UDP.PORTS[index] = UDP.PORTS[index] || tokens[0];
                 break;
             }
         }
@@ -77,9 +80,26 @@ function initWellKnownPorts() {
 }
 
 function initJSEvents() {
-    for (var i = 0; i < JSEVENTS.length; i++)
-        document.getElementById(JSEVENTS[i][0])
-           .setAttribute(JSEVENTS[i][1], JSEVENTS[i][2]);
+    document.addEventListener('click', closeContextMenu);
+    document.addEventListener('mouseup', processMouseUp);
+    document.addEventListener('mousemove', processMouseMove);
+    document.addEventListener('resize', processResize);
+    document.getElementById('startcap').addEventListener('click', switchConnection);
+    document.getElementById('clearcap').addEventListener('click', dissector.init());
+    document.getElementById('savecap').addEventListener('click', saveCapture);
+    document.getElementById('loadcap').addEventListener('click', fileinput.click);
+    document.getElementById('fileinput').addEventListener('change', function () {readPcapFile(this.files[0], dissector);});
+    document.getElementById('switchview').addEventListener('click', switchView);
+    document.getElementById('filterform').addEventListener('submit', processFilter);
+    document.getElementById('output').addEventListener('contextmenu', function (event) {event.preventDefault();}, false);
+    document.getElementById('output').addEventListener('mousewheel', processMouseWheel);
+    document.getElementById('output').addEventListener('wheel', processMouseWheel);
+    document.getElementById('table').addEventListener('contextmenu', function (event) {event.preventDefault();}, false);
+    document.getElementById('scrollbar-track').addEventListener('mousedown', function () {startTrackScrolling(true);});
+    document.getElementById('scroll-thumb').addEventListener('mousedown', selectScrollThumb);
+    document.getElementById('scrollbar-button-up').addEventListener('mousedown', function () {startScrolling(-1)});
+    document.getElementById('scrollbar-button-down').addEventListener('mousedown', function () {startScrolling(1)});
+    document.getElementById('contextmenu').addEventListener('selectstart', function (event) {event.preventDefault();}, false);
 }
 
 function onFirstMessage(msg) {
@@ -116,7 +136,7 @@ function onWebSocketMessage(msg) {
 function dissectMessage(data) {
     var oldLength, oldAnchor, length, anchor;
     
-    if (packetView) oldLength = pkts.length;
+    if (packetView) oldLength = packets.length;
     else {
         var tuple = connectionViewLength();
         oldLength = tuple[0];
@@ -124,10 +144,9 @@ function dissectMessage(data) {
     }
     
     dissector.dissect(data);
-    // simpleDissect(msg.data, simplePrint);
     
     if (packetView)
-        length = pkts.length;
+        length = packets.length;
     else {
         var tuple = connectionViewLength();
         length = tuple[0];
@@ -138,18 +157,18 @@ function dissectMessage(data) {
         return;
     if (autoscroll) {
         if (packetView) {
-            // we don't want a negative scrollanchor     
-            scrollanchor = Math.max(0, pkts.length - maxPackets);
+            // we don't want a negative anchor     
+            packetViewAnchor = Math.max(0, packets.length - maxRows);
             renderNextTime = true;
         }
         else {
-            connectionViewSeek(Math.max(0, length - anchor - maxPackets));
+            connectionViewSeek(Math.max(0, length - anchor - maxRows));
             renderNextTime = true;
         }
     }
     else if (!packetView) {
         // FIXME: what happens if connection is extended BELOW anchor...
-        if (oldAnchor === anchor && oldLength - oldAnchor >= maxPackets)
+        if (oldAnchor === anchor && oldLength - oldAnchor >= maxRows)
             return;
         renderNextTime = true;
     }
@@ -189,7 +208,7 @@ function processResize() {
     
     MAX_SCROLLTHUMB_OFFSET = scrollbarTrack.offsetHeight - MIN_SCROLLTHUMB_SIZE;
     
-    maxPackets = 0;
+    maxRows = 0;
     mainOutputTable.innerHTML = '';
     
     while (mainOutput.scrollHeight <= mainOutput.clientHeight) {
@@ -200,7 +219,7 @@ function processResize() {
         col.innerHTML = 'test';
         row.appendChild(col);
         mainOutputTable.appendChild(row);
-        maxPackets++;
+        maxRows++;
     }
     
     mainOutputTable.innerHTML = '';
@@ -211,15 +230,6 @@ function processFilter() {
     serverFilter = filterField.value + '\0';
     return false;
 }
-
-function switchView() {
-    packetView = !packetView;
-    renderNextTime = true;
-}
-
-function saveCapture() {
-    downloadFileFromURI(getPcapURI(dissector), 'log.pcap');
-} 
 
 function downloadFileFromURI(resource, filename) {
     if (!resource || !resource.URI)
@@ -236,8 +246,8 @@ function downloadFileFromURI(resource, filename) {
     
     tmpLink.dispatchEvent(mc); //'click' on the link
     
-    if (resource.blob) // if we're using blobs, close the blob
-        delete blob;
+    if (resource.blob && resource.blob.close) // if we're using blobs, close the blob
+        resource.blob.close();
 }
 
 function switchConnection() {
@@ -252,4 +262,234 @@ function switchConnection() {
     webSocket.onclose = onWebSocketClose;
     webSocket.onerror = onWebSocketClose;
     webSocket.onmessage = onFirstMessage;        
+}
+
+function followStream(id) {  
+    if (followID === id) {
+        followID = false;
+        packets = dissector.getDissectedPackets();
+    }
+    else {
+        packetView = true;
+        followID = id;
+        packets = dissector.getConnectionById(id).packets;
+    }
+    // we don't want a negative anchor
+    packetViewAnchor = Math.max(0, packets.length - maxRows);
+    autoscroll = true;
+    renderNextTime = true;
+}
+
+function initGUI() {
+    // some cross-browser related stuff
+    window.requestAnimationFrame = window.requestAnimationFrame || 
+                                   window.mozRequestAnimationFrame || 
+                                   window.oRequestAnimationFrame ||
+                                   window.webkitRequestAnimationFrame;
+                                   
+    window.cancelAnimationFrame =  window.cancelAnimationFrame ||
+                                   window.cancelTimeout;
+
+    if (!window.requestAnimationFrame) {
+        // create a pseudo-requestAnimationFrame method
+        window.requestAnimationFrame = 
+            function (callback) {
+                return setTimeout(callback, 40); // roundabout 25 FPS
+            }
+            
+        alert('Hi there!\n' +
+            'Your browser does not support the nifty method ' +
+            'requestAnimationFrame, so I will render your session ' +
+            'via setTimeout.');
+    }
+}
+
+function stopRendering() {
+    window.cancelAnimationFrame(renderThread);
+}
+
+function startRendering() {
+    renderThread = window.requestAnimationFrame(render);
+}
+
+function closeContextMenu() {
+    contextMenu.className = 'hidden';
+}
+
+function selectRow(row, num) {
+    var selectedRow;
+    if (packetView)
+        selectedRow = selectedPacketRow;
+    else
+        selectedRow = selectedConnectionRow;
+    
+    if (selectedRow.row)
+        selectedRow.row.setAttribute('class', selectedRow.class);
+    selectedRow.class = row.className;    
+    selectedRow.row = row;
+    selectedRow.num = num;
+    
+    row.setAttribute('class','row selected');
+}
+
+function processClick(row, num) {
+    selectRow(row, num);
+    
+    if (packetView) {
+        printPacketDetails(num);
+        printPayload(num);
+        return;
+    }
+    
+    if (dissector.getConnectionById(num)) {
+        printConnectionDetails(num);
+        bytesOutput.innerHTML = '';
+        return;
+    }
+    
+    printPacketDetails(num);
+    printPayload(num);
+}
+
+function processRightClick(row, num, event, id) {
+    processClick(row, num);
+    
+    // skip non-UDP, non-TCP packets
+    if (!id || !dissector.getConnectionsById()[id])
+        return false;
+    
+    var follow, showContent, downloadSrcContent, downloadDstContent;
+    
+
+    
+    follow = document.createElement('div');
+    follow.setAttribute('onclick','followStream("' + id + '")');
+    follow.setAttribute('class', 'contextentry');
+    
+    if (followID === id)
+        follow.innerHTML = 'Unfollow';
+    else
+        follow.innerHTML = 'Follow this stream';
+    
+    doubleBuffer.innerHTML = '';
+    doubleBuffer.appendChild(follow);
+    
+    if (dissector.getConnectionsById()[id].contents) {
+        showContent = document.createElement('div');
+        
+        showContent.setAttribute('onclick','showContent("' + id + '")');
+        showContent.setAttribute('class', 'contextentry');
+        showContent.innerHTML = 'Show content';
+        
+        doubleBuffer.appendChild(showContent);
+        
+        if (dissector.getConnectionsById()[id].contents[0].length) {
+            downloadSrcContent = document.createElement('div');
+            
+            downloadSrcContent.setAttribute('onclick','downloadContent("' + id + '", 0)');
+            downloadSrcContent.setAttribute('class', 'contextentry');
+            downloadSrcContent.innerHTML = 'Download source content';
+                    
+            doubleBuffer.appendChild(downloadSrcContent);
+        }
+        
+        if (dissector.getConnectionsById()[id].contents[1].length) {
+            downloadDstContent = document.createElement('div');
+            
+            downloadDstContent.setAttribute('onclick','downloadContent("' + id + '", 1)');
+            downloadDstContent.setAttribute('class', 'contextentry');
+            downloadDstContent.innerHTML = 'Download destination content';
+            
+            doubleBuffer.appendChild(downloadDstContent);            
+        }
+    }
+
+    contextMenu.className = '';
+    contextMenu.innerHTML = '';
+    contextMenu.style.left = event.pageX + 'px';
+    contextMenu.style.top = event.pageY + 'px';
+    contextMenu.appendChild(doubleBuffer);
+    
+    return false;
+}
+
+function downloadContent(id, srcOrDst) {
+    var contents = dissector.getConnectionsById()[id].contents[srcOrDst];
+    
+    if (contents.length === 0)
+        return;
+    
+    var data = [];
+    
+    for (var i = 0; i < contents.length; i++)
+        data[i] = contents[i].data.slice(contents[i].offset);
+        
+    downloadFileFromURI(createURI('application/x-download', data), id);
+}
+
+function showContent(id) {
+    var contents = dissector.getConnectionsById()[id].mergeContent();
+    
+    if (contents.length === 0)
+        return;
+    
+    var data = [];
+    var srcOrDst = contents[0].srcOrDst;
+        
+    var box = document.createElement('div');
+    box.className = 'contentbox';
+    
+    for (var i = 0; i < contents.length; i++) {
+        if (srcOrDst !== contents[i].srcOrDst) {
+            data = new Uint8Array(mergeBuffers(data));
+            
+            var text = '';
+            for (var j = 0; j < data.length; j++)
+                text += printASCII(data[j]);
+
+            var span = document.createElement('span');
+            span.className = ((srcOrDst && 'src') || 'dst') + 'content';
+            span.appendChild(document.createTextNode(text));
+            
+            box.appendChild(span);
+            
+            data = [];
+            srcOrDst = contents[i].srcOrDst;
+        }
+        data.push(contents[i].data.slice(contents[i].offset));
+    }
+    data = new Uint8Array(mergeBuffers(data));
+    
+    var text = '';
+    for (var j = 0; j < data.length; j++)
+        text += printASCII(data[j]);
+
+    var span = document.createElement('span');
+    span.className = ((srcOrDst && 'src') || 'dst') + 'content';
+    span.appendChild(document.createTextNode(text));
+    
+    box.appendChild(span);
+    
+    var w = window.open('tcpcontent.html', 'content', 'width=640, height=480, status=yes, resizable=yes');
+    w.onload = function() {w.document.body.appendChild(box); w.connection = dissector.getConnectionsById()[id]};
+}
+
+function render() {
+    if (packetView)
+        renderPacketView();
+    else {
+        renderConnectionView();        
+    }
+    calculateScrollbarSize();
+    
+    window.requestAnimationFrame(render);
+}
+
+function switchView() {
+    packetView = !packetView;
+    renderNextTime = true;
+}
+
+function saveCapture() {
+    downloadFileFromURI(getPcapURI(dissector), 'log.pcap');
 }

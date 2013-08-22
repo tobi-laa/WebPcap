@@ -1,3 +1,4 @@
+'use strict';
 if (typeof require !== 'undefined') {
     var Pcaph = require('./Pcaph').Pcaph;
     var Ethh = require('./Ethh').Ethh;
@@ -20,6 +21,11 @@ var PCAP_HEADER_LENGTH = 16;
 
 function Dissector() {
     this.cache = null; // cache for previously received data
+    this.init();
+}
+
+Dissector.prototype.init = function () {
+    // don't touch this.cache, that might break everything
     this.dissectedPackets = [];
     this.rawPackets = [];
     
@@ -29,10 +35,16 @@ function Dissector() {
 
     this.counter = 1;
     this.linkLayerType = 113; // default is SLL
+    this.littleEndian = true;
 }
 
 Dissector.prototype.setLinkLayerType = function (newType) {
     this.linkLayerType = newType;
+}
+
+Dissector.prototype.setLittleEndian = function (littleEndian) {
+    // note that this value is negated for dissection (network-byte-order!)
+    this.littleEndian = littleEndian;
 }
 
 Dissector.prototype.dissect = function (data) {
@@ -45,7 +57,7 @@ Dissector.prototype.dissect = function (data) {
             return;
         }
         
-        var packetLen = new DataView(data, 0, PCAP_HEADER_LENGTH).getUint32(8, getSwitchByteOrder()) + PCAP_HEADER_LENGTH;
+        var packetLen = new DataView(data, 0, PCAP_HEADER_LENGTH).getUint32(8, this.littleEndian) + PCAP_HEADER_LENGTH;
         
         if (data.byteLength < packetLen) { // i.e. packet not complete
             this.cache = data; // store for next call to dissect
@@ -57,7 +69,7 @@ Dissector.prototype.dissect = function (data) {
         // make values accessible via dataview
         var dataView = new DataView(this.rawPackets[this.counter - 1]);
         // dissect pcap header
-        var packet = new Pcaph(dataView, 0);
+        var packet = new Pcaph(this.littleEndian, dataView, 0);
         
         packet.num = this.counter;
         packet.next_header =
@@ -84,13 +96,13 @@ Dissector.prototype.dissectLinkLayer = function (packet, dataView, offset) {
     }
     switch(this.linkLayerType) {
     case 113: // SLL
-        toReturn = new SLLh(dataView, offset);       
+        toReturn = new SLLh(!this.littleEndian, dataView, offset);       
         packet.src  = printMAC(toReturn.src);
         // packet.dst  = printMAC(toReturn.dst);
         packet.prot = 'SLL';
         break;
     case 1: // Ethernet
-        toReturn = new Ethh(dataView, offset);       
+        toReturn = new Ethh(!this.littleEndian, dataView, offset);       
         packet.src  = printMAC(toReturn.src);
         packet.dst  = printMAC(toReturn.dst);
         packet.prot = 'Ethernet';
@@ -113,7 +125,7 @@ Dissector.prototype.dissectNetworkLayer = function (packet, dataView, offset, pa
     var toReturn;
     switch(parent.prot) {
     case 0x0800: // IPv4
-        toReturn = new IPv4h(dataView, offset);
+        toReturn = new IPv4h(!this.littleEndian, dataView, offset);
         packet.src  = printIPv4(toReturn.src);
         packet.dst  = printIPv4(toReturn.dst);
         packet.prot = 'IPv4';
@@ -123,7 +135,7 @@ Dissector.prototype.dissectNetworkLayer = function (packet, dataView, offset, pa
             packet.class = 'malformed';
         break;
     case 0x86DD: // IPv6
-        toReturn = new IPv6h(dataView, offset);   
+        toReturn = new IPv6h(!this.littleEndian, dataView, offset);   
         packet.src  = printIPv6(toReturn.src);
         packet.dst  = printIPv6(toReturn.dst);
         packet.prot = 'IPv6';
@@ -131,7 +143,7 @@ Dissector.prototype.dissectNetworkLayer = function (packet, dataView, offset, pa
         this.dissectTransportLayer(packet, dataView, offset + toReturn.getHeaderLength(), toReturn);
         break;
     case 0x0806: // ARP    
-        toReturn = new ARPh(dataView, offset);
+        toReturn = new ARPh(!this.littleEndian, dataView, offset);
         packet.prot = 'ARP';
         break;
     case 0x8035: // RARP
@@ -159,7 +171,7 @@ Dissector.prototype.dissectTransportLayer = function (packet, dataView, offset, 
         packet.prot = 'ICMP';
         break;
     case 6: // TCP
-        toReturn = new TCPh(dataView, offset, parent);        
+        toReturn = new TCPh(!this.littleEndian, dataView, offset, parent);        
         packet.prot = 'TCP';
         this.handleConnection(packet, dataView, offset, parent, toReturn);
         toReturn.next_header = 
@@ -172,7 +184,7 @@ Dissector.prototype.dissectTransportLayer = function (packet, dataView, offset, 
             packet.class = 'SYNFIN';
         break;
     case 17: // UDP
-        toReturn = new UDPh(dataView, offset, parent);        
+        toReturn = new UDPh(!this.littleEndian, dataView, offset, parent);        
         packet.prot = 'UDP';
         this.handleConnection(packet, dataView, offset, parent, toReturn);
         toReturn.next_header = 
@@ -223,7 +235,7 @@ Dissector.prototype.dissectApplicationLayer = function (packet, dataView, offset
     var toReturn = null;
     
     if (parent.sport === 6600 || parent.dport === 6600) {
-        toReturn = new MPDh(dataView, offset, parent);
+        toReturn = new MPDh(!this.littleEndian, dataView, offset, parent);
         this.connectionsById[packet.id].class = 'MPD';
         packet.class = 'MPD';
         if (!toReturn.type)
@@ -235,7 +247,7 @@ Dissector.prototype.dissectApplicationLayer = function (packet, dataView, offset
     }
     
     else if (parent.sport === 80 || parent.dport === 80) {
-        toReturn = new HTTPh(dataView, offset, parent);
+        toReturn = new HTTPh(!this.littleEndian, dataView, offset, parent);
         this.connectionsById[packet.id].class = 'HTTP';
         packet.class = 'HTTP';
         if (!toReturn.headers)

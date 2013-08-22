@@ -1,4 +1,5 @@
-var conns;
+'use strict';
+var conns = [];
 var connAnchor = 0;
 var pktAnchor = -1;
 
@@ -7,9 +8,9 @@ function connectionViewSeek(direction) {
     var length = tuple[0];
     var anchor = tuple[1];   
     
-    if (direction > 0 && direction >= length - anchor - maxPackets) {
+    if (direction > 0 && direction >= length - anchor - maxRows) {
         autoscroll = true;
-        direction = length - anchor - maxPackets;
+        direction = length - anchor - maxRows;
     }
     if (direction === 0)
         return;
@@ -98,7 +99,7 @@ function renderConnectionView() {
         
     var row, num;
     
-    for (var i = 0; i <= maxPackets; i++) {
+    for (var i = 0; i <= maxRows; i++) {
         if (p === -1) {
             row = printConnectionHeader(c);
             num = conns[c].id;            
@@ -134,6 +135,7 @@ function renderConnectionView() {
 
 function printConnectionHeader(connectionNumber) {
     var connection = conns[connectionNumber];
+    var row;
     
     if (!connection) {
         return;

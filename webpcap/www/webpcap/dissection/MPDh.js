@@ -1,3 +1,4 @@
+'use strict';
 /*
  ******************************************************************
  ************************** MPD HEADER ****************************
@@ -6,8 +7,8 @@
  ******************************************************************
  */
 
-function MPDh(data, offset, parent) {
-    data = dataView.buffer;
+function MPDh(littleEndian, data, offset, parent) {
+    data = data.buffer;
     if (data.byteLength - offset < 2)
         return;
     

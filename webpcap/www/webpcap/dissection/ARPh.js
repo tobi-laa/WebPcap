@@ -1,8 +1,9 @@
+'use strict';
 if (typeof require !== 'undefined') {
-    printEtherType = require('./Ethh').printEtherType;
-    printMAC = require('./Ethh').printMAC;
-    printIPv4 = require('./IPv4h').printIPv4;
-    printIPv6 = require('./IPv6h').printIPv6;
+    var printEtherType = require('./Ethh').printEtherType;
+    var printMAC = require('./Ethh').printMAC;
+    var printIPv4 = require('./IPv4h').printIPv4;
+    var printIPv6 = require('./IPv6h').printIPv6;
 }
 /*
  ******************************************************************
@@ -10,21 +11,21 @@ if (typeof require !== 'undefined') {
  ******************************************************************
  */
 
-function ARPh(dataView, offset) {
-    this.htype = dataView.getUint16(offset, !getSwitchByteOrder());
-    this.ptype = dataView.getUint16(offset + 2, !getSwitchByteOrder());
+function ARPh(littleEndian, dataView, offset) {
+    this.htype = dataView.getUint16(offset, littleEndian);
+    this.ptype = dataView.getUint16(offset + 2, littleEndian);
     this.hlen  = dataView.getUint8(offset + 4);
     this.plen  = dataView.getUint8(offset + 5);
-    this.op    = dataView.getUint16(offset + 6, !getSwitchByteOrder());
+    this.op    = dataView.getUint16(offset + 6, littleEndian);
     
     offset  += ARPh.HLEN;
-    this.sha = new Uint8Array(dataView.buffer, offset, this.hlen);
+    this.sha = new DataView(dataView.buffer, offset, this.hlen);
     offset  += this.hlen;
-    this.spa = new Uint8Array(dataView.buffer, offset, this.plen);
+    this.spa = new DataView(dataView.buffer, offset, this.plen);
     offset  += this.plen;
-    this.tha = new Uint8Array(dataView.buffer, offset, this.hlen);
+    this.tha = new DataView(dataView.buffer, offset, this.hlen);
     offset  += this.hlen;
-    this.tpa = new Uint8Array(dataView.buffer, offset, this.plen);
+    this.tpa = new DataView(dataView.buffer, offset, this.plen);
         
     this.next_header = null;
 }
@@ -67,13 +68,13 @@ ARPh.prototype = {
     toString: function () {
         if (this.op == 1) { // ARP query
             if (this.ptype == 0x0800)
-                return 'Who has '+printIPv4(this.tpa)+'? Tell '+printIPv4(this.spa);
+                return 'Who has ' + printIPv4(this.tpa)+'? Tell ' + printIPv4(this.spa);
             else
                 return 'ARP Query';
         }
         if (this.op == 2) {// ARP reply
             if (this.ptype == 0x0800 && this.htype == 1)
-                return printIPv4(this.spa)+' is at '+printMAC(this.sha);
+                return printIPv4(this.spa) + ' is at ' + printMAC(this.sha);
             else
                 return 'ARP Reply';
         }

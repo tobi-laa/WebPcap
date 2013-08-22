@@ -1,5 +1,6 @@
+'use strict';
+
 if (typeof require !== 'undefined') {
-    var getSwitchByteOrder = require('./byteOrder').getSwitchByteOrder;
     var validateChecksum = require('./IPv4h').validateChecksum;
 }
 /*
@@ -7,106 +8,97 @@ if (typeof require !== 'undefined') {
  ************************** TCP HEADER ****************************
  ******************************************************************
  */
-var TCP_PORTS = []; // well-known ports
-TCP_PORTS[6600] = 'mpd'; // specifying mpd manually
 
-function TCPh(dataView, offset, parent) {    
-    this.sport    = dataView.getUint16(offset, !getSwitchByteOrder()); // source port
-    this.dport    = dataView.getUint16(offset + 2, !getSwitchByteOrder()); // destination port
-    this.seqn     = dataView.getUint32(offset + 4, !getSwitchByteOrder()); // sequence number
-    this.ackn     = dataView.getUint32(offset + 8, !getSwitchByteOrder()); // ACK number
+function TCPh(littleEndian, dataView, offset, parent) {    
+    this.sport    = dataView.getUint16(offset, littleEndian); // source port
+    this.dport    = dataView.getUint16(offset + 2, littleEndian); // destination port
+    this.seqn     = dataView.getUint32(offset + 4, littleEndian); // sequence number
+    this.ackn     = dataView.getUint32(offset + 8, littleEndian); // ACK number
     this.off_rsd  = dataView.getUint8(offset + 12) & 0xfe; // data offset, reserved portion
-    this.flags    = dataView.getUint16(offset + 12, !getSwitchByteOrder()) & 0x1ff; // various flags
-    this.wsize    = dataView.getUint16(offset + 14, !getSwitchByteOrder());     // window size
-    this.csum     = dataView.getUint16(offset + 16, !getSwitchByteOrder());     // header checksum
-    this.urg      = dataView.getUint16(offset + 18, !getSwitchByteOrder());     // urgent pointer
+    this.flags    = dataView.getUint16(offset + 12, littleEndian) & 0x1ff; // various flags
+    this.wsize    = dataView.getUint16(offset + 14, littleEndian);     // window size
+    this.csum     = dataView.getUint16(offset + 16, littleEndian);     // header checksum
+    this.urg      = dataView.getUint16(offset + 18, littleEndian);     // urgent pointer
     /* various options may follow */
     
     if (offset + this.getHeaderLength() > dataView.byteLength)
         this.val = false; // already bogus
     else { // calculate checksum
-        var ph = buildPseudoHeader(parent, dataView.buffer, offset);
-        this.val = validateChecksum(ph);
+        var ph = buildPseudoHeader(littleEndian, dataView, offset, parent);
+        this.val = validateChecksum(littleEndian, ph);
     }
 
     this.id = createID(parent.src, this.sport, parent.dst, this.dport, 't');
     
-    this.NS       = this.flags & 0x100;
-    this.CWR      = this.flags & 0x080;
-    this.ECE      = this.flags & 0x040;
-    this.URG      = this.flags & 0x020;
-    this.ACK      = this.flags & 0x010;
-    this.PSH      = this.flags & 0x008;
-    this.RST      = this.flags & 0x004;
-    this.SYN      = this.flags & 0x002;
-    this.FIN      = this.flags & 0x001;
+    this.NS       = this.flags & 0x100 && 1;
+    this.CWR      = this.flags & 0x080 && 1;
+    this.ECE      = this.flags & 0x040 && 1;
+    this.URG      = this.flags & 0x020 && 1;
+    this.ACK      = this.flags & 0x010 && 1;
+    this.PSH      = this.flags & 0x008 && 1;
+    this.RST      = this.flags & 0x004 && 1;
+    this.SYN      = this.flags & 0x002 && 1;
+    this.FIN      = this.flags & 0x001 && 1;
     
     this.next_header = null;
-    byteView = shortView = intView = null;
 }
 
 function createID(src, sport, dst, dport, prefix) {
     if (sport === 0 || dport === 0)
         return false;
     var toSort = ['' + sport, '' + dport];
-    for (var i = 0; i < src.length; i++) {
-        toSort[0] += src[i];
-        toSort[1] += dst[i];
+    for (var i = 0; i < src.byteLength; i++) {
+        toSort[0] += src.getUint8(i);
+        toSort[1] += dst.getUint8(i);
     }
     toSort.sort();
     return prefix + toSort[0] + toSort[1];
 }
 
-function buildPseudoHeader(parent, data, offset) {
-    var len = data.byteLength - offset;
-    var packet = new Uint16Array(data, offset, len / 2 | 0);
+function buildPseudoHeader(littleEndian, dataView, offset, parent) {
+    var len = dataView.byteLength - offset;
         
-    if (parent.src.length === 4) { // IPv4
-        var ph = new ArrayBuffer(12 + len + (len % 2));
-        var byteView = new Uint8Array(ph);
-        var shortView = new Uint16Array(ph);
+    if (parent.src.byteLength === 4) { // IPv4
+        var pseudoHeaderBuffer = new ArrayBuffer(12 + len + (len % 2));
+        var pseudoHeaderView = new DataView(pseudoHeaderBuffer);
         
         for (var i = 0; i < 4; i++) {
-            byteView[i]     = parent.src[i];
-            byteView[i + 4] = parent.dst[i];
+            pseudoHeaderView.setUint8(i, parent.src.getUint8(i));
+            pseudoHeaderView.setUint8(i + 4, parent.dst.getUint8(i));
         }
-        byteView[8] = 0; // padding
-        byteView[9] = parent.prot; // will always be 6
-        shortView[5] = ntohs(len); // TCP length
+        pseudoHeaderView.setUint8(8, 0); // padding
+        pseudoHeaderView.setUint8(9, parent.prot); // will always be 4
+        pseudoHeaderView.setUint16(10, len, littleEndian); // TCP length
         
-        for (var i = 0; i < packet.length; i++) {
-            shortView[i + 6] = packet[i];
+        for (var i = 0; i < len; i++) {
+            pseudoHeaderView.setUint8(i + 12, dataView.getUint8(offset + i));
         }
-        if (len % 2)
-            byteView[byteView.length - 2] = 
-            new Uint8Array(data)[data.byteLength - 1];
+        if (len % 2) // add padding
+            pseudoHeaderView.setUint8(pseudoHeaderView.byteLength - 1, 0);
         
-        return shortView;
+        return pseudoHeaderView;
     }
     else { // IPv6
-        var ph = new ArrayBuffer(40 + len + (len % 2));
-        var byteView = new Uint8Array(ph);
-        var shortView = new Uint16Array(ph);
+        var pseudoHeaderBuffer = new ArrayBuffer(40 + len + (len % 2));
+        var pseudoHeaderView = new DataView(pseudoHeaderBuffer);
         
-        for (var i = 0; i < 8; i++) {
-            shortView[i]     = parent.src.getUint16(i * 2, getSwitchByteOrder());
-            shortView[i + 8] = parent.dst.getUint16(i * 2, getSwitchByteOrder());
+        for (var i = 0; i < 16; i++) {
+            pseudoHeaderView.setUint8(i, parent.src.getUint8(i));
+            pseudoHeaderView.setUint8(i + 16, parent.dst.getUint8(i));
         }        
-        shortView[16] = ntohs(len); // length
-        shortView[17] = 0;          // length-padding (32 bit)
+        pseudoHeaderView.setUint16(32, len, littleEndian); // length
+        pseudoHeaderView.setUint16(34, 0, littleEndian); // length-padding (32 bit)        
+        pseudoHeaderView.setUint16(36, 0, littleEndian); // padding
+        pseudoHeaderView.setUint8(38, 0);
+        pseudoHeaderView.setUint8(39, parent.nh); // next header
         
-        shortView[18] = 0;          // padding
-         byteView[38] = 0;
-         byteView[39] = parent.nh   // next header
-        
-        for (var i = 0; i < packet.length; i++) {
-            shortView[i + 20] = packet[i];
+        for (var i = 0; i < len; i++) {
+            pseudoHeaderView.setUint8(i + 40, dataView.getUint8(offset + i));
         }
-        if (len % 2)
-            byteView[byteView.length - 2] = 
-            new Uint8Array(data)[data.byteLength - 1];
+        if (len % 2) // add padding
+            pseudoHeaderView.setUint8(pseudoHeaderView.byteLength - 1, 0);
         
-        return shortView;
+        return pseudoHeaderView;
     }
 }
 
@@ -172,6 +164,8 @@ TCPh.prototype = {
 };
 
 TCPh.HLEN = 20; // TCP minimum header length in bytes
+TCPh.PORTS = []; // well-known ports
+TCPh.PORTS[6600] = 'mpd'; // specifying mpd manually
 
 if (typeof module !== 'undefined') {
     module.exports.TCPh = TCPh;

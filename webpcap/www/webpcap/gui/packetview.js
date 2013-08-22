@@ -1,5 +1,6 @@
-var pkts;
-var scrollanchor = 0;
+'use strict';
+var packets = [];
+var packetViewAnchor = 0;
 
 function printPacketDetails(packetNum) {
     var packet = dissector.getDissectedPacket(packetNum);
@@ -95,18 +96,20 @@ function printRow(packet, customClass) {
 }
 
 function renderPacketView() {    
-    if (pkts.length === 0 || !renderNextTime)
+    if (packets.length === 0 || !renderNextTime)
         return;
+    
+    var row;
     
     doubleBuffer.innerHTML = '';
     
-    for (var i = scrollanchor; i <= scrollanchor + maxPackets; i++) {
-        if (i >= pkts.length)
+    for (var i = packetViewAnchor; i <= packetViewAnchor + maxRows; i++) {
+        if (i >= packets.length)
             break;
-        row = printRow(pkts[i]);
+        row = printRow(packets[i]);
         doubleBuffer.appendChild(row);
-        if (pkts[i].num === selectedPacketRow.num)
-            selectRow(row, pkts[i].num);
+        if (packets[i].num === selectedPacketRow.num)
+            selectRow(row, packets[i].num);
     }
     
     mainOutputTable.innerHTML = '';

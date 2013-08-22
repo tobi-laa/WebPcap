@@ -1,36 +1,44 @@
+'use strict';
+
 function mergeBuffers(buffers) {
     var byteLength = 0, currentPos = 0;
+    var mergedBuffer;
+    var byteView;
     
     for (var i = 0; i < buffers.length; i++) {
-        if (buffers[i])
+        if (buffers[i]) // handle null or undefined as empty buffers
             byteLength += buffers[i].byteLength;
     }
-
-    var toReturn = new Uint8Array(byteLength);
+    
+    mergedBuffer = new ArrayBuffer(byteLength);
+    byteView = new Uint8Array(mergedBuffer);
     
     for (var i = 0; i < buffers.length; i++) {
         if (buffers[i]) {
-            toReturn.set(new Uint8Array(buffers[i]), currentPos);
+            byteView.set(new Uint8Array(buffers[i]), currentPos);
             currentPos += buffers[i].byteLength;
         }
     }
     
-    return toReturn.buffer;
+    return mergedBuffer;
 }
 
-function appendBuffer(buff, toAppend) {
-    if (!buff)
-        return toAppend;
-    if (!toAppend)
-        return buff;
-    var toReturn = new Uint8Array(buff.byteLength + toAppend.byteLength);
-    toReturn.set(new Uint8Array(buff),     0);
-    toReturn.set(new Uint8Array(toAppend), buff.byteLength);
-    return toReturn.buffer;
+// deprecated method
+function appendBuffer(fstBuff, sndBuff) {
+    mergeBuffers([fstBuff, sndBuff]);
 } 
 
-// The following method is not my own; I found it online
-
+// Credit for the method below goes to Jon Leighton.
+// See: https://gist.github.com/jonleighton/958841
+//
+// This method will be replaced by
+//
+// function base64ArrayBuffer(arrayBuffer) {
+//     return window.btoa(String.fromCharCode.apply(null, new Uint8Array(arrayBuffer)));
+// }
+//
+// unless a proper license can be provided.
+//
 // Converts an ArrayBuffer directly to base64, without any intermediate 'convert to string then
 // use window.btoa' step. According to my tests, this appears to be a faster approach:
 // http://jsperf.com/encoding-xhr-image-data/5
@@ -92,6 +100,7 @@ function base64ArrayBuffer(arrayBuffer) {
 function bufferToArrayBuffer(buff) {
     var newBuff = new ArrayBuffer(buff.length);
     var byteView = new Uint8Array(newBuff);
+    
     for (var i = 0; i < buff.length; i++) {
         byteView[i] = buff[i];
     }
@@ -101,6 +110,7 @@ function bufferToArrayBuffer(buff) {
 function arrayBufferToBuffer(arrBuff) {
     var newBuff = new Buffer(arrBuff.byteLength);
     var byteView = new Uint8Array(arrBuff);
+    
     for (var i = 0; i < arrBuff.byteLength; i++) {
         newBuff[i] = byteView[i];
     }
@@ -110,6 +120,7 @@ function arrayBufferToBuffer(arrBuff) {
 if (typeof module !== 'undefined') {
     module.exports.appendBuffer = appendBuffer;
     module.exports.mergeBuffers = mergeBuffers;
+    module.exports.base64ArrayBuffer = base64ArrayBuffer;
     module.exports.bufferToArrayBuffer = bufferToArrayBuffer;
     module.exports.arrayBufferToBuffer = arrayBufferToBuffer;
 }

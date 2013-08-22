@@ -14,8 +14,8 @@
             <img class="glow buttonicon" src="img/media-record.svgz" alt="Start capture">
         </div>
         
-        <div id="clearscr" class="button" title="Clear screen">
-            <img class="glow buttonicon" src="img/clear.svgz" alt="Clear screen">
+        <div id="clearcap" class="button" title="Clear session">
+            <img class="glow buttonicon" src="img/clear.svgz" alt="Clear session">
         </div>
 
         <div id="savecap" class="button" title="Save capture">
@@ -25,7 +25,7 @@
         <div id="loadcap" class="button" title="Open pcap file">                 
             <img class="glow buttonicon" src="img/document-open.svgz" alt="Save capture">       
             <div class="hidebox">
-                <input id="fileInput" type="file" onchange="readPcapFile(this.files[0], printRow)">
+                <input id="fileinput" type="file" onchange="readPcapFile(this.files[0], printRow)">
             </div>
         </div>            
                     
@@ -33,9 +33,9 @@
             <img class="glow buttonicon" src="img/tab-duplicate.svgz" alt="Switch view">
         </div>
         
-        <form id="filterForm" class="submit" style="float: left;">
+        <form id="filterform" class="submit" style="float: left;">
             <label>
-            Filter: <input id="filterField" type="text">
+            Filter: <input id="filterfield" type="text">
             </label>
         </form>
 

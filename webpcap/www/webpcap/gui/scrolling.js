@@ -1,3 +1,4 @@
+'use strict';
 var scrollbarTrack = document.getElementById('scrollbar-track');
 var scrollThumb = document.getElementById('scroll-thumb');
 
@@ -21,8 +22,8 @@ function calculateScrollbarSize() {
     var scrollbarTrackSize;
     
     if (packetView) {
-        packetNumber = pkts.length;
-        scrollbarTrackStart = scrollanchor;
+        packetNumber = packets.length;
+        scrollbarTrackStart = packetViewAnchor;
     }
     else {
         var array = connectionViewLength();
@@ -31,7 +32,7 @@ function calculateScrollbarSize() {
     }
     
     scrollbarTrackStart = Math.min(scrollbarTrackStart * scrollbarTrack.offsetHeight / packetNumber, MAX_SCROLLTHUMB_OFFSET);
-    scrollbarTrackSize = Math.max(maxPackets * scrollbarTrack.offsetHeight / packetNumber, MIN_SCROLLTHUMB_SIZE);
+    scrollbarTrackSize = Math.max(maxRows * scrollbarTrack.offsetHeight / packetNumber, MIN_SCROLLTHUMB_SIZE);
     if (scrollbarTrackSize >= scrollbarTrack.offsetHeight || packetNumber === 0) {
         scrollThumb.className = 'hidden';
         scrollbarButtonUp.className = 'scrollbar-button-up-inactive';
@@ -46,7 +47,7 @@ function calculateScrollbarSize() {
     else {
         scrollbarButtonDown.className = 'scrollbar-button-down';
         // FIXME
-        if ((packetView && scrollanchor === 0) || (!packetView && connAnchor === 0 && pktAnchor === -1))
+        if ((packetView && packetViewAnchor === 0) || (!packetView && connAnchor === 0 && pktAnchor === -1))
             scrollbarButtonUp.className = 'scrollbar-button-up-inactive';
         else
             scrollbarButtonUp.className = 'scrollbar-button-up';
@@ -77,19 +78,19 @@ function scroll(direction) {
 }
 
 function scrollPacketView(direction) {
-    if (pkts.length === 0)
+    if (packets.length === 0)
         return;
     
     autoscroll = false;
     renderNextTime = true;
     
-    scrollanchor += direction;
+    packetViewAnchor += direction;
     
-    if (scrollanchor < 0)
-        scrollanchor = 0
-    else if (scrollanchor >= pkts.length - maxPackets) {
+    if (packetViewAnchor < 0)
+        packetViewAnchor = 0
+    else if (packetViewAnchor >= packets.length - maxRows) {
         // we don't want a negative anchor
-        scrollanchor = Math.max(pkts.length - maxPackets, 0);
+        packetViewAnchor = Math.max(packets.length - maxRows, 0);
         autoscroll = true;
     }
 }
@@ -154,16 +155,16 @@ function moveScrollThumb(event) {
                     / scrollbarTrack.offsetHeight;
     
     if (packetView) {
-        newPos = (pkts.length * newPos) | 0;
+        newPos = (packets.length * newPos) | 0;
         
         if (newPos < 0)
             newPos = 0;
-        else if (newPos >= pkts.length - maxPackets) {
-            newPos = pkts.length - maxPackets;
+        else if (newPos >= packets.length - maxRows) {
+            newPos = packets.length - maxRows;
             autoscroll = true;
         }
         
-        scrollanchor = newPos;
+        packetViewAnchor = newPos;
         renderNextTime = true;
     }
     

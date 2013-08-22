@@ -1,10 +1,9 @@
 var assert = require('assert');
 var TCPh = require('../../dissection/TCPh').TCPh;
-var setSwitchByteOrder = require('../../dissection/byteOrder')
-                            .setSwitchByteOrder;
 
 // bogus IPv4 header values
-var parent = {src: [0, 0, 0, 0], dst: [0, 0, 0, 0] , prot: 0}
+var ip = new DataView(new ArrayBuffer(4));
+var parent = {src: ip, dst: ip, prot: 0}
 
 var data = new DataView(new Uint8Array(
 [
@@ -16,8 +15,7 @@ var data = new DataView(new Uint8Array(
 ]).buffer);
 
 test('dissected TCP values from self-made packet are correct', function () {
-    setSwitchByteOrder(false);
-    var tcp = new TCPh(data, 0, parent);
+    var tcp = new TCPh(true, data, 0, parent);
     
     assert.strictEqual(tcp.sport, 1337);
     assert.strictEqual(tcp.dport, 80);
@@ -30,7 +28,7 @@ test('dissected TCP values from self-made packet are correct', function () {
     assert.strictEqual(tcp.ACK, 1);
     assert.strictEqual(tcp.PSH, 0);
     assert.strictEqual(tcp.RST, 1);
-    assert.strictEqual(tcp.RST, 0);
+    assert.strictEqual(tcp.SYN, 0);
     assert.strictEqual(tcp.FIN, 1);
     assert.strictEqual(tcp.wsize, 512);
     assert.strictEqual(tcp.csum, 789);

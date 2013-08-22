@@ -1,14 +1,15 @@
+'use strict';
 /*
  ******************************************************************
  ************************* PCAP HEADER ****************************
  ******************************************************************
  */
 
-function Pcaph(dataView, offset) {    
-    this.ts_sec   = dataView.getUint32(offset, getSwitchByteOrder());  // timestamp seconds
-    this.ts_usec  = dataView.getUint32(offset + 4, getSwitchByteOrder());  // timestamp microseconds
-    this.incl_len = dataView.getUint32(offset + 8, getSwitchByteOrder());  // number of octets of packet saved in file
-    this.orig_len = dataView.getUint32(offset + 12, getSwitchByteOrder());  // actual length of packet
+function Pcaph(littleEndian, dataView, offset) {    
+    this.ts_sec   = dataView.getUint32(offset, littleEndian);  // timestamp seconds
+    this.ts_usec  = dataView.getUint32(offset + 4, littleEndian);  // timestamp microseconds
+    this.incl_len = dataView.getUint32(offset + 8, littleEndian);  // number of octets of packet saved in file
+    this.orig_len = dataView.getUint32(offset + 12, littleEndian);  // actual length of packet
     
     // some general information about the packet (not part of pcap header)
     this.num;

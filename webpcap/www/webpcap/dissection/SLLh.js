@@ -1,3 +1,4 @@
+'use strict';
 if (typeof require !== 'undefined') {
     var printNum = require('../formattedOutput').printNum;
     var printMAC = require('./Ethh').printMAC;
@@ -10,12 +11,12 @@ if (typeof require !== 'undefined') {
  ******************************************************************
  */
 
-function SLLh(dataView, offset) {    
-    this.type    = dataView.getUint16(offset, !getSwitchByteOrder());                 // packet type
-    this.llat    = dataView.getUint16(offset + 2, !getSwitchByteOrder());                 // link-layer address type
-    this.llal    = dataView.getUint16(offset + 4, !getSwitchByteOrder());                 // link-layer address length
-    this.src     = new Uint8Array(dataView.buffer, offset + 6, this.llal); // source (MAC) address    
-    this.prot    = dataView.getUint16(offset + 14, !getSwitchByteOrder());                 // protocol (i.e. IPv4)
+function SLLh(littleEndian, dataView, offset) {    
+    this.type    = dataView.getUint16(offset, littleEndian);                 // packet type
+    this.llat    = dataView.getUint16(offset + 2, littleEndian);                 // link-layer address type
+    this.llal    = dataView.getUint16(offset + 4, littleEndian);                 // link-layer address length
+    this.src     = new DataView(dataView.buffer, offset + 6, this.llal); // source (MAC) address    
+    this.prot    = dataView.getUint16(offset + 14, littleEndian);                 // protocol (i.e. IPv4)
     
     this.next_header = null;
 }

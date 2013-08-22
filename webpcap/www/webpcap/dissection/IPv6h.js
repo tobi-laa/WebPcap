@@ -1,3 +1,4 @@
+'use strict';
 if (typeof require !== 'undefined')
     var printNum = require('../formattedOutput').printNum;
 
@@ -7,15 +8,17 @@ if (typeof require !== 'undefined')
  ******************************************************************
  */
 
-function IPv6h(dataView, offset) {    
+function IPv6h(littleEndian, dataView, offset) {    
     this.v = (dataView.getUint8(offset) & 0xF0) >> 4; // version
     // this.v_tc_fl = ;        // version, traffic class, flow label
-    this.plen = dataView.getUint16(offset + 4, !getSwitchByteOrder()); // payload length
+    this.plen = dataView.getUint16(offset + 4, littleEndian); // payload length
     this.nh = dataView.getUint8(offset + 6); // next header; same as protocol for ipv4h
     this.hlim = dataView.getUint8(offset + 7); // hop limit
     this.src = new DataView(dataView.buffer, offset + 8, IPv6h.ALEN);  // source IPv6 address
     this.dst = new DataView(dataView.buffer, offset + 24, IPv6h.ALEN); // destination IPv6 address
         
+    this.littleEndian = littleEndian; // store for IP printing method
+    
     this.next_header = null;
 }
 
@@ -44,8 +47,8 @@ IPv6h.prototype = {
                          + 'Payload length: ' + this.plen + '</br>'
                          + 'Next header: ' + this.nh + '</br>'
                          + 'Hop limit ' + this.hlim + '</br>'
-                         + 'Source: ' + printIPv6(this.src) + '</br>'
-                         + 'Destination: ' + printIPv6(this.dst) + '</br>';
+                         + 'Source: ' + printIPv6(this.src, this.littleEndian) + '</br>'
+                         + 'Destination: ' + printIPv6(this.dst, this.littleEndian) + '</br>';
 
         details.appendChild(hidden);
         
@@ -59,7 +62,7 @@ IPv6h.prototype = {
 IPv6h.HLEN = 40; // IPv6 header length in bytes
 IPv6h.ALEN = 16;  // IPv6 address length in bytes
 
-function printIPv6(ip) {
+function printIPv6(ip, littleEndian) {
     var start, tempStart;
     var end, tempEnd;
     var ipFragments;
@@ -74,9 +77,9 @@ function printIPv6(ip) {
     start = tempStart = end = tempEnd = ip.byteLength / 2; //
     
     for (var i = 0; i < ip.byteLength; i += 2) {
-        if (ip.getUint16(i, !getSwitchByteOrder()) === 0) {
+        if (ip.getUint16(i, littleEndian) === 0) {
             tempStart = i;
-            while (i < ip.byteLength && ip.getUint16(i, !getSwitchByteOrder()) === 0)
+            while (i < ip.byteLength && ip.getUint16(i, littleEndian) === 0)
                 i += 2;
             tempEnd = i;
             if (tempEnd - tempStart > end - start) {
@@ -89,7 +92,7 @@ function printIPv6(ip) {
     // print IPv6 address
     ipFragments = [];
     for (var i = 0; i < start; i += 2) {
-        ipFragments.push(ip.getUint16(i, !getSwitchByteOrder()).toString(16));
+        ipFragments.push(ip.getUint16(i, littleEndian).toString(16));
     }
     if (end > start) {
         if (end === ip.byteLength || start === 0)
@@ -98,7 +101,7 @@ function printIPv6(ip) {
             ipFragments.push(''); // induces a double ::
     }
     for (var i = end; i < ip.byteLength; i += 2) {
-        ipFragments.push(ip.getUint16(i, !getSwitchByteOrder()).toString(16));        
+        ipFragments.push(ip.getUint16(i, littleEndian).toString(16));        
     }
     
     return ipFragments.join(':');

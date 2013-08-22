@@ -1,3 +1,4 @@
+'use strict';
 if (typeof require !== 'undefined') {
     var createID = require('./TCPh').createID;
     var buildPseudoHeader = require('./TCPh').buildPseudoHeader;
@@ -8,27 +9,24 @@ if (typeof require !== 'undefined') {
  ************************** UDP HEADER ****************************
  ******************************************************************
  */
-var UDP_PORTS = []; // well-known ports
-
-function UDPh(dataView, offset, parent) {    
-    this.sport = dataView.getUint16(offset, !getSwitchByteOrder()); // source port
-    this.dport = dataView.getUint16(offset + 2, !getSwitchByteOrder()); // destination port
-    this.len   = dataView.getUint16(offset + 4, !getSwitchByteOrder()); // length of payload incl. UDP header
-    this.csum  = dataView.getUint16(offset + 6, !getSwitchByteOrder()); // header checksum
+function UDPh(littleEndian, dataView, offset, parent) {    
+    this.sport = dataView.getUint16(offset, littleEndian); // source port
+    this.dport = dataView.getUint16(offset + 2, littleEndian); // destination port
+    this.len   = dataView.getUint16(offset + 4, littleEndian); // length of payload incl. UDP header
+    this.csum  = dataView.getUint16(offset + 6, littleEndian); // header checksum
       
     this.id = createID(parent.src, this.sport, parent.dst, this.dport, 'u');
     
-    if (offset + this.getHeaderLength() > dataView.length)
-        this.val = false;
-    else if (!this.csum) // UDP checksum is optional...
-        this.val = true;
-    else {
-        var ph = buildPseudoHeader(parent, dataView.buffer, offset);
-        this.val = validateChecksum(ph);
-    }
+//     if (offset + this.getHeaderLength() > dataView.length)
+//         this.val = false;
+//     else if (!this.csum) // UDP checksum is optional...
+//         this.val = true;
+//     else {
+//         var ph = buildPseudoHeader(littleEndian, dataView.buffer, offset, parent);
+//         this.val = validateChecksum(ph);
+//     }
         
     this.next_header = null;
-    shortView = null;
 }
 
 UDPh.prototype = {
@@ -70,6 +68,7 @@ UDPh.prototype = {
 };
 
 UDPh.HLEN = 8; // UDP header length in bytes  
+UDPh.PORTS = []; // well-known ports
 
 if (typeof module !== 'undefined')
     module.exports = UDPh;
