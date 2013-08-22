@@ -4,28 +4,25 @@
  ******************************************************************
  */
 
-function IPv4h(data, offset) {
-    var byteView  = new  Uint8Array(data, offset, IPv4h.HLEN);
-    var shortView = new Uint16Array(data, offset, IPv4h.HLEN / 2);
-    
-    this.v    = byteView[0] >> 4;             // version
-    this.hl   = byteView[0] & 0x0F;           // IP header length
-    this.tos  = byteView[1];                  // type of service
-    this.tlen = ntohs(shortView[1]);          // total length
-    this.id   = ntohs(shortView[2]);          // identification
-    this.frag = ntohs(shortView[3]);          // fragmentation flags & offset
-    this.off  = ntohs(shortView[3]) & 0x1FFF; // fragmentation offset
-    this.ttl  = byteView[8];                  // time to live
-    this.prot = byteView[9];                  // protocol (i.e. TCP)
-    this.csum = ntohs(shortView[5]);          // header checksum
-    this.src  = byteView.subarray(12, 16);    // source IPv4 address
-    this.dst  = byteView.subarray(16, 20);    // destination IPv4 address
+function IPv4h(dataView, offset) {    
+    this.v    = dataView.getUint8(offset) >> 4;    // version
+    this.hl   = dataView.getUint8(offset) & 0x0F;  // IP header length
+    this.tos  = dataView.getUint8(offset + 1);         // type of service
+    this.tlen = dataView.getUint16(offset + 2, !getSwitchByteOrder()); // total length
+    this.id   = dataView.getUint16(offset + 4, !getSwitchByteOrder());          // identification
+    this.frag = dataView.getUint16(offset + 6, !getSwitchByteOrder());         // fragmentation flags & offset
+    this.off  = dataView.getUint16(offset + 6, !getSwitchByteOrder()) & 0x1FFF; // fragmentation offset
+    this.ttl  = dataView.getUint8(offset + 8);                  // time to live
+    this.prot = dataView.getUint8(offset + 9);                  // protocol (i.e. TCP)
+    this.csum = dataView.getUint16(offset + 10, !getSwitchByteOrder());          // header checksum
+    this.src  = new Uint8Array(dataView.buffer, offset + 12, 4);    // source IPv4 address
+    this.dst  = new Uint8Array(dataView.buffer, offset + 16, 4);    // destination IPv4 address
     /* various options may follow */
     
-    if (offset + this.getHeaderLength() > data.byteLength)
+    if (offset + this.getHeaderLength() > dataView.byteLength)
         this.val = false;
     else 
-        this.val = validateChecksum(new Uint16Array(data, offset, 
+        this.val = validateChecksum(new Uint16Array(dataView.buffer, offset, 
                                                     this.getHeaderLength() / 2));
         
     this.next_header = null;

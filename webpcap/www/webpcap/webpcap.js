@@ -32,7 +32,8 @@ var JSEVENTS =
     ['scrollbar-track', 'onmousedown', 'startTrackScrolling(true)'],
     ['scroll-thumb', 'onmousedown', 'selectScrollThumb(event)'],
     ['scrollbar-button-up', 'onmousedown', 'startScrolling(-1)'],
-    ['scrollbar-button-down', 'onmousedown', 'startScrolling(1)']
+    ['scrollbar-button-down', 'onmousedown', 'startScrolling(1)'],
+    ['contextmenu', 'onselectstart', 'return false;']
 ];
 
 initWebPcapJS();

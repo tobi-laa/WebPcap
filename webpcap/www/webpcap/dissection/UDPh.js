@@ -10,22 +10,20 @@ if (typeof require !== 'undefined') {
  */
 var UDP_PORTS = []; // well-known ports
 
-function UDPh(data, offset, parent) {
-    var shortView = new Uint16Array(data, offset, UDPh.HLEN / 2);
-    
-    this.sport = ntohs(shortView[0]); // source port
-    this.dport = ntohs(shortView[1]); // destination port
-    this.len   = ntohs(shortView[2]); // length of payload incl. UDP header
-    this.csum  = ntohs(shortView[3]); // header checksum
+function UDPh(dataView, offset, parent) {    
+    this.sport = dataView.getUint16(offset, !getSwitchByteOrder()); // source port
+    this.dport = dataView.getUint16(offset + 2, !getSwitchByteOrder()); // destination port
+    this.len   = dataView.getUint16(offset + 4, !getSwitchByteOrder()); // length of payload incl. UDP header
+    this.csum  = dataView.getUint16(offset + 6, !getSwitchByteOrder()); // header checksum
       
     this.id = createID(parent.src, this.sport, parent.dst, this.dport, 'u');
     
-    if (offset + this.getHeaderLength() > data.byteLength)
+    if (offset + this.getHeaderLength() > dataView.length)
         this.val = false;
     else if (!this.csum) // UDP checksum is optional...
         this.val = true;
     else {
-        var ph = buildPseudoHeader(parent, data, offset);
+        var ph = buildPseudoHeader(parent, dataView.buffer, offset);
         this.val = validateChecksum(ph);
     }
         

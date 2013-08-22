@@ -7,16 +7,12 @@ if (typeof require !== 'undefined')
  ******************************************************************
  */
 
-function Ethh(data, offset) {    
-    var byteView  = new  Uint8Array(data, offset, Ethh.HLEN);
-    var shortView = new Uint16Array(data, offset + 2 * Ethh.ALEN, 1);
-    
-    this.dst  = byteView.subarray(0, 6);  // destination MAC address
-    this.src  = byteView.subarray(6, 12); // source MAC address    
-    this.prot = ntohs(shortView[0]);      // protocol (i.e. IPv4)
+function Ethh(dataView, offset) {   
+    this.dst  = new Uint8Array(dataView.buffer, offset, Ethh.ALEN);  // destination MAC address
+    this.src  = new Uint8Array(dataView.buffer, offset + 6, Ethh.ALEN); // source MAC address    
+    this.prot = dataView.getUint16(offset + 12, !getSwitchByteOrder()); // protocol (i.e. IPv4)
     
     this.next_header = null;
-    byteView = shortView = null;
 }
 
 Ethh.prototype = {

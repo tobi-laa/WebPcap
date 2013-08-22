@@ -45,32 +45,38 @@ Dissector.prototype.dissect = function (data) {
             return;
         }
         
-        var packet = new Pcaph(data, 0);
+        var packetLen = new DataView(data, 0, PCAP_HEADER_LENGTH).getUint32(8, getSwitchByteOrder()) + PCAP_HEADER_LENGTH;
         
-        if (data.byteLength < (packet.incl_len + PCAP_HEADER_LENGTH)) { // i.e. packet not complete
+        if (data.byteLength < packetLen) { // i.e. packet not complete
             this.cache = data; // store for next call to dissect
             return;
         }
-                
+        
+        // store raw packet data
+        this.rawPackets[this.counter - 1] = data.slice(0, packetLen);
+        // make values accessible via dataview
+        var dataView = new DataView(this.rawPackets[this.counter - 1]);
+        // dissect pcap header
+        var packet = new Pcaph(dataView, 0);
+        
         packet.num = this.counter;
         packet.next_header =
-        this.dissectLinkLayer(packet, data.slice(0, packet.incl_len + PCAP_HEADER_LENGTH), PCAP_HEADER_LENGTH); // dissect further  
-        
-        
-        // store dissected and raw packet
+        this.dissectLinkLayer(packet, dataView, PCAP_HEADER_LENGTH); // dissect further  
+                
+        // store dissected packet
         this.dissectedPackets[this.counter - 1] = packet;
-        this.rawPackets[this.counter - 1] = data.slice(0, packet.incl_len + PCAP_HEADER_LENGTH);
+        
         this.counter++;
         
         // see if there is more data to dissect
-        if (packet.incl_len > 0 && data.byteLength > (packet.incl_len + PCAP_HEADER_LENGTH))
-            data = data.slice(packet.incl_len + PCAP_HEADER_LENGTH);        
+        if (packet.incl_len > 0 && data.byteLength > packetLen)
+            data = data.slice(packetLen);        
         else
             return;
     }
 }
 
-Dissector.prototype.dissectLinkLayer = function (packet, data, offset) {
+Dissector.prototype.dissectLinkLayer = function (packet, dataView, offset) {
     var toReturn = null;
     if (offset > packet.incl_len + PCAP_HEADER_LENGTH) { // bogus value
         packet.class = 'malformed';
@@ -78,13 +84,13 @@ Dissector.prototype.dissectLinkLayer = function (packet, data, offset) {
     }
     switch(this.linkLayerType) {
     case 113: // SLL
-        toReturn = new SLLh(data, offset);       
+        toReturn = new SLLh(dataView, offset);       
         packet.src  = printMAC(toReturn.src);
         // packet.dst  = printMAC(toReturn.dst);
         packet.prot = 'SLL';
         break;
     case 1: // Ethernet
-        toReturn = new Ethh(data, offset);       
+        toReturn = new Ethh(dataView, offset);       
         packet.src  = printMAC(toReturn.src);
         packet.dst  = printMAC(toReturn.dst);
         packet.prot = 'Ethernet';
@@ -92,14 +98,14 @@ Dissector.prototype.dissectLinkLayer = function (packet, data, offset) {
     default:
         return toReturn; // i.e. return null
     }
-    toReturn.next_header = this.dissectNetworkLayer(packet, data, 
+    toReturn.next_header = this.dissectNetworkLayer(packet, dataView, 
                                                offset + 
                                                toReturn.getHeaderLength(), 
                                                toReturn);
     return toReturn;
 }
 
-Dissector.prototype.dissectNetworkLayer = function (packet, data, offset, parent) {
+Dissector.prototype.dissectNetworkLayer = function (packet, dataView, offset, parent) {
     if (offset > packet.incl_len + PCAP_HEADER_LENGTH) { // bogus value
         packet.class = 'malformed';
         return null;
@@ -107,25 +113,25 @@ Dissector.prototype.dissectNetworkLayer = function (packet, data, offset, parent
     var toReturn;
     switch(parent.prot) {
     case 0x0800: // IPv4
-        toReturn = new IPv4h(data, offset);
+        toReturn = new IPv4h(dataView, offset);
         packet.src  = printIPv4(toReturn.src);
         packet.dst  = printIPv4(toReturn.dst);
         packet.prot = 'IPv4';
         toReturn.next_header = 
-        this.dissectTransportLayer(packet, data, offset + toReturn.getHeaderLength(), toReturn);
+        this.dissectTransportLayer(packet, dataView, offset + toReturn.getHeaderLength(), toReturn);
         if (!toReturn.val)
             packet.class = 'malformed';
         break;
     case 0x86DD: // IPv6
-        toReturn = new IPv6h(data, offset);   
+        toReturn = new IPv6h(dataView, offset);   
         packet.src  = printIPv6(toReturn.src);
         packet.dst  = printIPv6(toReturn.dst);
         packet.prot = 'IPv6';
         toReturn.next_header = 
-        this.dissectTransportLayer(packet, data, offset + toReturn.getHeaderLength(), toReturn);
+        this.dissectTransportLayer(packet, dataView, offset + toReturn.getHeaderLength(), toReturn);
         break;
     case 0x0806: // ARP    
-        toReturn = new ARPh(data, offset);
+        toReturn = new ARPh(dataView, offset);
         packet.prot = 'ARP';
         break;
     case 0x8035: // RARP
@@ -139,7 +145,7 @@ Dissector.prototype.dissectNetworkLayer = function (packet, data, offset, parent
     return toReturn;
 }
 
-Dissector.prototype.dissectTransportLayer = function (packet, data, offset, parent) {
+Dissector.prototype.dissectTransportLayer = function (packet, dataView, offset, parent) {
     var toReturn = null;
     
     if (offset > packet.incl_len + PCAP_HEADER_LENGTH) { // bogus value
@@ -153,11 +159,11 @@ Dissector.prototype.dissectTransportLayer = function (packet, data, offset, pare
         packet.prot = 'ICMP';
         break;
     case 6: // TCP
-        toReturn = new TCPh(data, offset, parent);        
+        toReturn = new TCPh(dataView, offset, parent);        
         packet.prot = 'TCP';
-        this.handleConnection(packet, data, offset, parent, toReturn);
+        this.handleConnection(packet, dataView, offset, parent, toReturn);
         toReturn.next_header = 
-        this.dissectApplicationLayer(packet, data, offset + toReturn.getHeaderLength(), toReturn);
+        this.dissectApplicationLayer(packet, dataView, offset + toReturn.getHeaderLength(), toReturn);
         if (!toReturn.val)
             packet.class = 'malformed';
         else if (toReturn.RST)
@@ -166,11 +172,11 @@ Dissector.prototype.dissectTransportLayer = function (packet, data, offset, pare
             packet.class = 'SYNFIN';
         break;
     case 17: // UDP
-        toReturn = new UDPh(data, offset, parent);        
+        toReturn = new UDPh(dataView, offset, parent);        
         packet.prot = 'UDP';
-        this.handleConnection(packet, data, offset, parent, toReturn);
+        this.handleConnection(packet, dataView, offset, parent, toReturn);
         toReturn.next_header = 
-        this.dissectApplicationLayer(packet, data, offset + toReturn.getHeaderLength(), toReturn);
+        this.dissectApplicationLayer(packet, dataView, offset + toReturn.getHeaderLength(), toReturn);
         if (!toReturn.val)
             packet.class = 'malformed';
         break;
@@ -178,7 +184,7 @@ Dissector.prototype.dissectTransportLayer = function (packet, data, offset, pare
     return toReturn;
 }
 
-Dissector.prototype.handleConnection = function (packet, data, offset, parent, toReturn) {
+Dissector.prototype.handleConnection = function (packet, dataView, offset, parent, toReturn) {
     if (!toReturn.id)
         return;
         
@@ -190,7 +196,7 @@ Dissector.prototype.handleConnection = function (packet, data, offset, parent, t
         // create a new connection object and store it properly
         connection = new Connection(this.connectionsByArrival.length + 1, 
                                     packet,
-                                    data,
+                                    dataView.buffer,
                                     toReturn);
         this.connectionsById[toReturn.id] = connection;
         this.connectionsByArrival.push(connection);
@@ -206,10 +212,10 @@ Dissector.prototype.handleConnection = function (packet, data, offset, parent, t
     
     // otherwise try to add this segment to connection's content
     offset += toReturn.getHeaderLength();
-    connection.processSegment(packet, data, offset, parent, toReturn);
+    connection.processSegment(packet, dataView.buffer, offset, parent, toReturn);
 }
 
-Dissector.prototype.dissectApplicationLayer = function (packet, data, offset, parent) {
+Dissector.prototype.dissectApplicationLayer = function (packet, dataView, offset, parent) {
     if (offset > packet.incl_len + PCAP_HEADER_LENGTH) { // bogus value
         packet.class = 'malformed';
         return null;
@@ -217,7 +223,7 @@ Dissector.prototype.dissectApplicationLayer = function (packet, data, offset, pa
     var toReturn = null;
     
     if (parent.sport === 6600 || parent.dport === 6600) {
-        toReturn = new MPDh(data, offset, parent);
+        toReturn = new MPDh(dataView, offset, parent);
         this.connectionsById[packet.id].class = 'MPD';
         packet.class = 'MPD';
         if (!toReturn.type)
@@ -229,7 +235,7 @@ Dissector.prototype.dissectApplicationLayer = function (packet, data, offset, pa
     }
     
     else if (parent.sport === 80 || parent.dport === 80) {
-        toReturn = new HTTPh(data, offset, parent);
+        toReturn = new HTTPh(dataView, offset, parent);
         this.connectionsById[packet.id].class = 'HTTP';
         packet.class = 'HTTP';
         if (!toReturn.headers)

@@ -10,18 +10,14 @@ if (typeof require !== 'undefined') {
  ******************************************************************
  */
 
-function SLLh(data, offset) {
-    var byteView  = new  Uint8Array(data, offset, SLLh.HLEN);
-    var shortView = new Uint16Array(data, offset, SLLh.HLEN / 2);
-    
-    this.type    = ntohs(shortView[0]);                 // packet type
-    this.llat    = ntohs(shortView[1]);                 // link-layer address type
-    this.llal    = ntohs(shortView[2]);                 // link-layer address length
-    this.src     = byteView.subarray(6, 6 + this.llal); // source (MAC) address    
-    this.prot    = ntohs(shortView[7]);                 // protocol (i.e. IPv4)
+function SLLh(dataView, offset) {    
+    this.type    = dataView.getUint16(offset, !getSwitchByteOrder());                 // packet type
+    this.llat    = dataView.getUint16(offset + 2, !getSwitchByteOrder());                 // link-layer address type
+    this.llal    = dataView.getUint16(offset + 4, !getSwitchByteOrder());                 // link-layer address length
+    this.src     = new Uint8Array(dataView.buffer, offset + 6, this.llal); // source (MAC) address    
+    this.prot    = dataView.getUint16(offset + 14, !getSwitchByteOrder());                 // protocol (i.e. IPv4)
     
     this.next_header = null;
-    byteView = shortView = null;
 }
 
 SLLh.prototype = {

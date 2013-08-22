@@ -4,13 +4,11 @@
  ******************************************************************
  */
 
-function Pcaph(data, offset) {
-    var intView  = new Uint32Array(data, offset, Pcaph.HLEN / 4);
-    
-    this.ts_sec   = intView[0];  // timestamp seconds
-    this.ts_usec  = intView[1];  // timestamp microseconds
-    this.incl_len = intView[2];  // number of octets of packet saved in file
-    this.orig_len = intView[3];  // actual length of packet
+function Pcaph(dataView, offset) {    
+    this.ts_sec   = dataView.getUint32(offset, getSwitchByteOrder());  // timestamp seconds
+    this.ts_usec  = dataView.getUint32(offset + 4, getSwitchByteOrder());  // timestamp microseconds
+    this.incl_len = dataView.getUint32(offset + 8, getSwitchByteOrder());  // number of octets of packet saved in file
+    this.orig_len = dataView.getUint32(offset + 12, getSwitchByteOrder());  // actual length of packet
     
     // some general information about the packet (not part of pcap header)
     this.num;
@@ -21,7 +19,6 @@ function Pcaph(data, offset) {
     this.id;
     
     this.next_header = null;
-    intView = shortView = null;
 }
 
 Pcaph.prototype = {

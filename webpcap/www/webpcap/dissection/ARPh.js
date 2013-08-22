@@ -10,27 +10,23 @@ if (typeof require !== 'undefined') {
  ******************************************************************
  */
 
-function ARPh(data, offset) {
-    var byteView  = new  Uint8Array(data, offset, ARPh.HLEN);
-    var shortView = new Uint16Array(data, offset, ARPh.HLEN / 2);
-    
-    this.htype = ntohs(shortView[0]);
-    this.ptype = ntohs(shortView[1]);
-    this.hlen  = byteView[4];
-    this.plen  = byteView[5];
-    this.op    = ntohs(shortView[3]);
+function ARPh(dataView, offset) {
+    this.htype = dataView.getUint16(offset, !getSwitchByteOrder());
+    this.ptype = dataView.getUint16(offset + 2, !getSwitchByteOrder());
+    this.hlen  = dataView.getUint8(offset + 4);
+    this.plen  = dataView.getUint8(offset + 5);
+    this.op    = dataView.getUint16(offset + 6, !getSwitchByteOrder());
     
     offset  += ARPh.HLEN;
-    this.sha = new Uint8Array(data, offset, this.hlen);
+    this.sha = new Uint8Array(dataView.buffer, offset, this.hlen);
     offset  += this.hlen;
-    this.spa = new Uint8Array(data, offset, this.plen);
+    this.spa = new Uint8Array(dataView.buffer, offset, this.plen);
     offset  += this.plen;
-    this.tha = new Uint8Array(data, offset, this.hlen);
+    this.tha = new Uint8Array(dataView.buffer, offset, this.hlen);
     offset  += this.hlen;
-    this.tpa = new Uint8Array(data, offset, this.plen);
+    this.tpa = new Uint8Array(dataView.buffer, offset, this.plen);
         
     this.next_header = null;
-    byteView = shortView = null;
 }
 
 ARPh.prototype = {

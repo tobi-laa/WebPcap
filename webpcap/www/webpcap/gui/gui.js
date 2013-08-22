@@ -4,7 +4,7 @@ var detailsOutput = document.getElementById('details');
 var bytesOutput = document.getElementById('raw');
 var html = document.getElementById('html');
 
-var packetView = false; // makes connection view the default
+var packetView = true; // makes connection view the default
 var contextMenu = document.getElementById('contextmenu');
 
 var renderThread;

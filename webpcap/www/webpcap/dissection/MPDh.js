@@ -7,6 +7,7 @@
  */
 
 function MPDh(data, offset, parent) {
+    data = dataView.buffer;
     if (data.byteLength - offset < 2)
         return;
     

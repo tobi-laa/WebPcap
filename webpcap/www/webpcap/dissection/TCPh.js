@@ -10,26 +10,22 @@ if (typeof require !== 'undefined') {
 var TCP_PORTS = []; // well-known ports
 TCP_PORTS[6600] = 'mpd'; // specifying mpd manually
 
-function TCPh(data, offset, parent) {
-    var byteView  = new Uint8Array (data, offset, TCPh.HLEN);
-    var shortView = new Uint16Array(data, offset, TCPh.HLEN/ 2);
-    var intView   = new DataView(data, offset, TCPh.HLEN);
-    
-    this.sport    = ntohs(shortView[0]); // source port
-    this.dport    = ntohs(shortView[1]); // destination port
-    this.seqn     = intView.getUint32(4, !getSwitchByteOrder()); // sequence number
-    this.ackn     = intView.getUint32(8, !getSwitchByteOrder()); // ACK number
-    this.off_rsd  = byteView[12] & 0xfe; // data offset, reserved portion
-    this.flags    = ntohs(shortView[6]) & 0x1ff; // various flags
-    this.wsize    = ntohs(shortView[7]);     // window size
-    this.csum     = ntohs(shortView[8]);     // header checksum
-    this.urg      = ntohs(shortView[9]);     // urgent pointer
+function TCPh(dataView, offset, parent) {    
+    this.sport    = dataView.getUint16(offset, !getSwitchByteOrder()); // source port
+    this.dport    = dataView.getUint16(offset + 2, !getSwitchByteOrder()); // destination port
+    this.seqn     = dataView.getUint32(offset + 4, !getSwitchByteOrder()); // sequence number
+    this.ackn     = dataView.getUint32(offset + 8, !getSwitchByteOrder()); // ACK number
+    this.off_rsd  = dataView.getUint8(offset + 12) & 0xfe; // data offset, reserved portion
+    this.flags    = dataView.getUint16(offset + 12, !getSwitchByteOrder()) & 0x1ff; // various flags
+    this.wsize    = dataView.getUint16(offset + 14, !getSwitchByteOrder());     // window size
+    this.csum     = dataView.getUint16(offset + 16, !getSwitchByteOrder());     // header checksum
+    this.urg      = dataView.getUint16(offset + 18, !getSwitchByteOrder());     // urgent pointer
     /* various options may follow */
     
-    if (offset + this.getHeaderLength() > data.byteLength)
+    if (offset + this.getHeaderLength() > dataView.byteLength)
         this.val = false; // already bogus
     else { // calculate checksum
-        var ph = buildPseudoHeader(parent, data, offset);
+        var ph = buildPseudoHeader(parent, dataView.buffer, offset);
         this.val = validateChecksum(ph);
     }
 
@@ -93,8 +89,8 @@ function buildPseudoHeader(parent, data, offset) {
         var shortView = new Uint16Array(ph);
         
         for (var i = 0; i < 8; i++) {
-            shortView[i]     = ntohs(parent.src[i]);
-            shortView[i + 8] = ntohs(parent.dst[i]);
+            shortView[i]     = parent.src.getUint16(i * 2, getSwitchByteOrder());
+            shortView[i + 8] = parent.dst.getUint16(i * 2, getSwitchByteOrder());
         }        
         shortView[16] = ntohs(len); // length
         shortView[17] = 0;          // length-padding (32 bit)
@@ -139,7 +135,7 @@ TCPh.prototype = {
                          + 'Sequence number: ' + this.seqn + '</br>'
                          + 'Acknowledgment number: ' + this.ackn + '</br>'
                          + 'Header length: ' + this.getHeaderLength() + '</br>'
-                         + 'Flags: ' + printNum(this.flags, 16, 3) + ' ' + this.printFlags() + '</br>'
+                         + 'Flags: 0x' + printNum(this.flags, 16, 3) + ' ' + this.printFlags() + '</br>'
                          + 'Window size value: ' + this.wsize + '</br>'                         
                          + 'Checksum: 0x' + printNum(this.csum, 16, 4) + ' [' + (this.val ? 'correct' : 'incorrect') + ']</br>';
                          // FIXME options

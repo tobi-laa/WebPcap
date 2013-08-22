@@ -3,17 +3,17 @@ var TCPh = require('../../dissection/TCPh').TCPh;
 var setSwitchByteOrder = require('../../dissection/byteOrder')
                             .setSwitchByteOrder;
 
-// bogus IP header values
+// bogus IPv4 header values
 var parent = {src: [0, 0, 0, 0], dst: [0, 0, 0, 0] , prot: 0}
 
-var data = new Uint8Array(
+var data = new DataView(new Uint8Array(
 [
     0x39, 0x05, 0x50, 0x00, // ports 1337 & 80
     0x67, 0x07, 0x00, 0x00, // seqn 1895
     0x7C, 0xD9, 0x01, 0x00, // ackn 121212
     0x35, 0x00, 0x00, 0x02, // urg, ack, rst, fin, winsize 512
     0x15, 0x03, 0x00, 0x04  // checksum 789 (invalid), urg pointer 1024
-]).buffer;
+]).buffer);
 
 test('dissected TCP values from self-made packet are correct', function () {
     setSwitchByteOrder(false);

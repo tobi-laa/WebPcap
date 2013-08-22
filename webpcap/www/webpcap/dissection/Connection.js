@@ -42,8 +42,8 @@ Connection.prototype.processSegment = function (packet, data, offset, parent, tl
     if (tlHeader.SYN) // skip syn packages; there's no payload
         return;
     
-    var seqn;     // current sequence number and next sequence number
-    var nextSeqn;
+    var seqn;     // packet's sequence number 
+    var nextSeqn; // packet's next sequence number
     var ackn;     // current ack number
     var srcOrDst; // 0 if the packet belongs to the source side; 1 otherwise
     
@@ -65,8 +65,8 @@ Connection.prototype.processSegment = function (packet, data, offset, parent, tl
     
     if (!this.seqn) { // nothing processed so far, initialize seqns
         this.seqn = [];
-        this.seqn[srcOrDst]      = tlHeader.seqn;
-        this.seqn[!srcOrDst | 0] = tlHeader.ackn;
+        this.seqn[srcOrDst]     = tlHeader.seqn;
+        this.seqn[1 - srcOrDst] = tlHeader.ackn;
         this.srcOrDst = srcOrDst;
     }
         
@@ -178,7 +178,7 @@ Connection.prototype.mergeContent = function () {
             i[srcOrDst]++;
         }
         
-        srcOrDst = !srcOrDst | 0;
+        srcOrDst = 1 - srcOrDst;
     }
     while (i[0] < this.contents[0].length) {
         mergedContent.push(this.contents[0][i[0]]);

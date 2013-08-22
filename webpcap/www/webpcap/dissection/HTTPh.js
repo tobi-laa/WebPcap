@@ -5,6 +5,7 @@
  */
 
 function HTTPh(data, offset, parent) {
+    data = data.buffer; // FIXME ?
     if (data.byteLength - offset < 4)
         return;
     
