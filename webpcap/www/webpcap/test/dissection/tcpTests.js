@@ -1,5 +1,5 @@
 var assert = require('assert');
-var TCPh = require('../../dissection/TCPh').TCPh;
+var TCPh = require('../../dissection/tcp').TCP;
 
 // bogus IPv4 header values
 var ip = new DataView(new ArrayBuffer(4));

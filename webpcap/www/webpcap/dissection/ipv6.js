@@ -1,6 +1,6 @@
 'use strict';
 if (typeof require !== 'undefined')
-    var printNum = require('../formattedOutput').printNum;
+    var printNum = require('../formattedoutput').printNum;
 
 /*
  ******************************************************************

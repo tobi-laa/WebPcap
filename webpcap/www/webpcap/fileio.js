@@ -1,10 +1,5 @@
 'use strict';
 
-if (typeof require !== 'undefined') {
-    var dissect = require('./dissection/dissection').dissect;
-    var setLinkLayerType = require('./dissection/dissection').setLinkLayerType;
-}
-
 // >>> 0 is a trick to convert the number to an unsigned value
 var MAGIC_NUMBER_BIG_ENDIAN_MS    = (0xa1b2c3d4 >>> 0); // millisecond accuracy
 var MAGIC_NUMBER_BIG_ENDIAN_NS    = (0xa1b23c4d >>> 0); // nanosecond accuracy

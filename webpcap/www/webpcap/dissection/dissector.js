@@ -13,6 +13,7 @@ if (typeof require !== 'undefined') {
     var ARP = require('./arp').ARP;
     var TCP = require('./tcp').TCP;
     var UDP = require('./udp').UDP;
+    var DNS = require('./dns').DNS;
     var HTTP = require('./http').HTTP;
     var MPD = require('./mpd').MPD;
     var Connection = require('./connection').Connection;

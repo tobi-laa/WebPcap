@@ -1,6 +1,6 @@
 var assert = require('assert');
-var ntohl = require('../../dissection/byteOrder').ntohl;
-var ntohs = require('../../dissection/byteOrder').ntohs;
+var ntohl = require('../../dissection/byteorder').ntohl;
+var ntohs = require('../../dissection/byteorder').ntohs;
 
 test('magic number byte order changed correctly (ntohl)', function () {
     var magic_num_ho = 0xa1b2c3d4 >> 0;
@@ -9,7 +9,7 @@ test('magic number byte order changed correctly (ntohl)', function () {
     assert.equal(magic_num_no, ntohl(magic_num_ho));
 });
 
-test('magic number byte order changed correctly (ntohs)', function () {
+test('short magic number byte order changed correctly (ntohs)', function () {
     var magic_num_ho = 0xd4c3 >> 0;
     var magic_num_no = 0xc3d4 >> 0;
     assert.strictEqual(magic_num_ho, ntohs(magic_num_no));

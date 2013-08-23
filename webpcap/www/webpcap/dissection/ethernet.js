@@ -1,6 +1,6 @@
 'use strict';
 if (typeof require !== 'undefined') 
-    var printNum = require('../formattedOutput').printNum;
+    var printNum = require('../formattedoutput').printNum;
 
 /*
  ******************************************************************
@@ -18,7 +18,7 @@ function Ethernet(littleEndian, dataView, offset) {
 
 Ethernet.prototype = {
     getHeaderLength: function () {
-        return Ethernet.HLEN;
+        return Ethernet.HEADER_LENGTH;
     },
     printDetails: function (pkt_num) {
         var details = document.createElement('div');

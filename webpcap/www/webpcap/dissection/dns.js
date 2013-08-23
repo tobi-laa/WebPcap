@@ -1,5 +1,11 @@
 'use strict';
 
+if (typeof require !== 'undefined') {
+    var printEtherType = require('./ethernet').printEtherType;
+    var printMAC = require('./ethernet').printMAC;
+    var printIPv4 = require('./ipv4').printIPv4;
+    var printIPv6 = require('./ipv6').printIPv6;
+}
 /*
  ******************************************************************
  ************************** DNS HEADER ****************************

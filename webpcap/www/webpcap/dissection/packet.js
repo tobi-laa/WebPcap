@@ -63,5 +63,5 @@ Packet.HEADER_LENGTH = 16; // pcap header length in bytes
 
 if (typeof module !== 'undefined') {
     module.exports.Packet = Packet;
-    module.exports.HEADER_LENGTH = HEADER_LENGTH;
+    module.exports.HEADER_LENGTH = Packet.HEADER_LENGTH;
 }

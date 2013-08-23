@@ -1,9 +1,9 @@
 var assert = require('assert');
 var fs = require('fs');
-var Dissector = require('../../dissection/dissection').Dissector;
-var readPcapGlobalHeader = require('../../fileIO').readPcapGlobalHeader;
-var bufferToArrayBuffer = require('../../arrayBuffers').bufferToArrayBuffer;
-var arrayBufferToBuffer = require('../../arrayBuffers').arrayBufferToBuffer;
+var Dissector = require('../../dissection/dissector').Dissector;
+var readPcapGlobalHeader = require('../../fileio').readPcapGlobalHeader;
+var bufferToArrayBuffer = require('../../arraybuffers').bufferToArrayBuffer;
+var arrayBufferToBuffer = require('../../arraybuffers').arrayBufferToBuffer;
 
 var PATH = './test/dissection/test.pcap';
 var PKTNUM = 67;
@@ -44,6 +44,7 @@ test('number of read TCP/UDP/... packets from test.pcap is correct', function ()
             tcpCount++;
             break;
         case 'UDP':
+        case 'DNS':
             udpCount++;
             break;
         }

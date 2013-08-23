@@ -18,17 +18,36 @@ function ARP(littleEndian, dataView, offset) {
     this.hlen  = dataView.getUint8(offset + 4);
     this.plen  = dataView.getUint8(offset + 5);
     this.op    = dataView.getUint16(offset + 6, littleEndian);
+
+    this.next_header = null; // not used
     
     offset  += ARP.HLEN;
+    if (dataView.byteLength < offset) {// bogus value
+        // packet.val = false;
+        return;
+    }
     this.sha = new DataView(dataView.buffer, offset, this.hlen);
+    
     offset  += this.hlen;
+    if (dataView.byteLength < offset) {// bogus value
+        // packet.val = false;
+        return;
+    }
     this.spa = new DataView(dataView.buffer, offset, this.plen);
+    
     offset  += this.plen;
+    if (dataView.byteLength < offset) {// bogus value
+        // packet.val = false;
+        return;
+    }
     this.tha = new DataView(dataView.buffer, offset, this.hlen);
+    
     offset  += this.hlen;
-    this.tpa = new DataView(dataView.buffer, offset, this.plen);
-        
-    this.next_header = null;
+    if (dataView.byteLength < offset) {// bogus value
+        // packet.val = false;
+        return;
+    }
+    this.tpa = new DataView(dataView.buffer, offset, this.plen);    
 }
 
 ARP.prototype = {

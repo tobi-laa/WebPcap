@@ -1,10 +1,10 @@
 var assert = require('assert');
 var fs = require('fs');
 var md5 = require('MD5');
-var Dissector = require('../../dissection/dissection').Dissector;
-var readPcapGlobalHeader = require('../../fileIO').readPcapGlobalHeader;
-var bufferToArrayBuffer = require('../../arrayBuffers').bufferToArrayBuffer;
-var arrayBufferToBuffer = require('../../arrayBuffers').arrayBufferToBuffer;
+var Dissector = require('../../dissection/dissector').Dissector;
+var readPcapGlobalHeader = require('../../fileio').readPcapGlobalHeader;
+var bufferToArrayBuffer = require('../../arraybuffers').bufferToArrayBuffer;
+var arrayBufferToBuffer = require('../../arraybuffers').arrayBufferToBuffer;
 
 var PATH = './test/dissection/http_hhucn.pcap';
 
