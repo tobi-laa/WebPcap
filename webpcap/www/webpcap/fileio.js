@@ -8,6 +8,8 @@ var MAGIC_NUMBER_LITTLE_ENDIAN_NS = (0x4d3cb2a1 >>> 0);
 
 var PCAP_MIMETYPE = 'application/vnd.tcpdump.pcap';
 
+var CHUNKSIZE = 1024 * 1024; // 1 MiB
+
 var createURI;
 var pcapGlobalHeader = null;
 
@@ -23,25 +25,56 @@ function initFileIO() {
     }    
 }
 
+function readCSVFile(fileURL, numIndex, nameIndex) {
+    var req;
+    var array = [];
+    
+    if (typeof window === 'undefined' || !window.XMLHttpRequest) {
+        console.log('Warning: Empty array returned.');
+        return array;
+    }
+    
+    req = new XMLHttpRequest();
+    req.open('get', fileURL, true);
+    req.send();    
+    req.onload = function () {
+        var lines = this.responseText.split('\n');
+        var tokens, index;
+        
+        for (var i = 0; i < lines.length; i++) {
+            tokens = lines[i].split(','); // comma separated
+            
+            // skip empty lines/comments/and so forth
+            if (!tokens[nameIndex] || isNaN(index = Number(tokens[numIndex])))
+                continue;
+            
+            array[index] = tokens[nameIndex];
+        }
+    }
+    
+    return array;
+}
+
 function createDataURI(mimetype, data) {
-    return {URI: 'data:' + mimetype + ';base64,' + 
-                 base64ArrayBuffer(mergeBuffers(data))};
+    return 'data:' + mimetype + ';base64,' + 
+            base64ArrayBuffer(mergeBuffers(data));
 }
 
 function getPcapURI(dissector) {
-    return createURI(PCAP_MIMETYPE, [pcapGlobalHeader].concat(dissector.getRawPackets()));
+    return createURI(PCAP_MIMETYPE, 
+                     [pcapGlobalHeader].concat(dissector.getRawPackets()));
 }
 
 function createBlobURI(mimetype, data) {
     var size = 0;
+    var blob;
+    
     for (var i = 0; i < data.length; i++)
         size += data[i].byteLength;
     
-    var blob = new Blob(data, {type: mimetype, size: size});
-    
-    console.log('Created blob of size ' + blob.size + 'bytes');
-    
-    return {URI: URL.createObjectURL(blob), blob: blob};
+    blob = new Blob(data, {type: mimetype, size: size});
+        
+    return URL.createObjectURL(blob);
 }
 
 function readPcapFile(file, dissector) {
@@ -54,20 +87,6 @@ function readPcapFile(file, dissector) {
         readPcapGlobalHeader(evt.target.result, dissector);};
         
     readPcapFilePiece(file.slice(24), fr);
-}
-
-var CHUNKSIZE = 1024 * 1024; // 1 MiB
-
-function readPcapFilePiece(file, fr) {
-    if (file.size <= 0)
-        return;
-    
-    fr = new FileReader();
-    fr.onloadend = function(evt) {
-        dissectMessage(evt.target.result);
-        readPcapFilePiece(file.slice(CHUNKSIZE), fr);
-    };
-    fr.readAsArrayBuffer(file.slice(0, CHUNKSIZE));
 }
 
 function readPcapGlobalHeader(data, dissector) {
@@ -104,7 +123,20 @@ function readPcapGlobalHeader(data, dissector) {
     dissector.setLinkLayerType(network);
 }
 
+function readPcapFilePiece(file, fr) {
+    if (file.size <= 0)
+        return;
+    
+    fr = new FileReader();
+    fr.onloadend = function(evt) {
+        dissectMessage(evt.target.result);
+        readPcapFilePiece(file.slice(CHUNKSIZE), fr);
+    };
+    fr.readAsArrayBuffer(file.slice(0, CHUNKSIZE));
+}
+
 if (typeof module !== 'undefined') {
     module.exports.readPcapFile = readPcapFile;
     module.exports.readPcapGlobalHeader = readPcapGlobalHeader;
+    module.exports.readCSVFile = readCSVFile;
 }
