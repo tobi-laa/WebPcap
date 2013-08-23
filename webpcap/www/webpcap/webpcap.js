@@ -120,7 +120,7 @@ function onFirstMessage(msg) {
 }
 
 function onSecondMessage(msg) {    
-    cache = appendBuffer(cache, msg.data);
+    cache = mergeBuffers([cache, msg.data]);
     if (cache.byteLength < 24)
         return;
     

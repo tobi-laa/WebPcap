@@ -85,6 +85,7 @@ body {
 .RST       { background-color: #a40000;
              color: #fffc9c;}
 .UDP       { background-color: #daeeff;}
+.DNS       { background-color: #daeeff;}
 .HTTP      { background-color: #e4ffc7;}
 .ARP       { background-color: #faf0d7;}
 .ICMP      { background-color: #fce0ff;}

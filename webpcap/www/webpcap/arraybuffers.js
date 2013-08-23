@@ -25,7 +25,7 @@ function mergeBuffers(buffers) {
 
 // deprecated method
 function appendBuffer(fstBuff, sndBuff) {
-    mergeBuffers([fstBuff, sndBuff]);
+    return mergeBuffers([fstBuff, sndBuff]);
 } 
 
 // Credit for the method below goes to Jon Leighton.

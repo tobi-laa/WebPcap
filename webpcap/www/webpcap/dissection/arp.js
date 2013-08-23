@@ -1,9 +1,10 @@
 'use strict';
+
 if (typeof require !== 'undefined') {
-    var printEtherType = require('./Ethh').printEtherType;
-    var printMAC = require('./Ethh').printMAC;
-    var printIPv4 = require('./IPv4h').printIPv4;
-    var printIPv6 = require('./IPv6h').printIPv6;
+    var printEtherType = require('./ethernet').printEtherType;
+    var printMAC = require('./ethernet').printMAC;
+    var printIPv4 = require('./ipv4').printIPv4;
+    var printIPv6 = require('./ipv6').printIPv6;
 }
 /*
  ******************************************************************
@@ -11,14 +12,14 @@ if (typeof require !== 'undefined') {
  ******************************************************************
  */
 
-function ARPh(littleEndian, dataView, offset) {
+function ARP(littleEndian, dataView, offset) {
     this.htype = dataView.getUint16(offset, littleEndian);
     this.ptype = dataView.getUint16(offset + 2, littleEndian);
     this.hlen  = dataView.getUint8(offset + 4);
     this.plen  = dataView.getUint8(offset + 5);
     this.op    = dataView.getUint16(offset + 6, littleEndian);
     
-    offset  += ARPh.HLEN;
+    offset  += ARP.HLEN;
     this.sha = new DataView(dataView.buffer, offset, this.hlen);
     offset  += this.hlen;
     this.spa = new DataView(dataView.buffer, offset, this.plen);
@@ -30,9 +31,9 @@ function ARPh(littleEndian, dataView, offset) {
     this.next_header = null;
 }
 
-ARPh.prototype = {
+ARP.prototype = {
     getHeaderLength: function () {
-        return ARPh.HLEN + 2*this.hlen + 2*this.plen;
+        return ARP.MIN_HEADER_LENGTH + 2 * this.hlen + 2 * this.plen;
     },
     printDetails: function (pkt_num) {
         var details = document.createElement('div');
@@ -81,7 +82,9 @@ ARPh.prototype = {
     }
 }
 
-ARPh.HLEN = 8; // beginning (!) of ARP header length in bytes
+ARP.MIN_HEADER_LENGTH = 8; // beginning (!) of ARP header length in bytes
 
-if (typeof module !== 'undefined')
-    module.exports = ARPh;
+if (typeof module !== 'undefined') {
+    module.exports.ARP = ARP;
+    module.exports.MIN_HEADER_LENGTH = ARP.MIN_HEADER_LENGTH;
+}

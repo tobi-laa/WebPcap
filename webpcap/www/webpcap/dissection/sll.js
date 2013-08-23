@@ -1,8 +1,9 @@
 'use strict';
+
 if (typeof require !== 'undefined') {
     var printNum = require('../formattedOutput').printNum;
-    var printMAC = require('./Ethh').printMAC;
-    var printEtherType = require('./Ethh').printEtherType;
+    var printMAC = require('./ethernet').printMAC;
+    var printEtherType = require('./ethernet').printEtherType;
 }
 
 /*
@@ -11,7 +12,7 @@ if (typeof require !== 'undefined') {
  ******************************************************************
  */
 
-function SLLh(littleEndian, dataView, offset) {    
+function SLL(littleEndian, dataView, offset) {    
     this.type    = dataView.getUint16(offset, littleEndian);                 // packet type
     this.llat    = dataView.getUint16(offset + 2, littleEndian);                 // link-layer address type
     this.llal    = dataView.getUint16(offset + 4, littleEndian);                 // link-layer address length
@@ -21,9 +22,9 @@ function SLLh(littleEndian, dataView, offset) {
     this.next_header = null;
 }
 
-SLLh.prototype = {
+SLL.prototype = {
     getHeaderLength: function () {
-        return SLLh.HLEN;
+        return SLL.HEADER_LENGTH;
     },
     printDetails: function (pkt_num) {
         var details = document.createElement('div');
@@ -67,7 +68,9 @@ function printPacketType(type) {
     }
 }
 
-SLLh.HLEN = 16; // SLL header length in bytes
+SLL.HEADER_LENGTH = 16; // SLL header length in bytes
 
-if (typeof module !== 'undefined')
-    module.exports.SLLh = SLLh;
+if (typeof module !== 'undefined') {
+    module.exports.HEADER_LENGTH = SLL.HEADER_LENGTH;
+    module.exports.SLL = SLL;
+}

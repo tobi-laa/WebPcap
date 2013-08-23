@@ -1,7 +1,7 @@
 'use strict';
 
 if (typeof require !== 'undefined') {
-    var validateChecksum = require('./IPv4h').validateChecksum;
+    var validateChecksum = require('./ipv4').validateChecksum;
 }
 /*
  ******************************************************************
@@ -9,7 +9,7 @@ if (typeof require !== 'undefined') {
  ******************************************************************
  */
 
-function TCPh(littleEndian, dataView, offset, parent) {    
+function TCP(littleEndian, dataView, offset, parent) {    
     this.sport    = dataView.getUint16(offset, littleEndian); // source port
     this.dport    = dataView.getUint16(offset + 2, littleEndian); // destination port
     this.seqn     = dataView.getUint32(offset + 4, littleEndian); // sequence number
@@ -102,7 +102,7 @@ function buildPseudoHeader(littleEndian, dataView, offset, parent) {
     }
 }
 
-TCPh.prototype = {
+TCP.prototype = {
     getHeaderLength: function () {
         return 4 * (this.off_rsd >>> 4);
     },
@@ -137,8 +137,8 @@ TCPh.prototype = {
         return details;
     },
     printPorts: function() {
-        return (TCP_PORTS[this.sport] || this.sport) + ' ⊳ ' +
-               (TCP_PORTS[this.dport] || this.dport);
+        return (TCP.PORTS[this.sport] || this.sport) + ' ⊳ ' +
+               (TCP.PORTS[this.dport] || this.dport);
     },
     printFlags: function() {
         if (!this.flags)
@@ -163,12 +163,14 @@ TCPh.prototype = {
     }
 };
 
-TCPh.HLEN = 20; // TCP minimum header length in bytes
-TCPh.PORTS = []; // well-known ports
-TCPh.PORTS[6600] = 'mpd'; // specifying mpd manually
+TCP.MIN_HEADER_LENGTH = 20; // TCP minimum header length in bytes
+TCP.PORTS = []; // well-known ports
+TCP.PORTS[6600] = 'mpd'; // specifying mpd manually
 
 if (typeof module !== 'undefined') {
-    module.exports.TCPh = TCPh;
+    module.exports.TCP = TCP;
+    module.exports.PORTS = TCP.PORTS;
+    module.exports.MIN_HEADER_LENGTH = TCP.MIN_HEADER_LENGTH;
     module.exports.createID = createID;
     module.exports.buildPseudoHeader = buildPseudoHeader;
 }

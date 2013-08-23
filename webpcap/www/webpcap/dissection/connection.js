@@ -1,6 +1,7 @@
 'use strict';
+
 if (typeof require !== 'undefined') {
-    var mergeBuffers = require('../arrayBuffers').mergeBuffers;
+    var mergeBuffers = require('../arraybuffers').mergeBuffers;
 }
 
 /**

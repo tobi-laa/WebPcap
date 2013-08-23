@@ -1,4 +1,5 @@
 'use strict';
+
 var scrollbarTrack = document.getElementById('scrollbar-track');
 var scrollThumb = document.getElementById('scroll-thumb');
 

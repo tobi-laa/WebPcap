@@ -1,15 +1,15 @@
 'use strict';
 if (typeof require !== 'undefined') {
-    var createID = require('./TCPh').createID;
-    var buildPseudoHeader = require('./TCPh').buildPseudoHeader;
-    var validateChecksum = require('./IPv4h').validateChecksum;
+    var createID = require('./tcp').createID;
+    var buildPseudoHeader = require('./tcp').buildPseudoHeader;
+    var validateChecksum = require('./ipv4').validateChecksum;
 }
 /*
  ******************************************************************
  ************************** UDP HEADER ****************************
  ******************************************************************
  */
-function UDPh(littleEndian, dataView, offset, parent) {    
+function UDP(littleEndian, dataView, offset, parent) {    
     this.sport = dataView.getUint16(offset, littleEndian); // source port
     this.dport = dataView.getUint16(offset + 2, littleEndian); // destination port
     this.len   = dataView.getUint16(offset + 4, littleEndian); // length of payload incl. UDP header
@@ -17,21 +17,21 @@ function UDPh(littleEndian, dataView, offset, parent) {
       
     this.id = createID(parent.src, this.sport, parent.dst, this.dport, 'u');
     
-//     if (offset + this.getHeaderLength() > dataView.length)
-//         this.val = false;
-//     else if (!this.csum) // UDP checksum is optional...
-//         this.val = true;
-//     else {
-//         var ph = buildPseudoHeader(littleEndian, dataView.buffer, offset, parent);
-//         this.val = validateChecksum(ph);
-//     }
+    if (offset + this.getHeaderLength() > dataView.length)
+        this.val = false;
+    else if (!this.csum) // UDP checksum is optional...
+        this.val = true;
+    else {
+        var ph = buildPseudoHeader(littleEndian, dataView, offset, parent);
+        this.val = validateChecksum(littleEndian, ph);
+    }
         
     this.next_header = null;
 }
 
-UDPh.prototype = {
+UDP.prototype = {
     getHeaderLength: function () {
-        return UDPh.HLEN;
+        return UDP.HEADER_LENGTH;
     },
     printDetails: function (pkt_num) {
         var details = document.createElement('div');
@@ -59,16 +59,19 @@ UDPh.prototype = {
         return details;
     },
     printPorts: function() {
-        return (UDP_PORTS[this.sport] || this.sport) + ' ⊳ ' +
-               (UDP_PORTS[this.dport] || this.dport);
+        return (UDP.PORTS[this.sport] || this.sport) + ' ⊳ ' +
+               (UDP.PORTS[this.dport] || this.dport);
     },
     toString: function () {
         return this.printPorts();
     }
 };
 
-UDPh.HLEN = 8; // UDP header length in bytes  
-UDPh.PORTS = []; // well-known ports
+UDP.HEADER_LENGTH = 8; // UDP header length in bytes  
+UDP.PORTS = []; // well-known ports
 
-if (typeof module !== 'undefined')
-    module.exports = UDPh;
+if (typeof module !== 'undefined') {
+    module.exports.UDP = UDP;
+    module.exports.PORTS = UDP.PORTS;
+    module.exports.HEADER_LENGTH = UDP.HEADER_LENGTH;
+}

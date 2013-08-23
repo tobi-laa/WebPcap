@@ -1,11 +1,12 @@
 'use strict';
+
 /*
  ******************************************************************
  ************************* HTTP HEADER ****************************
  ******************************************************************
  */
 
-function HTTPh(littleEndian, data, offset, parent) {
+function HTTP(littleEndian, data, offset, parent) {
     data = data.buffer; // FIXME ?
     if (data.byteLength - offset < 4)
         return;
@@ -29,7 +30,7 @@ function HTTPh(littleEndian, data, offset, parent) {
     this.next_header = null;
 }
 
-HTTPh.prototype = {
+HTTP.prototype = {
     getHeaderLength: function () {
         return this.hlen;
     },
@@ -79,5 +80,5 @@ HTTPh.prototype = {
 };
 
 if (typeof module !== 'undefined') {
-    module.exports.HTTPh = HTTPh;
+    module.exports.HTTP = HTTP;
 }

@@ -5,7 +5,7 @@
  ******************************************************************
  */
 
-function IPv4h(littleEndian, dataView, offset) {    
+function IPv4(littleEndian, dataView, offset) {    
     this.v    = dataView.getUint8(offset) >> 4;    // version
     this.hl   = dataView.getUint8(offset) & 0x0F;  // IP header length
     this.tos  = dataView.getUint8(offset + 1);         // type of service
@@ -28,7 +28,7 @@ function IPv4h(littleEndian, dataView, offset) {
     this.next_header = null;
 }
 
-IPv4h.prototype = {
+IPv4.prototype = {
     getHeaderLength: function () {
         return 4 * this.hl;
     },
@@ -71,14 +71,14 @@ IPv4h.prototype = {
     }
 };
 
-IPv4h.HLEN = 20; // IPv4 minimum header length in bytes 
-IPv4h.ALEN = 4;  // IPv4 address length in bytes
+IPv4.MIN_HEADER_LENGTH = 20; // IPv4 minimum header length in bytes 
+IPv4.ADDRESS_LENGTH = 4;  // IPv4 address length in bytes
 
 function printIPv4(ip) {
     // check param for consistency
     if (!ip.getUint8)
         throw 'IPv4 address param has to be a DataView object.';
-    if (ip.byteLength !== IPv4h.ALEN)
+    if (ip.byteLength !== IPv4.ADDRESS_LENGTH)
         console.log('Warning: Incorrect IPv4 address length.');
     
     var ipFragments = [];
@@ -98,6 +98,8 @@ function validateChecksum(littleEndian, dataView) {
 
 if (typeof module !== 'undefined') {
     module.exports.printIPv4 = printIPv4;
-    module.exports.IPv4h = IPv4h;
+    module.exports.IPv4 = IPv4;
+    module.exports.MIN_HEADER_LENGTH = IPv4.MIN_HEADER_LENGTH;
+    module.exports.ADDRESS_LENGTH = IPv4.ADDRESS_LENGTH;
     module.exports.validateChecksum = validateChecksum;
 }

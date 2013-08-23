@@ -8,17 +8,17 @@ if (typeof require !== 'undefined')
  ******************************************************************
  */
 
-function Ethh(littleEndian, dataView, offset) {   
-    this.dst  = new DataView(dataView.buffer, offset, Ethh.ALEN);  // destination MAC address
-    this.src  = new DataView(dataView.buffer, offset + 6, Ethh.ALEN); // source MAC address    
+function Ethernet(littleEndian, dataView, offset) {   
+    this.dst  = new DataView(dataView.buffer, offset, Ethernet.ADDRESS_LENGTH);  // destination MAC address
+    this.src  = new DataView(dataView.buffer, offset + 6, Ethernet.ADDRESS_LENGTH); // source MAC address    
     this.prot = dataView.getUint16(offset + 12, littleEndian); // protocol (i.e. IPv4)
     
     this.next_header = null;
 }
 
-Ethh.prototype = {
+Ethernet.prototype = {
     getHeaderLength: function () {
-        return Ethh.HLEN;
+        return Ethernet.HLEN;
     },
     printDetails: function (pkt_num) {
         var details = document.createElement('div');
@@ -50,26 +50,14 @@ Ethh.prototype = {
     }
 };
 
-Ethh.HLEN = 14; // Ethernet frame length in bytes
-Ethh.ALEN = 6;  // MAC address length in bytes
+Ethernet.HEADER_LENGTH = 14; // Ethernet frame length in bytes
+Ethernet.ADDRESS_LENGTH = 6;  // MAC address length in bytes
 
-function printIPv4(ip) {
-    // check param for consistency
-    if (!ip.getUint8)
-        throw 'IPv4 address param has to be a DataView object.';
-    if (ip.byteLength !== IPv4h.ALEN)
-        console.log('Warning: Incorrect IPv4 address length.');
-    
-    var ipFragments = [];
-    for (var i = 0; i < ip.byteLength; i++)
-        ipFragments[i] = ip.getUint8(i);
-    return ipFragments.join('.');
-}
 function printMAC(mac) {
     // check param for consistency
     if (!mac.getUint8)
         throw 'MAC address param has to be a DataView object.';
-    if (mac.byteLength !== Ethh.ALEN)
+    if (mac.byteLength !== Ethernet.ADDRESS_LENGTH)
         console.log('Warning: Incorrect MAC address length.');
     
     var macFragments = [];
@@ -93,7 +81,9 @@ function printEtherType(type) {
 }
 
 if (typeof module !== 'undefined') {
-    module.exports.Ethh = Ethh;
+    module.exports.Ethernet = Ethernet;
     module.exports.printMAC = printMAC;
     module.exports.printEtherType = printEtherType;
+    module.exports.HEADER_LENGTH = Ethernet.HEADER_LENGTH;
+    module.exports.ADDRESS_LENGTH = Ethernet.ADDRESS_LENGTH;
 }

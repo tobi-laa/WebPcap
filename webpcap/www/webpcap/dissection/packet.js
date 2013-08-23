@@ -1,11 +1,12 @@
 'use strict';
+
 /*
  ******************************************************************
- ************************* PCAP HEADER ****************************
+ ************************* PACKET HEADER **************************
  ******************************************************************
  */
 
-function Pcaph(littleEndian, dataView, offset) {    
+function Packet(littleEndian, dataView, offset) {    
     this.ts_sec   = dataView.getUint32(offset, littleEndian);  // timestamp seconds
     this.ts_usec  = dataView.getUint32(offset + 4, littleEndian);  // timestamp microseconds
     this.incl_len = dataView.getUint32(offset + 8, littleEndian);  // number of octets of packet saved in file
@@ -22,9 +23,9 @@ function Pcaph(littleEndian, dataView, offset) {
     this.next_header = null;
 }
 
-Pcaph.prototype = {
+Packet.prototype = {
     getHeaderLength: function () {
-        return Pcaph.HLEN;
+        return Packet.HEADER_LEN;
     },
     printDetails: function (pkt_num) {
         var details = document.createElement('div');
@@ -58,8 +59,9 @@ Pcaph.prototype = {
     }
 };
 
-Pcaph.HLEN = 16; // pcap header length in bytes 
+Packet.HEADER_LENGTH = 16; // pcap header length in bytes 
 
 if (typeof module !== 'undefined') {
-    module.exports.Pcaph = Pcaph;
+    module.exports.Packet = Packet;
+    module.exports.HEADER_LENGTH = HEADER_LENGTH;
 }

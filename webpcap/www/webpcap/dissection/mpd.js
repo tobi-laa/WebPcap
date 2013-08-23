@@ -1,4 +1,5 @@
 'use strict';
+
 /*
  ******************************************************************
  ************************** MPD HEADER ****************************
@@ -7,7 +8,7 @@
  ******************************************************************
  */
 
-function MPDh(littleEndian, data, offset, parent) {
+function MPD(littleEndian, data, offset, parent) {
     data = data.buffer;
     if (data.byteLength - offset < 2)
         return;
@@ -28,7 +29,7 @@ function MPDh(littleEndian, data, offset, parent) {
     this.next_header = null;
 }
 
-MPDh.prototype = {
+MPD.prototype = {
     processHeaders: function (cmds) {
         var tokens = cmds.split('\n');
         
@@ -71,5 +72,5 @@ MPDh.prototype = {
 };
 
 if (typeof module !== 'undefined') {
-    module.exports.MPDh = MPDh;
+    module.exports.MPD = MPD;
 }
