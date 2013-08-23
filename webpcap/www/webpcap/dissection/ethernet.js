@@ -1,12 +1,8 @@
 'use strict';
-if (typeof require !== 'undefined') 
+if (typeof require !== 'undefined') {
+    var readCSVFile = require('../fileio').readCSVFile;
     var printNum = require('../formattedoutput').printNum;
-
-/*
- ******************************************************************
- ************************ ETHERNET HEADER *************************
- ******************************************************************
- */
+}
 
 function Ethernet(littleEndian, dataView, offset) {   
     this.dst  = new DataView(dataView.buffer, offset, Ethernet.ADDRESS_LENGTH);  // destination MAC address
@@ -44,7 +40,7 @@ Ethernet.prototype.printDetails = function () {
 
 Ethernet.HEADER_LENGTH = 14; // Ethernet frame length in bytes
 Ethernet.ADDRESS_LENGTH = 6;  // MAC address length in bytes
-Ethernet.TYPES = [];
+Ethernet.TYPES = readCSVFile('webpcap/dissection/ieee-802-numbers-1.csv', 0, 4);
 
 function printMAC(mac) {
     // check param for consistency

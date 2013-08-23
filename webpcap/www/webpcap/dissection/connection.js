@@ -69,7 +69,7 @@ Connection.prototype.processSegment = function (packet, data, offset, parent, tl
         this.seqn = [];
         this.seqn[srcOrDst]     = tlHeader.seqn;
         this.seqn[1 - srcOrDst] = tlHeader.ackn;
-        this.srcOrDst = srcOrDst;
+        this.firstPacketSrcOrDst = srcOrDst;
     }
         
     if (seqn === this.seqn[srcOrDst]) { // i.e. next expected segment
@@ -164,24 +164,33 @@ Connection.prototype.getContent = function (srcOrDst) {
 
 Connection.prototype.mergeContent = function () {
     var srcOrDst;
-    var i;
-    var mergedContent;
+    var i = [0, 0]; // indices for both sides
+    var mergedContent = [];
     
-    srcOrDst = this.srcOrDst;
-    i = [0, 0];
-    mergedContent = [];
+    if (!this.contents[0].length && !this.contents[1].length) // no content
+        return mergedContent;
     
-    while (i[0] < this.contents[0].length && i[1] < this.contents[1].length) {        
-        var oldAckn = this.contents[srcOrDst][i[srcOrDst]].ackn;
+    srcOrDst = this.firstPacketSrcOrDst; // side of first packet
+    
+    // as long a both sides still have content, switch between them
+    while (i[0] < this.contents[0].length && i[1] < this.contents[1].length) {
+        var currentSide = this.contents[srcOrDst];
+        // oldAckn is the indicator for when to switch
+        var oldAckn = currentSide[i[srcOrDst]].ackn;
         
-        while (i[srcOrDst] < this.contents[srcOrDst].length 
-            && this.contents[srcOrDst][i[srcOrDst]].ackn === oldAckn) {
-            mergedContent.push(this.contents[srcOrDst][i[srcOrDst]]);
+        // keep adding content from this side until the ackn changes
+        while (i[srcOrDst] < currentSide.length 
+            && currentSide[i[srcOrDst]].ackn === oldAckn)
+        {
+            mergedContent.push(currentSide[i[srcOrDst]]);
             i[srcOrDst]++;
         }
         
+        // switch to the other side
         srcOrDst = 1 - srcOrDst;
     }
+    
+    // only one of these while loops will be executed; it adds the rest
     while (i[0] < this.contents[0].length) {
         mergedContent.push(this.contents[0][i[0]]);
         i[0]++;

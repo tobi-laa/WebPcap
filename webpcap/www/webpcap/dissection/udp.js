@@ -1,14 +1,12 @@
 'use strict';
+
 if (typeof require !== 'undefined') {
+    var readCSVFile = require('../fileio').readCSVFile;
     var createID = require('./tcp').createID;
     var buildPseudoHeader = require('./tcp').buildPseudoHeader;
     var validateChecksum = require('./ipv4').validateChecksum;
 }
-/*
- ******************************************************************
- ************************** UDP HEADER ****************************
- ******************************************************************
- */
+
 function UDP(littleEndian, dataView, offset, parent) {    
     this.sport = dataView.getUint16(offset, littleEndian); // source port
     this.dport = dataView.getUint16(offset + 2, littleEndian); // destination port
@@ -29,18 +27,18 @@ function UDP(littleEndian, dataView, offset, parent) {
     this.next_header = null;
 }
 
-UDP.prototype = {
-    getHeaderLength: function () {
-        return UDP.HEADER_LENGTH;
-    },
-    printPorts: function() {
-        return (UDP.PORTS[this.sport] || this.sport) + ' ⊳ ' +
-               (UDP.PORTS[this.dport] || this.dport);
-    },
-    toString: function () {
-        return this.printPorts();
-    }
-};
+UDP.prototype.getHeaderLength = function () {
+    return UDP.HEADER_LENGTH;
+}
+
+UDP.prototype.printPorts = function() {
+    return (UDP.PORT_NAMES[this.sport] || this.sport) + ' ⊳ ' +
+            (UDP.PORT_NAMES[this.dport] || this.dport);
+}
+
+UDP.prototype.toString = function () {
+    return this.printPorts();
+}
 
 UDP.prototype.printDetails = function () {
     var title = 'User Datagram Protocol';
@@ -60,10 +58,11 @@ UDP.prototype.printDetails = function () {
 }
 
 UDP.HEADER_LENGTH = 8; // UDP header length in bytes  
-UDP.PORTS = []; // well-known ports
+UDP.PORT_NAMES = readCSVFile(
+    'webpcap/dissection/service-names-port-numbers-udp.csv', 1, 0);
 
 if (typeof module !== 'undefined') {
     module.exports.UDP = UDP;
-    module.exports.PORTS = UDP.PORTS;
+    module.exports.PORT_NAMES = UDP.PORT_NAMES;
     module.exports.HEADER_LENGTH = UDP.HEADER_LENGTH;
 }

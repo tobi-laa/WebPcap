@@ -7,12 +7,6 @@ if (typeof require !== 'undefined') {
     Ethernet.TYPES = require('./ethernet').TYPES;
 }
 
-/*
- ******************************************************************
- ******************* LINUX 'COOKED' CAPTURE ***********************
- ******************************************************************
- */
-
 function SLL(littleEndian, dataView, offset) {    
     this.type    = dataView.getUint16(offset, littleEndian);                 // packet type
     this.llat    = dataView.getUint16(offset + 2, littleEndian);                 // link-layer address type
@@ -42,7 +36,8 @@ SLL.prototype.printDetails = function () {
         'Link-layer address type: ' + this.llat,
         'Link-layer address length: ' + this.llal,
         'Source: ' + printMAC(this.src),
-        'Protocol: ' + Ethernet.TYPES[this.prot] + ' (0x' + printNum(this.prot, 16, 4) + ')'
+        'Protocol: ' + Ethernet.TYPES[this.prot] + ' (0x' + 
+            printNum(this.prot, 16, 4) + ')'
         ].join('\n')
     ));
     

@@ -1,13 +1,9 @@
 'use strict';
 
 if (typeof require !== 'undefined') {
+    var readCSVFile = require('../fileio').readCSVFile;
     var validateChecksum = require('./ipv4').validateChecksum;
 }
-/*
- ******************************************************************
- ************************** TCP HEADER ****************************
- ******************************************************************
- */
 
 function TCP(littleEndian, dataView, offset, parent) {    
     this.sport    = dataView.getUint16(offset, littleEndian); // source port
@@ -107,8 +103,8 @@ TCP.prototype = {
         return 4 * (this.off_rsd >>> 4);
     },
     printPorts: function() {
-        return (TCP.PORTS[this.sport] || this.sport) + ' ⊳ ' +
-               (TCP.PORTS[this.dport] || this.dport);
+        return (TCP.PORT_NAMES[this.sport] || this.sport) + ' ⊳ ' +
+               (TCP.PORT_NAMES[this.dport] || this.dport);
     },
     printFlags: function() {
         if (!this.flags)
@@ -155,12 +151,13 @@ TCP.prototype.printDetails = function () {
 }
 
 TCP.MIN_HEADER_LENGTH = 20; // TCP minimum header length in bytes
-TCP.PORTS = []; // well-known ports
-TCP.PORTS[6600] = 'mpd'; // specifying mpd manually
+TCP.PORT_NAMES = readCSVFile(
+    'webpcap/dissection/service-names-port-numbers-tcp.csv', 1, 0);
+TCP.PORT_NAMES[6600] = 'mpd'; // specifying mpd manually
 
 if (typeof module !== 'undefined') {
     module.exports.TCP = TCP;
-    module.exports.PORTS = TCP.PORTS;
+    module.exports.PORT_NAMES = TCP.PORT_NAMES;
     module.exports.MIN_HEADER_LENGTH = TCP.MIN_HEADER_LENGTH;
     module.exports.createID = createID;
     module.exports.buildPseudoHeader = buildPseudoHeader;

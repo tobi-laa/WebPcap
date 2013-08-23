@@ -1,6 +1,7 @@
 'use strict';
 
 if (typeof require !== 'undefined') {
+    var readCSVFile = require('../fileio').readCSVFile;
     var printMAC = require('./ethernet').printMAC;
     var printIPv4 = require('./ipv4').printIPv4;
     var printIPv6 = require('./ipv6').printIPv6;
@@ -107,8 +108,8 @@ ARP.prototype.printDetails = function () {
 }
 
 ARP.MIN_HEADER_LENGTH = 8; // beginning (!) of ARP header length in bytes
-ARP.HARDWARE_TYPES = [];
-ARP.OPCODES = [];
+ARP.HARDWARE_TYPES = readCSVFile('webpcap/dissection/arp-parameters-2.csv', 0, 1);
+ARP.OPCODES = readCSVFile('webpcap/dissection/arp-parameters-1.csv', 0, 1);
 
 if (typeof module !== 'undefined') {
     module.exports.ARP = ARP;

@@ -2,12 +2,6 @@
 if (typeof require !== 'undefined')
     var printNum = require('../formattedoutput').printNum;
 
-/*
- ******************************************************************
- ************************* IPV6 HEADER ****************************
- ******************************************************************
- */
-
 function IPv6(littleEndian, dataView, offset) {    
     this.v = (dataView.getUint8(offset) & 0xF0) >> 4; // version
     // this.v_tc_fl = ;        // version, traffic class, flow label

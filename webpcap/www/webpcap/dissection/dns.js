@@ -1,6 +1,7 @@
 'use strict';
 
 if (typeof require !== 'undefined') {
+    var readCSVFile = require('../fileio').readCSVFile;
     var printMAC = require('./ethernet').printMAC;
     var printIPv4 = require('./ipv4').printIPv4;
     var printIPv6 = require('./ipv6').printIPv6;
@@ -19,9 +20,6 @@ function DNS(littleEndian, dataView, offset, parent) {
     this.authorityCount = dataView.getUint16(offset + 8, littleEndian);
     this.additionalCount = dataView.getUint16(offset + 10, littleEndian);
     
-    if (this.questionCount === 0)
-        alert('there is your what the fuck situation')
-    
     this.QR     = this.flags & 0x8000 && 1;
     this.opcode = this.flags & 0x7800 >>> 11;
     this.AA     = this.flags & 0x0400 && 1;
@@ -34,6 +32,10 @@ function DNS(littleEndian, dataView, offset, parent) {
     this.rCode  = this.flags & 0x000F;
     
     this.offset = offset; // for pointers
+    this.questions = [];
+    this.otherRecords = [[], [], []]; // answers, authorities, additions
+    this.otherRecordsLen = [this.answerCount, this.authorityCount, 
+                            this.additionalCount];
     
     this.dissectResourceRecords(littleEndian, dataView, 
                                 offset + DNS.MIN_HEADER_LENGTH);
@@ -41,79 +43,80 @@ function DNS(littleEndian, dataView, offset, parent) {
     this.next_header = null;
 }
 
-DNS.prototype = {
-    getHeaderLength: function () {
-        return DNS.MIN_HEADER_LENGTH;
-    },
-    printDetails: function (pkt_num) {
-        var details = document.createElement('div');
-        var check = document.createElement('input');
-        check.setAttribute('type','checkbox');  
-        check.setAttribute('id', 'dnsd');
-        var hidden = document.createElement('div');
-        var label = document.createElement('label');
-        var icon = document.createElement('span');
-        icon.setAttribute('class', 'dropdown glow');
-        label.setAttribute('for', 'dnsd');
-        label.appendChild(icon);
-        label.innerHTML += 'Domain Name System';
-        details.appendChild(check);
-        details.appendChild(label);   
-         
-        hidden.innerHTML = 'Transaction ID: 0x' + printNum(this.id, 16, 4) + '</br>'
-                         // FIXME
-        //                  += 'Flags: ' +  + '</br>'
-                         + 'Questions: ' + this.questionCount + '</br>' 
-                         + 'Answer RRs: ' + this.answerCount + '</br>'
-                         + 'Authority RRs: ' + this.authorityCount + '</br>'
-                         + 'Additional RRs: ' + this.additionalCount + '</br>';
-            
-        if (this.questionCount) {
-            for (var i = 0; i < this.questionCount; i++) {
-                hidden.innerHTML += this.questions[i].name + '</br>'
-                                 + this.questions[i].type + '</br>'
-                                 + this.questions[i].class+ '</br>';
-            }
-        }
-        if (this.answerCount) {
-            for (var i = 0; i < this.answerCount; i++) {
-                hidden.innerHTML += this.answers[i].name + '</br>'
-                                 + this.answers[i].type + '</br>'
-                                 + this.answers[i].class+ '</br>'
-                                 + printTime(this.answers[i].ttl)+ '</br>'
-                                 + this.answers[i].rdLength+ '</br>'
-                                 + this.answers[i].rData+ '</br>';
-            }
-        }
-                if (this.authorityCount) {
-            for (var i = 0; i < this.authorityCount; i++) {
-                hidden.innerHTML += this.authorities[i].name + '</br>'
-                                 + this.authorities[i].type + '</br>'
-                                 + this.authorities[i].class+ '</br>';
-            }
-        }
-                if (this.additionalCount) {
-            for (var i = 0; i < this.additionalCount; i++) {
-                hidden.innerHTML += this.additions[i].name + '</br>'
-                                 + this.additions[i].type + '</br>'
-                                 + this.additions[i].class+ '</br>';
-            }
-        }
+DNS.prototype.getHeaderLength = function () {
+    return DNS.MIN_HEADER_LENGTH;
+}
 
-        details.appendChild(hidden);
+DNS.prototype.printDetails = function () {
+    var title = 'Domain Name System';
+    var nodes = [];
+    // for nested entries
+    var nestedNodes = [];
+    var nestedNode;
+    
+    // put the general information first to the beginning
+    nodes.push(document.createTextNode(
+        [
+            'Transaction ID: 0x' + printNum(this.id, 16, 4),
+            // NOTE show flags as well
+            'Questions: ' + this.questionCount,
+            'Answer RRs: ' + this.answerCount,
+            'Authority RRs: ' + this.authorityCount,
+            'Additional RRs: ' + this.additionalCount
+        ].join('\n')
+    ));
+    
+    // now create nested entries for resource records
+    for (var i = 0; i < this.questionCount; i++) {
+        nestedNode = document.createTextNode(
+            [
+                'Name: ' + this.questions[i].name,
+                'Type: ' + DNS.TYPES[this.questions[i].type],
+                'Class: ' + DNS.CLASSES[this.questions[i].class]
+            ].join('\n'));
         
-        return details;
+        nestedNodes.push(createDetails(this.questions[i].name, 
+                                        [nestedNode]));
     }
-};
+    
+    nodes.push(createDetails('Queries', nestedNodes));
+    
+    for (var j = 0; j < this.otherRecords.length; j++) {
+        if (!this.otherRecordsLen[j]) // skip empty arrays
+            continue;
+        
+        nestedNodes = [];
+        
+        for (var i = 0; i < this.otherRecordsLen[j]; i++) {            
+            nestedNode = document.createTextNode(
+                [
+                    'Name: ' + this.otherRecords[j][i].name,
+                    'Type: ' + DNS.TYPES[this.otherRecords[j][i].type],
+                    'Class: ' + DNS.CLASSES[this.otherRecords[j][i].class],
+                    'Time to live: ' + printTime(this.otherRecords[j][i].ttl),
+                    'Data length: ' + this.otherRecords[j][i].rdLength,
+                    // NOTE empty string when unsupported
+                    'Data: ' + this.otherRecords[j][i].rData
+                ].join('\n'));
+            
+            nestedNodes.push(createDetails(this.questions[i].name, 
+                                            [nestedNode]));
+        }
+        
+        nodes.push(createDetails(DNS.OTHER_RECORD_NAMES[j], nestedNodes));
+    }
+    
+    return createDetails(title, nodes);
+}
 
 DNS.prototype.toString = function () {
     var resourceRecordStrings = ''; // suffix of the string, either add ...
     
     // ... all answers
-    if (this.QR && this.answers) {
-        for (var i = 0; i < this.answers.length; i++) {
-            resourceRecordStrings += DNS.TYPES[this.answers[i].type] + ' '
-            + this.answers[i].rData;                
+    if (this.QR) {
+        for (var i = 0; i < this.otherRecords[0].length; i++) {
+            resourceRecordStrings += DNS.TYPES[this.otherRecords[0][i].type] + 
+            ' ' + this.otherRecords[0][i].rData;                
         }
     }
     // ... or all questions
@@ -124,42 +127,26 @@ DNS.prototype.toString = function () {
         }
     }
     
-    return (DNS.OPCODES[this.opcode] || '') + (this.QR ? 'response ' : '') +
-            printNum(this.id, 16, 4) + '  ' + resourceRecordStrings;
+    return DNS.OPCODES[this.opcode] + (this.QR ? ' response ' : ' ') +
+            '0x' + printNum(this.id, 16, 4) + '  ' + resourceRecordStrings;
 }
 
 DNS.prototype.dissectResourceRecords = function (littleEndian, dataView, offset) 
 {
     var tuple;
-    
-    if (this.questionCount)
-        this.questions = [];
-    if (this.answerCount)
-        this.answers = [];
-    if (this.authorityCount)
-        this.authorities = [];
-    if (this.additionalCount)
-        this.additions = [];
         
     for (var i = 0; i < this.questionCount; i++) {
         tuple = this.nextResourceRecord(littleEndian, dataView, offset, true);
         this.questions.push(tuple.resourceRecord);
         offset = tuple.offset;
     }
-    for (var i = 0; i < this.answerCount; i++) {
-        tuple = this.nextResourceRecord(littleEndian, dataView, offset);
-        this.answers.push(tuple.resourceRecord);
-        offset = tuple.offset;
-    }
-    for (var i = 0; i < this.authorityCount; i++) {
-        tuple = this.nextResourceRecord(littleEndian, dataView, offset);
-        this.authorities.push(tuple.resourceRecord);
-        offset = tuple.offset;
-    }
-    for (var i = 0; i < this.additionalCount; i++) {
-        tuple = this.nextResourceRecord(littleEndian, dataView, offset);
-        this.additions.push(tuple.resourceRecord);
-        offset = tuple.offset;
+    
+    for (var j = 0; j < this.otherRecords.length; j++) {
+        for (var i = 0; i < this.otherRecordsLen[j]; i++) {
+            tuple = this.nextResourceRecord(littleEndian, dataView, offset);
+            this.otherRecords[j].push(tuple.resourceRecord);
+            offset = tuple.offset;
+        }
     }
 }
 
@@ -241,11 +228,13 @@ DNS.prototype.getName = function (littleEndian, dataView, offset) {
 }
 
 DNS.MIN_HEADER_LENGTH = 12; // initial dns header size in bytes
-DNS.A    = 0x0001;
-DNS.AAAA = 0x001c;
-DNS.OPCODES = ['Standard Query ', 'Inverse Query ', 'Status ', '', 'Notify ',
-               'Update '];
-DNS.TYPES = [];
+DNS.A     = 0x0001;
+DNS.AAAA  = 0x001c;
+DNS.CNAME = 0x0005;
+DNS.OPCODES = readCSVFile('webpcap/dissection/dns-parameters-5.csv', 0, 1);
+DNS.TYPES = readCSVFile('webpcap/dissection/dns-parameters-4.csv', 1, 0);
+DNS.CLASSES = readCSVFile('webpcap/dissection/dns-parameters-2.csv', 0, 2);
+DNS.OTHER_RECORD_NAMES = ['Answers', 'Authorities', 'Additions'];
 
 if (typeof module !== 'undefined') {
     module.exports.DNS = DNS;
