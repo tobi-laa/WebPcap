@@ -149,9 +149,9 @@ function initWellKnownPortNames() {
             if (tokens[4] === '' || !(index = Number(tokens[0])))
                 continue;
             
-            Ethernet.TYPES[index] = tokens[1];
+            Ethernet.TYPES[index] = tokens[4];
         }
-    }
+    }    
 }
 
 function initJSEvents() {

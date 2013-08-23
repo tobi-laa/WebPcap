@@ -3,7 +3,8 @@
 if (typeof require !== 'undefined') {
     var printNum = require('../formattedoutput').printNum;
     var printMAC = require('./ethernet').printMAC;
-    var printEtherType = require('./ethernet').printEtherType;
+    var Ethernet = require('./ethernet').Ethernet;
+    Ethernet.TYPES = require('./ethernet').TYPES;
 }
 
 /*
@@ -41,7 +42,7 @@ SLL.prototype.printDetails = function () {
         'Link-layer address type: ' + this.llat,
         'Link-layer address length: ' + this.llal,
         'Source: ' + printMAC(this.src),
-        'Protocol: ' + printEtherType(this.prot) + ' (0x' + printNum(this.prot, 16, 4) + ')'
+        'Protocol: ' + Ethernet.TYPES[this.prot] + ' (0x' + printNum(this.prot, 16, 4) + ')'
         ].join('\n')
     ));
     

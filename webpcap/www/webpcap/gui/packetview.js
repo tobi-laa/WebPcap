@@ -9,7 +9,7 @@ function printPacketDetails(packetNum) {
     
     detailsOutput.innerHTML = '';
     
-    while (packet !== null) { // print details for each header
+    while (packet) { // print details for each header
         detailsOutput.appendChild(packet.printDetails(packetNum));
         packet = packet.next_header;        
     }
