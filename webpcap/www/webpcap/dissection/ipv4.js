@@ -32,44 +32,35 @@ IPv4.prototype = {
     getHeaderLength: function () {
         return 4 * this.hl;
     },
-    printDetails: function (pkt_num) {
-        var details = document.createElement('div');
-        details.setAttribute('class','ip');
-        var check = document.createElement('input');
-        check.setAttribute('type','checkbox');  
-        check.setAttribute('id', 'i4d');
-        var hidden = document.createElement('div');
-        var label = document.createElement('label');
-        var icon = document.createElement('span');
-        icon.setAttribute('class', 'dropdown glow');
-        label.setAttribute('for', 'i4d');
-        label.appendChild(icon);
-        label.innerHTML += 'Internet Protocol Version 4';
-        details.appendChild(check);
-        details.appendChild(label);   
-         
-        hidden.innerHTML = 'Version: ' + this.v + '</br>'
-                         + 'Header length: ' + this.getHeaderLength() + '</br>'
-                         + 'Differentiated Services Field: 0x' + printNum(this.tos, 16, 2) + '</br>'
-                         + 'Total Length: ' + this.tlen + '</br>'
-                         + 'Identification: 0x' + printNum(this.id, 16, 4) + ' (' + this.id + ')</br>'
-                         // FIXME
-        //                  += 'Flags: ' +  + '</br>'
-                         + 'Fragment offset: ' + this.off + '</br>'
-                         + 'Time to live: ' + this.ttl + '</br>'
-                         + 'Protocol: ' + this.prot + '</br>'
-                         + 'Header checksum: 0x' + printNum(this.csum, 16, 4) + ' [' + (this.val ? 'correct' : 'incorrect') + ']</br>'
-                         + 'Source: ' + printIPv4(this.src) + '</br>'
-                         + 'Destination: ' + printIPv4(this.dst) + '</br>';
-
-        details.appendChild(hidden);
-        
-        return details;
-    },
     toString: function () {
         return '';
     }
 };
+
+IPv4.prototype.printDetails = function () {
+    var title = 'Internet Protocol Version ' + this.v;
+    var nodes = []
+    
+    nodes.push(document.createTextNode(
+        [
+        'Version: ' + this.v,
+        'Header length: ' + this.getHeaderLength(),
+        'Differentiated Services Field: 0x' + printNum(this.tos, 16, 2),
+        'Total Length: ' + this.tlen,
+        'Identification: 0x' + printNum(this.id, 16, 4) + ' (' + this.id + ')',
+        // FIXME
+        //        = 'Flags: ' + ,
+        'Fragment offset: ' + this.off,
+        'Time to live: ' + this.ttl,
+        'Protocol: ' + this.prot,
+        'Header checksum: 0x' + printNum(this.csum, 16, 4) + ' [' + (this.val ? 'correct' : 'incorrect') + ']',
+        'Source: ' + printIPv4(this.src),
+        'Destination: ' + printIPv4(this.dst)
+        ].join('\n')
+    ));
+    
+    return createDetails(title, nodes);
+}
 
 IPv4.MIN_HEADER_LENGTH = 20; // IPv4 minimum header length in bytes 
 IPv4.ADDRESS_LENGTH = 4;  // IPv4 address length in bytes

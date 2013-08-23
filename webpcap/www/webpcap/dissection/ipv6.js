@@ -26,38 +26,29 @@ IPv6.prototype = {
     getHeaderLength: function () {
         return IPv6.HEADER_LENGTH;
     },
-    printDetails: function (pkt_num) {
-        var details = document.createElement('div');
-        details.setAttribute('class','ip');
-        var check = document.createElement('input');
-        check.setAttribute('type','checkbox');  
-        check.setAttribute('id', 'i6d');
-        var hidden = document.createElement('div');
-        var label = document.createElement('label');
-        var icon = document.createElement('span');
-        icon.setAttribute('class', 'dropdown glow');
-        label.setAttribute('for', 'i6d');
-        label.appendChild(icon);
-        label.innerHTML += 'Internet Protocol Version 6';
-        details.appendChild(check);
-        details.appendChild(label);   
-         
-        hidden.innerHTML = 'Version: ' + this.v + '</br>'
-                         // FIXME traffic class & flow label
-                         + 'Payload length: ' + this.plen + '</br>'
-                         + 'Next header: ' + this.nh + '</br>'
-                         + 'Hop limit ' + this.hlim + '</br>'
-                         + 'Source: ' + printIPv6(this.src, this.littleEndian) + '</br>'
-                         + 'Destination: ' + printIPv6(this.dst, this.littleEndian) + '</br>';
-
-        details.appendChild(hidden);
-        
-        return details;
-    },
     toString: function() {
         return '';
     }
 };
+
+IPv6.prototype.printDetails = function () {
+    var title = 'Internet Protocol Version ' + this.v;
+    var nodes = []
+    
+    nodes.push(document.createTextNode(
+        [
+        'Version: ' + this.v,
+        // FIXME traffic class & flow label
+        'Payload length: ' + this.plen,
+        'Next header: ' + this.nh,
+        'Hop limit ' + this.hlim,
+        'Source: ' + printIPv6(this.src, this.littleEndian),
+        'Destination: ' + printIPv6(this.dst, this.littleEndian)
+        ].join('\n')
+    ));
+    
+    return createDetails(title, nodes);
+}
 
 IPv6.HEADER_LENGTH = 40; // IPv6 header length in bytes
 IPv6.ADDRESS_LENGTH = 16;  // IPv6 address length in bytes

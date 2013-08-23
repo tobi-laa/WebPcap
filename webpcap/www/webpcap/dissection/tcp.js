@@ -106,36 +106,6 @@ TCP.prototype = {
     getHeaderLength: function () {
         return 4 * (this.off_rsd >>> 4);
     },
-    printDetails: function (pkt_num) {
-        var details = document.createElement('div');
-        details.setAttribute('class','tcp');
-        var check = document.createElement('input');
-        check.setAttribute('type','checkbox');  
-        check.setAttribute('id', 'td');
-        var hidden = document.createElement('div');
-        var label = document.createElement('label');
-        var icon = document.createElement('span');
-        icon.setAttribute('class', 'dropdown glow');
-        label.setAttribute('for', 'td');
-        label.appendChild(icon);
-        label.innerHTML += 'Transmission Control Protocol';
-        details.appendChild(check);
-        details.appendChild(label);   
-         
-        hidden.innerHTML = 'Source port: ' + this.sport + '</br>'
-                         + 'Destination port: ' + this.dport + '</br>'
-                         + 'Sequence number: ' + this.seqn + '</br>'
-                         + 'Acknowledgment number: ' + this.ackn + '</br>'
-                         + 'Header length: ' + this.getHeaderLength() + '</br>'
-                         + 'Flags: 0x' + printNum(this.flags, 16, 3) + ' ' + this.printFlags() + '</br>'
-                         + 'Window size value: ' + this.wsize + '</br>'                         
-                         + 'Checksum: 0x' + printNum(this.csum, 16, 4) + ' [' + (this.val ? 'correct' : 'incorrect') + ']</br>';
-                         // FIXME options
-                                 
-        details.appendChild(hidden);
-        
-        return details;
-    },
     printPorts: function() {
         return (TCP.PORTS[this.sport] || this.sport) + ' ⊳ ' +
                (TCP.PORTS[this.dport] || this.dport);
@@ -162,6 +132,27 @@ TCP.prototype = {
         return this.printPorts() + ' ' + this.printFlags();
     }
 };
+
+TCP.prototype.printDetails = function () {
+    var title = 'Transmission Control Protocol';
+    var nodes = []
+    
+    nodes.push(document.createTextNode(
+        [
+        'Source port: ' + this.sport,
+        'Destination port: ' + this.dport,
+        'Sequence number: ' + this.seqn,
+        'Acknowledgment number: ' + this.ackn,
+        'Header length: ' + this.getHeaderLength(),
+        'Flags: 0x' + printNum(this.flags, 16, 3) + ' ' + this.printFlags(),
+        'Window size value: ' + this.wsize,                         
+        'Checksum: 0x' + printNum(this.csum, 16, 4) + ' [' + 
+            (this.val ? 'correct' : 'incorrect') + ']'
+        ].join('\n')
+    ));
+    
+    return createDetails(title, nodes);
+}
 
 TCP.MIN_HEADER_LENGTH = 20; // TCP minimum header length in bytes
 TCP.PORTS = []; // well-known ports

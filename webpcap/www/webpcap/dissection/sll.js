@@ -26,36 +26,27 @@ SLL.prototype = {
     getHeaderLength: function () {
         return SLL.HEADER_LENGTH;
     },
-    printDetails: function (pkt_num) {
-        var details = document.createElement('div');
-        details.setAttribute('class','eth');
-        var check = document.createElement('input');
-        check.setAttribute('type','checkbox');  
-        check.setAttribute('id', 'ed');
-        var hidden = document.createElement('div');
-        var label = document.createElement('label');
-        var icon = document.createElement('span');
-        icon.setAttribute('class', 'dropdown glow');
-        label.setAttribute('for', 'ed');
-        label.appendChild(icon);
-        label.innerHTML += 'Linux cooked capture';
-        details.appendChild(check);
-        details.appendChild(label);   
-        
-        hidden.innerHTML += 'Packet type: ' + printPacketType(this.type) + ' (' + this.type + ')</br>';
-        hidden.innerHTML += 'Link-layer address type: ' + this.llat + '</br>';
-        hidden.innerHTML += 'Link-layer address length: ' + this.llal + '</br>';
-        hidden.innerHTML += 'Source: ' + printMAC(this.src) + '</br>';
-        hidden.innerHTML += 'Protocol: ' + printEtherType(this.prot) + ' (0x' + printNum(this.prot, 16, 4) + ')</br>';
-        
-        details.appendChild(hidden);
-        
-        return details;
-    },
     toString: function () {
         return 'From:  ' + printMAC(this.src);
     }
 };
+
+SLL.prototype.printDetails = function () {
+    var title = 'Linux cooked capture';
+    var nodes = []
+    
+    nodes.push(document.createTextNode(
+        [
+        'Packet type: ' + printPacketType(this.type) + ' (' + this.type + ')',
+        'Link-layer address type: ' + this.llat,
+        'Link-layer address length: ' + this.llal,
+        'Source: ' + printMAC(this.src),
+        'Protocol: ' + printEtherType(this.prot) + ' (0x' + printNum(this.prot, 16, 4) + ')'
+        ].join('\n')
+    ));
+    
+    return createDetails(title, nodes);
+}
 
 function printPacketType(type) {
     switch(type) {

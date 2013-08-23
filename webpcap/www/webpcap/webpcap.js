@@ -48,23 +48,26 @@ function initWebPcapJS () {
     conns = dissector.getConnectionsByArrival();
 }
 
-function initWellKnownPortNames() {
+function initWellKnownPortNames() {    
+    var req;
+    
     // open the file below and parse well-known ports
-    var req = new XMLHttpRequest();    
-    req.open('get', 'webpcap/dissection/service-names-port-numbers.txt', true);
+    req = new XMLHttpRequest();    
+    req.open('get', 'webpcap/dissection/service-names-port-numbers.csv', true);
     req.send();    
     req.onload = function () {
         var lines = this.responseText.split('\n');
         var tokens, index;
         for (var i = 0; i < lines.length; i++) {
-            tokens = lines[i].split(/\s* \s*/, 3); //regexp: split at whitespace
+            tokens = lines[i].split(','); // comma separated
             
             // skip empty lines/comments/and so forth
-            if (tokens[0] === '' || tokens[1] === '' || tokens[2] === '')
+            if (tokens[0] === '' || tokens[2] === ''|| 
+                !(index = Number(tokens[1])))
+            {
                 continue;
-            
-            index = Number(tokens[1]);
-            
+            }
+                        
             switch (tokens[2]) {
             case 'tcp':
                 // some ports are listed more than once; the || always keeps
@@ -75,6 +78,78 @@ function initWellKnownPortNames() {
                 UDP.PORTS[index] = UDP.PORTS[index] || tokens[0];
                 break;
             }
+        }
+    }
+    
+    // open the file below and parse DNS types
+    req = new XMLHttpRequest();    
+    req.open('get', 'webpcap/dissection/dns-parameters-4.csv', true);
+    req.send();    
+    req.onload = function () {
+        var lines = this.responseText.split('\n');
+        var tokens, index;
+        for (var i = 0; i < lines.length; i++) {
+            tokens = lines[i].split(','); // comma separated
+            
+            // skip empty lines/comments/and so forth
+            if (tokens[0] === '' || !(index = Number(tokens[1])))
+                continue;
+            
+            DNS.TYPES[index] = tokens[0];
+        }
+    }
+    
+    // open the file below and parse ARP hardware types
+    req = new XMLHttpRequest();    
+    req.open('get', 'webpcap/dissection/arp-parameters-2.csv', true);
+    req.send();    
+    req.onload = function () {
+        var lines = this.responseText.split('\n');
+        var tokens, index;
+        for (var i = 0; i < lines.length; i++) {
+            tokens = lines[i].split(','); // comma separated
+            
+            // skip empty lines/comments/and so forth
+            if (tokens[1] === '' || !(index = Number(tokens[0])))
+                continue;
+            
+            ARP.HARDWARE_TYPES[index] = tokens[1];
+        }
+    }
+    
+    // open the file below and parse ARP hardware types
+    req = new XMLHttpRequest();    
+    req.open('get', 'webpcap/dissection/arp-parameters-1.csv', true);
+    req.send();    
+    req.onload = function () {
+        var lines = this.responseText.split('\n');
+        var tokens, index;
+        for (var i = 0; i < lines.length; i++) {
+            tokens = lines[i].split(','); // comma separated
+            
+            // skip empty lines/comments/and so forth
+            if (tokens[1] === '' || !(index = Number(tokens[0])))
+                continue;
+            
+            ARP.OPCODES[index] = tokens[1];
+        }
+    }
+    
+    // open the file below and parse ARP hardware types
+    req = new XMLHttpRequest();    
+    req.open('get', 'webpcap/dissection/ieee-802-numbers-1.csv', true);
+    req.send();    
+    req.onload = function () {
+        var lines = this.responseText.split('\n');
+        var tokens, index;
+        for (var i = 0; i < lines.length; i++) {
+            tokens = lines[i].split(','); // comma separated
+            
+            // skip empty lines/comments/and so forth
+            if (tokens[4] === '' || !(index = Number(tokens[0])))
+                continue;
+            
+            Ethernet.TYPES[index] = tokens[1];
         }
     }
 }

@@ -1,10 +1,11 @@
 'use strict';
 
 if (typeof require !== 'undefined') {
-    var printEtherType = require('./ethernet').printEtherType;
     var printMAC = require('./ethernet').printMAC;
     var printIPv4 = require('./ipv4').printIPv4;
     var printIPv6 = require('./ipv6').printIPv6;
+    var Ethernet = require('./ethernet').Ethernet;
+    Ethernet.TYPES = require('./ethernet').TYPES;
 }
 /*
  ******************************************************************
@@ -53,38 +54,7 @@ function ARP(littleEndian, dataView, offset) {
 ARP.prototype = {
     getHeaderLength: function () {
         return ARP.MIN_HEADER_LENGTH + 2 * this.hlen + 2 * this.plen;
-    },
-    printDetails: function (pkt_num) {
-        var details = document.createElement('div');
-        details.setAttribute('class','arp');
-        var check = document.createElement('input');
-        check.setAttribute('type','checkbox');  
-        check.setAttribute('id', 'ad');
-        var hidden = document.createElement('div');
-        var label = document.createElement('label');
-        var icon = document.createElement('span');
-        icon.setAttribute('class', 'dropdown glow');
-        label.setAttribute('for', 'ad');
-        label.appendChild(icon);
-        label.innerHTML += 'Address Resolution Protocol';
-        details.appendChild(check);
-        details.appendChild(label);   
-         
-        // FIXME FIXME obviously not always IP & MAC... also show whether query or reply etc
-        hidden.innerHTML = 'Hardware type: ' + this.htype + '</br>'
-                         + 'Protocol type: ' + printEtherType(this.ptype) + ' (0x' + printNum(this.ptype, 16, 4) + ')</br>'
-                         + 'Hardware size: ' + this.hlen + '</br>'
-                         + 'Protocol size: ' + this.plen + '</br>'
-                         + 'Opcode: ' + this.op + '</br>'
-                         + 'Sender MAC address: ' + printMAC(this.sha) + '</br>'                         
-                         + 'Sender IP address: ' + printIPv4(this.spa) + '</br>'
-                         + 'Target MAC address: ' + printMAC(this.tha) + '</br>'                         
-                         + 'Target IP address: ' + printIPv4(this.tpa) + '</br>';
-
-        details.appendChild(hidden);
-        
-        return details;
-    },
+    },    
     toString: function () {
         if (this.op == 1) { // ARP query
             if (this.ptype == 0x0800)
@@ -101,7 +71,33 @@ ARP.prototype = {
     }
 }
 
+ARP.prototype.printDetails = function () {
+    var title = 'Address Resolution Protocol';
+    var nodes = []
+    
+    nodes.push(document.createTextNode(
+        [        
+        'Hardware type: ' + ARP.HARDWARE_TYPES[this.htype] + '(' + this.htype +
+            ')',
+        'Protocol type: ' + Ethernet.TYPES[this.ptype] + 
+            ' (0x' + printNum(this.ptype, 16, 4) + ')',
+        'Hardware size: ' + this.hlen,
+        'Protocol size: ' + this.plen,
+        'Opcode: ' + ARP.OPCODES[this.op] + '(' + this.op + ')',
+        // FIXME FIXME obviously not always IP & MAC... also show whether query or reply etc
+        'Sender MAC address: ' + printMAC(this.sha),                         
+        'Sender IP address: ' + printIPv4(this.spa),
+        'Target MAC address: ' + printMAC(this.tha),                         
+        'Target IP address: ' + printIPv4(this.tpa)
+        ].join('\n')
+    ));
+    
+    return createDetails(title, nodes);
+}
+
 ARP.MIN_HEADER_LENGTH = 8; // beginning (!) of ARP header length in bytes
+ARP.HARDWARE_TYPES = [];
+ARP.OPCODES = [];
 
 if (typeof module !== 'undefined') {
     module.exports.ARP = ARP;

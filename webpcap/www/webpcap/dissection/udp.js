@@ -33,31 +33,6 @@ UDP.prototype = {
     getHeaderLength: function () {
         return UDP.HEADER_LENGTH;
     },
-    printDetails: function (pkt_num) {
-        var details = document.createElement('div');
-        details.setAttribute('class','udp');
-        var check = document.createElement('input');
-        check.setAttribute('type','checkbox');  
-        check.setAttribute('id', 'ud');
-        var hidden = document.createElement('div');
-        var label = document.createElement('label');
-        var icon = document.createElement('span');
-        icon.setAttribute('class', 'dropdown glow');
-        label.setAttribute('for', 'ud');
-        label.appendChild(icon);
-        label.innerHTML += 'User Datagram Protocol';
-        details.appendChild(check);
-        details.appendChild(label);   
-         
-        hidden.innerHTML = 'Source port: ' + this.sport + '</br>'
-                         + 'Destination port: ' + this.dport + '</br>'
-                         + 'Length: ' + this.len + '</br>'                    
-                         + 'Checksum: 0x' + printNum(this.csum, 16, 4) + ' [' + (this.val ? 'correct' : 'incorrect') + ']</br>';
-        
-        details.appendChild(hidden);
-        
-        return details;
-    },
     printPorts: function() {
         return (UDP.PORTS[this.sport] || this.sport) + ' ⊳ ' +
                (UDP.PORTS[this.dport] || this.dport);
@@ -66,6 +41,23 @@ UDP.prototype = {
         return this.printPorts();
     }
 };
+
+UDP.prototype.printDetails = function () {
+    var title = 'User Datagram Protocol';
+    var nodes = []
+    
+    nodes.push(document.createTextNode(
+        [
+        'Source port: ' + this.sport,
+        'Destination port: ' + this.dport,
+        'Length: ' + this.len,                    
+        'Checksum: 0x' + printNum(this.csum, 16, 4) + ' [' + 
+            (this.val ? 'correct' : 'incorrect') + ']'
+        ].join('\n')
+    ));
+    
+    return createDetails(title, nodes);
+}
 
 UDP.HEADER_LENGTH = 8; // UDP header length in bytes  
 UDP.PORTS = []; // well-known ports

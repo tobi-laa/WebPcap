@@ -20,6 +20,9 @@ function DNS(littleEndian, dataView, offset, parent) {
     this.authorityCount = dataView.getUint16(offset + 8, littleEndian);
     this.additionalCount = dataView.getUint16(offset + 10, littleEndian);
     
+    if (this.questionCount === 0)
+        alert('there is your what the fuck situation')
+    
     this.QR     = this.flags & 0x8000 && 1;
     this.opcode = this.flags & 0x7800 >>> 11;
     this.AA     = this.flags & 0x0400 && 1;
@@ -101,11 +104,30 @@ DNS.prototype = {
         details.appendChild(hidden);
         
         return details;
-    },
-    toString: function () {
-        return '';
     }
 };
+
+DNS.prototype.toString = function () {
+    var resourceRecordStrings = ''; // suffix of the string, either add ...
+    
+    // ... all answers
+    if (this.QR && this.answers) {
+        for (var i = 0; i < this.answers.length; i++) {
+            resourceRecordStrings += DNS.TYPES[this.answers[i].type] + ' '
+            + this.answers[i].rData;                
+        }
+    }
+    // ... or all questions
+    else if (this.questions) {
+        for (var i = 0; i < this.questions.length; i++) {
+            resourceRecordStrings += DNS.TYPES[this.questions[i].type] + ' '
+                                    + this.questions[i].name;                
+        }
+    }
+    
+    return (DNS.OPCODES[this.opcode] || '') + (this.QR ? 'response ' : '') +
+            printNum(this.id, 16, 4) + '  ' + resourceRecordStrings;
+}
 
 DNS.prototype.dissectResourceRecords = function (littleEndian, dataView, offset) 
 {
@@ -172,13 +194,16 @@ DNS.prototype.nextResourceRecord = function (littleEndian, dataView, offset,
     resourceRecord.rdLength = dataView.getUint16(offset, littleEndian);
     offset += 2;
     
-    // FIXME: only A and AAAA supported as yet
+    // FIXME: only A, AAAA and CNAME supported as yet
     switch (resourceRecord.type) {
     case DNS.A:
         resourceRecord.rData = printIPv4(new DataView(dataView.buffer, offset, 4));
         break;
     case DNS.AAAA:
         resourceRecord.rData = printIPv6(new DataView(dataView.buffer, offset, 16));
+        break;
+    case DNS.CNAME:
+        resourceRecord.rData = this.getName(littleEndian, dataView, offset).name;
         break;
     default:
         resourceRecord.rData = '';
@@ -219,6 +244,9 @@ DNS.prototype.getName = function (littleEndian, dataView, offset) {
 DNS.MIN_HEADER_LENGTH = 12; // initial dns header size in bytes
 DNS.A    = 0x0001;
 DNS.AAAA = 0x001c;
+DNS.OPCODES = ['Standard Query ', 'Inverse Query ', 'Status ', '', 'Notify ',
+               'Update '];
+DNS.TYPES = [];
 
 if (typeof module !== 'undefined') {
     module.exports.DNS = DNS;
