@@ -5,8 +5,10 @@ var Dissector = require('../../dissection/dissector').Dissector;
 var readPcapGlobalHeader = require('../../fileio').readPcapGlobalHeader;
 var bufferToArrayBuffer = require('../../arraybuffers').bufferToArrayBuffer;
 var arrayBufferToBuffer = require('../../arraybuffers').arrayBufferToBuffer;
+var mergeBuffers = require('../../arraybuffers').mergeBuffers;
 
-var PATH = './test/dissection/http_hhucn.pcap';
+var HHUCN_PATH = './test/dissection/http_hhucn.pcap';
+var THESIS_PATH = './test/dissection/thesis_transfer.pcap';
 
 // these were calculated with wireshark (follow stream -> save as) & md5sum
 var md5sums =
@@ -21,11 +23,14 @@ var md5sums =
     'd41d8cd98f00b204e9800998ecf8427e'
 ]
 
+// this is the md5sum of the thesis corresponding to this projects (master.pdf)
+var thesisMd5Sum = '2d4b8ebb90c94d094790bd2703e3eb1e';
+
 test('content from http_hhucn.pcap does not include more packets than whole ' + 
      'connection', function () 
 {
     var dissector = new Dissector();
-    var data = fs.readFileSync(PATH);
+    var data = fs.readFileSync(HHUCN_PATH);
     data = bufferToArrayBuffer(data);
     
     readPcapGlobalHeader(data.slice(0, 24), dissector);
@@ -46,7 +51,7 @@ test('merged content and source + destination content from http_hhucn.pcap ' +
      'include same number of packets', function () 
 {
     var dissector = new Dissector();
-    var data = fs.readFileSync(PATH);
+    var data = fs.readFileSync(HHUCN_PATH);
     data = bufferToArrayBuffer(data);
     
     readPcapGlobalHeader(data.slice(0, 24), dissector);
@@ -65,7 +70,7 @@ test('merged content and source + destination content from http_hhucn.pcap ' +
 
 test('md5 sums of content from http_hhucn.pcap are correct', function () {
     var dissector = new Dissector();
-    var data = fs.readFileSync(PATH);
+    var data = fs.readFileSync(HHUCN_PATH);
     data = bufferToArrayBuffer(data);
     
     readPcapGlobalHeader(data.slice(0, 24), dissector);
@@ -73,10 +78,26 @@ test('md5 sums of content from http_hhucn.pcap are correct', function () {
         
     for (var i = 0; i < dissector.getConnectionsByArrival().length; i++) {
         var conn = dissector.getConnectionsByArrival()[i];
-        var srcContent = arrayBufferToBuffer(conn.getContent(0));
-        var dstContent = arrayBufferToBuffer(conn.getContent(1));
+        var srcContent = arrayBufferToBuffer(mergeBuffers(conn.getContent(0)));
+        var dstContent = arrayBufferToBuffer(mergeBuffers(conn.getContent(1)));
         
         assert.strictEqual(md5(srcContent), md5sums[i * 2]);
         assert.strictEqual(md5(dstContent), md5sums[i * 2 + 1]);
     }
+});
+
+test('master.pdf can be reconstructed from thesis_transfer.pcap', function () {
+    var dissector = new Dissector();
+    var content;
+    var data = fs.readFileSync(THESIS_PATH);
+    data = bufferToArrayBuffer(data);
+    
+    readPcapGlobalHeader(data.slice(0, 24), dissector);
+    dissector.dissect(data.slice(24));
+        
+    // first connection has the content
+    content = arrayBufferToBuffer(
+        mergeBuffers(dissector.getConnectionByArrival(0).getContent(0)));
+    
+    assert.strictEqual(md5(content), thesisMd5Sum);
 });

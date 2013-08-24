@@ -42,8 +42,8 @@ IPv6.prototype.printDetails = function () {
         'Version: ' + this.v,
         // FIXME traffic class & flow label
         'Payload length: ' + this.plen,
-        'Next header: ' + this.nh,
-        'Hop limit ' + this.hlim,
+        'Next header: ' + IPv6.PROTOCOLS[this.nh] + ' (' + this.nh + ')',
+        'Hop limit: ' + this.hlim,
         'Source: ' + IPv6.printIP(this.src, this.littleEndian),
         'Destination: ' + IPv6.printIP(this.dst, this.littleEndian)
         ].join('\n')
@@ -89,10 +89,8 @@ IPv6.printIP = function (ip, littleEndian) {
         ipFragments.push(ip.getUint16(i, littleEndian).toString(16));
     }
     if (end > start) {
-        if (end === ip.byteLength || start === 0)
-            ipFragments.push(':'); // explicitly add when prefix or suffix
-        else
-            ipFragments.push(''); // induces a double ::
+        ipFragments.push((start === 0 ? ':' : '') + 
+                         (end === ip.byteLength ? ':' : ''));
     }
     for (var i = end; i < ip.byteLength; i += 2) {
         ipFragments.push(ip.getUint16(i, littleEndian).toString(16));        

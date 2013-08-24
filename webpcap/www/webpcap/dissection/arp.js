@@ -52,7 +52,7 @@ function ARP(littleEndian, packet, dataView, offset) {
     
     // set general information
     packet.prot = packet.class = 'ARP';
-    packet.info = this.toString;
+    packet.info = this.toString();
 }
 
 ARP.prototype.getHeaderLength = function () {
@@ -60,23 +60,23 @@ ARP.prototype.getHeaderLength = function () {
 }
 
 ARP.prototype.toString = function () {
-    switch (this.op) {        
+    switch (this.op) {
     case 1: // ARP query
         if (this.ptype === 0x0800)
-            return 'Who has ' + printIPv4(this.tpa)+'? Tell ' 
-                + printIPv4(this.spa);
+            return 'Who has ' + IPv4.printIP(this.tpa)+'? Tell ' 
+                + IPv4.printIP(this.spa);
         if (this.ptype === 0x86DD)
-            return 'Who has ' + printIPv6(this.tpa)+'? Tell ' 
-                + printIPv6(this.spa);
+            return 'Who has ' + IPv6.printIP(this.tpa)+'? Tell ' 
+                + IPv6.printIP(this.spa);
         break;
     case 2: // ARP reply
         if (this.htype == 1) {
             if (this.ptype === 0x0800) {
-                return printIPv4(this.spa) + ' is at ' + 
+                return IPv4.printIP(this.spa) + ' is at ' + 
                     Ethernet.printMAC(this.sha);                
             }
             if (this.ptype === 0x86DD) {
-                return printIPv6(this.spa) + ' is at ' + 
+                return IPv6.printIP(this.spa) + ' is at ' + 
                     Ethernet.printMAC(this.sha);                
             }
         }

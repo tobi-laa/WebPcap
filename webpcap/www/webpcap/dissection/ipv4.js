@@ -13,8 +13,11 @@ function IPv4(littleEndian, packet, dataView, offset, validateChecksums) {
     this.id   = dataView.getUint16(offset + 4, littleEndian); // identification
     // fragmentation flags & offset
     this.frag = dataView.getUint16(offset + 6, littleEndian); 
-    // fragmentation offset
-    this.off  = dataView.getUint16(offset + 6, littleEndian) & 0x1FFF;
+    this.frag_off = this.frag & 0x1FFF;
+    this.RSVD = this.frag & 0x2000;
+    this.DF   = this.frag & 0x4000;
+    this.MF   = this.frag & 0x8000;
+    
     this.ttl  = dataView.getUint8(offset + 8); // time to live
     this.prot = dataView.getUint8(offset + 9); // protocol (i.e. TCP)
     this.csum = dataView.getUint16(offset + 10, littleEndian);// header checksum
@@ -49,6 +52,25 @@ IPv4.prototype.getHeaderLength = function () {
     return 4 * this.hl;
 }
 
+IPv4.prototype.printFlags = function() {
+    if (!this.flags)
+        return '';
+    
+    var toReturn = [];
+    
+    if (this.NS)  toReturn.push('NS');
+    if (this.CWR) toReturn.push('CWR');
+    if (this.ECE) toReturn.push('ECE');
+    if (this.URG) toReturn.push('URG');
+    if (this.ACK) toReturn.push('ACK');
+    if (this.PSH) toReturn.push('PSH');
+    if (this.RST) toReturn.push('RST');
+    if (this.SYN) toReturn.push('SYN');
+    if (this.FIN) toReturn.push('FIN');
+    
+    return '[' + toReturn.join(', ') + ']';
+}
+
 IPv4.prototype.toString = function () {
     return '';
 }
@@ -68,7 +90,7 @@ IPv4.prototype.printDetails = function () {
         //        = 'Flags: ' + ,
         'Fragment offset: ' + this.off,
         'Time to live: ' + this.ttl,
-        'Protocol: ' + this.prot,
+        'Protocol: ' + IPv4.PROTOCOLS[this.prot] + ' (' + this.prot + ')',
         'Header checksum: 0x' + printNum(this.csum, 16, 4) + 
             IPv4.CHECKSUM_VALUES[this.val],
         'Source: ' + IPv4.printIP(this.src),
@@ -82,9 +104,10 @@ IPv4.prototype.printDetails = function () {
 IPv4.MIN_HEADER_LENGTH = 20; // IPv4 minimum header length in bytes 
 IPv4.ADDRESS_LENGTH = 4;  // IPv4 address length in bytes
 IPv4.PROTOCOLS = readCSVFile(
-    'webpcap/dissection/resources/protocol-numbers-1.csv', 1, 0);
-IPv4.CHECKSUM_VALUES = ['[incorrect]', '[correct]', '[not checked]', 
-                        '[not specified]']; // last entry is for UDP
+    'webpcap/dissection/resources/protocol-numbers-1.csv', 0, 1);
+// this variable is shared among all checksum-having protocols
+IPv4.CHECKSUM_VALUES = [' [incorrect]', ' [correct]', ' [not checked]', 
+                        ' [not specified]']; // last entry is for UDP only
 
 IPv4.printIP = function (ip) {
     // check param for consistency

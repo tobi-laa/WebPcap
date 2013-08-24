@@ -66,3 +66,24 @@ test('number of TCP connections from test.pcap is correct', function () {
     
     assert.strictEqual(dissector.getConnectionsByArrival().length, CONNNUM);
 });
+
+test('make sure info fields have correct types', function () {
+    var dissector = new Dissector();
+    var connCount = 0;
+    var packet;
+    var data = fs.readFileSync(PATH);
+    data = bufferToArrayBuffer(data);
+    
+    readPcapGlobalHeader(data.slice(0, 24), dissector);
+    dissector.dissect(data.slice(24));
+    
+    for (var i = 1; i < dissector.getDissectedPackets().length; i++) {
+        packet = dissector.getDissectedPacket(i);
+        assert.strictEqual(typeof packet.num, 'number');
+        assert.strictEqual(typeof packet.src, 'string');
+        assert.strictEqual(typeof packet.dst, 'string');
+        assert.strictEqual(typeof packet.prot, 'string');
+        assert.strictEqual(typeof packet.orig_len,'number');
+        assert.strictEqual(typeof packet.info, 'string');
+    }
+});

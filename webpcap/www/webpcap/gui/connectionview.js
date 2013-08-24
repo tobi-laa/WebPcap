@@ -1,54 +1,48 @@
 'use strict';
+
 var conns = [];
 var connAnchor = 0;
 var pktAnchor = -1;
 
-function connectionViewSeek(direction) {
-    var tuple = connectionViewLength();
-    var length = tuple[0];
-    var anchor = tuple[1];   
+function seekConnectionView(direction) {
+    var cV = connectionViewLength();
+    var currentConnection = conns[connAnchor];
     
-    if (direction > 0 && direction >= length - anchor - maxRows) {
+    // seeking down to the very bottom
+    if (direction > 0 && direction + cV.anchor >= cV.length - maxRows) {
         autoscroll = true;
-        direction = length - anchor - maxRows;
+        // may be negative when main output is not full.. dont want that
+        direction = Math.max(cV.length - cV.anchor - maxRows, 0);
+        // we dont know the connAnchor/pktAnchor of the last row, so continue
     }
+    // seeking to the top
+    else if (direction + cV.anchor < 0) {
+        connAnchor = 0;
+        pktAnchor = -1;
+        return;
+    }
+    
+    // nothing to do
     if (direction === 0)
         return;
-    
-    var currentConnection;
     
     while (direction !== 0) {
         pktAnchor += direction;
         
-        currentConnection = conns[connAnchor];
-        
-        if (pktAnchor < -1) {
+        if (pktAnchor < -1) { // scrolling up
             direction = (pktAnchor + 2);
-            connAnchor--;
-            
-            if (connAnchor < 0) {
-                connAnchor = 0;
-                pktAnchor = -1;
-                break;
-            }
-            
+            connAnchor--;            
             currentConnection = conns[connAnchor];
-            pktAnchor = (currentConnection.packets.length * currentConnection.visible) - 1;
+            pktAnchor = currentConnection.getEffectiveLength() - 1;
         }
-        else if (pktAnchor >= currentConnection.packets.length * currentConnection.visible) {
-            direction = (pktAnchor - currentConnection.packets.length * currentConnection.visible);
+        // scrolling down
+        else if (pktAnchor >= currentConnection.getEffectiveLength()) {
+            direction = (pktAnchor - currentConnection.getEffectiveLength());
             connAnchor++;
-            
-            if (connAnchor >= conns.length) {
-                alert('BUG!')
-                connAnchor = conns.length - 1;
-                currentConnection = conns[connAnchor];
-                pktAnchor = (currentConnection.packets.length * currentConnection.visible) - 1;
-                direction = 0;
-            }            
+            currentConnection = conns[connAnchor];
             pktAnchor = -1;
         }
-        else
+        else // changing the pktAnchor was sufficient
             direction = 0;
     }
 }
@@ -60,22 +54,21 @@ function scrollConnectionView(direction) {
     autoscroll = false;
     renderNextTime = true;
     
-    connectionViewSeek(direction);
-    
-    
+    seekConnectionView(direction);
 }
 
 function updateConnectionView() {        
-    var i = connAnchor;
-    var j = pktAnchor;
+    var connNum = connAnchor;
+    var packetNum = pktAnchor;
     
     var rows = mainOutputTable.getElementsByClassName('row');
     
-    for (var k = 0; k < rows.length; k++) {
-        if (j === -1) updateConnectionHeader(i, rows[k]);
-        if (++j >= conns[i].packets.length * conns[i].visible) {
-            i++;
-            j = -1;
+    for (var rowNum = 0; rowNum < rows.length; rowNum++) {
+        if (packetNum === -1)
+            updateConnectionHeader(connNum, rows[rowNum]);
+        if (++packetNum >= conns[connNum].getEffectiveLength()) {
+            connNum++;
+            packetNum = -1;
         }
     }
 }
@@ -84,8 +77,8 @@ function renderConnectionView() {
     if (conns.length === 0)
         return;
     
-    if (selectedConnectionRow.num)
-        printConnectionDetails(selectedConnectionRow.num);
+    if (selectedConnectionRow)
+        printConnectionDetails(selectedConnectionRow);
     
     if (!renderNextTime) {
         updateConnectionView();
@@ -97,24 +90,25 @@ function renderConnectionView() {
    
     doubleBuffer.innerHTML = '';
         
-    var row, num;
+    var row;
     
     for (var i = 0; i <= maxRows; i++) {
         if (p === -1) {
-            row = printConnectionHeader(c);
-            num = conns[c].id;            
+            if (conns[c].id === selectedConnectionRow)
+                row = printConnectionHeader(c, 'selected');
+            else
+                row = printConnectionHeader(c);
         }
         else {
-            row = printRow(conns[c].packets[p], 'gray');
-            num = conns[c].packets[p].num;
+            if (conns[c].packets[p].num === selectedConnectionRow)
+                row = printRow(conns[c].packets[p], 'selected');
+            else
+                row = printRow(conns[c].packets[p], 'gray');
         }
-        doubleBuffer.appendChild(row);
-        if (num === selectedConnectionRow.num)
-            selectRow(row, num);
-        
+        doubleBuffer.appendChild(row);        
         p++;
         
-        if (p >= conns[c].packets.length * conns[c].visible) {
+        if (p >= conns[c].getEffectiveLength()) {
             p = -1;
             c++;
             if (c >= conns.length)
@@ -133,28 +127,31 @@ function renderConnectionView() {
     renderNextTime = false;
 }
 
-function printConnectionHeader(connectionNumber) {
+function printConnectionHeader(connectionNumber, customClass) {
     var connection = conns[connectionNumber];
     var row;
+    var drop, num, src, dst, prot, len, info; // columns
+    var icon;
     
-    if (!connection) {
-        return;
-        alert(connectionNumber)
-    }
+    if (!connection)
+        throw 'Connection ' + connectionNumber + ' does not exist.';
     
-    row = document.createElement('div');    
-
-    row.setAttribute('onclick','processClick(this, "' + connection.id + '")');
-    row.setAttribute('oncontextmenu','processRightClick(this, "' + connection.id + '", event, "' + connection.id + '")');
-    row.className = 'row ' + (connection.class || connection.prot);
+    row = document.createElement('div');
+    drop = document.createElement('div');
+    num  = document.createElement('div');
+    src  = document.createElement('div');
+    dst  = document.createElement('div');
+    prot = document.createElement('div');
+    len  = document.createElement('div');
+    info = document.createElement('div');
     
-    var drop = document.createElement('div');
-    var num  = document.createElement('div');
-    var src  = document.createElement('div');
-    var dst  = document.createElement('div');
-    var prot = document.createElement('div');
-    var len  = document.createElement('div');
-    var info = document.createElement('div');
+    row.addEventListener('click', function () {
+        processClick(connection.id);        
+    });
+    row.addEventListener('contextmenu', function (event) {
+        processRightClick(connection.id, event, connection.id);        
+    });
+    row.className = 'row ' + (customClass || '') + ' ' + connection.class;
        
     drop.setAttribute('class', 'col 2p');
     num.setAttribute('class', 'col 8p tr');    
@@ -164,12 +161,14 @@ function printConnectionHeader(connectionNumber) {
     len.setAttribute('class', 'col 10p tr mono');    
     info.setAttribute('class', 'col 30p');
     
-    var icon = document.createElement('span');
+    icon = document.createElement('span');
     if (connection.visible)
         icon.setAttribute('class', 'dropdown glow clicked');
     else
         icon.setAttribute('class', 'dropdown glow');
-    icon.setAttribute('onclick', 'switchVisibility(this,' + connectionNumber + ')');
+    icon.addEventListener('click', function () {
+        switchVisibility(this, connectionNumber);
+    });
     drop.appendChild(icon);    
     
     num.innerHTML  = connection.num;
@@ -197,8 +196,8 @@ function updateConnectionHeader(connectionNumber, row) {
     if (!connection || !row) 
         return;
     
-    if (selectedConnectionRow.num !== connection.id)
-        row.className = 'row ' + (connection.class || connection.prot);
+    if (selectedConnectionRow !== connection.id)
+        row.className = 'row ' + connection.class;
     
     var cols = row.getElementsByTagName('div');
     
@@ -221,9 +220,9 @@ function printConnectionDetails(id) {
     
     detailsOutput.innerHTML = '';
         
-    detailsOutput.innerHTML  = 'Last packet arrival: ' + lastPacket.printTime() + '</br>';
-    detailsOutput.innerHTML += 'Number of pkts: ' + conn.num + '</br>';
-    detailsOutput.innerHTML += 'Amount of data: ' + printSize(conn.len) + '</br>';
+    detailsOutput.innerHTML  = 'Last packet arrival: ' + lastPacket.printTime() + '<br/>';
+    detailsOutput.innerHTML += 'Number of pkts: ' + conn.num + '<br/>';
+    detailsOutput.innerHTML += 'Amount of data: ' + printSize(conn.len) + '<br/>';
 }
 
 function connectionViewLength() {
@@ -237,7 +236,7 @@ function connectionViewLength() {
     } 
     length += conns.length;
     
-    return [length, anchor];
+    return {length: length, anchor: anchor};
 }
 
 function switchVisibility(dropdown, connectionNumber) {

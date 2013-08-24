@@ -43,8 +43,6 @@ function printTime(time) {
 }
                 
 function printNum(num, base, minLen) {
-    if(num === null)
-        return '%';
     var hex = num.toString(base);
     var toReturn = '';
     for (var i = 0; i < (minLen - hex.length); i++)
@@ -58,7 +56,7 @@ function printSize(bytes) {
         bytes /= 1024;
         i++;
     }
-    return (bytes | 0) + IEC_UNITS[i];
+    return (bytes | 0) + IEC_UNITS[i]; // bytes | 0 makes it an integer..
 }
 
 function printDate(date) {
@@ -66,7 +64,36 @@ function printDate(date) {
            date.getFullYear() + ' ' + date.getHours() + ':' + 
            printNum(date.getMinutes(), 10, 2) + ':' + 
            printNum(date.getSeconds(), 10, 2);
-} 
+}
 
-if (typeof module !== 'undefined')
+function printFlag(length, flag, flagOffset, flagLength) {
+    var outputString = '';
+    var flagString = printNum(flag, 2, flagLength);
+    
+    for (var i = 0; i < flagOffset; i++) {
+        if (!(i % 4))
+            outputString += ' ';
+        outputString += '.';
+    }
+    for (var i = 0; i < flagString.length; i++) {
+        if (!((i + flagOffset) % 4))
+            outputString += ' ';
+        outputString += flagString.charAt(i);
+    }
+    for (var i = flagOffset + flagLength; i < length; i++) {
+        if (!(i % 4))
+            outputString += ' ';
+        outputString += '.';
+    }
+    
+    return outputString;
+}
+
+if (typeof module !== 'undefined') {
     module.exports.printNum = printNum;
+    module.exports.printASCII = printASCII;
+    module.exports.printASCIINoLF = printASCIINoLF;
+    module.exports.printTime = printTime;
+    module.exports.printSize = printSize;
+    module.exports.printDate = printDate;
+}

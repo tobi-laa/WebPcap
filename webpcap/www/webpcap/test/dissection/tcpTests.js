@@ -1,5 +1,5 @@
 var assert = require('assert');
-var TCPh = require('../../dissection/tcp').TCP;
+var TCP = require('../../dissection/tcp').TCP;
 
 // bogus IPv4 header values
 var ip = new DataView(new ArrayBuffer(4));
@@ -15,7 +15,7 @@ var data = new DataView(new Uint8Array(
 ]).buffer);
 
 test('dissected TCP values from self-made packet are correct', function () {
-    var tcp = new TCPh(true, data, 0, parent);
+    var tcp = new TCP(true, {}, data, 0, parent);
     
     assert.strictEqual(tcp.sport, 1337);
     assert.strictEqual(tcp.dport, 80);

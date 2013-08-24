@@ -27,9 +27,9 @@ function calculateScrollbarSize() {
         scrollbarTrackStart = packetViewAnchor;
     }
     else {
-        var array = connectionViewLength();
-        packetNumber = array[0];
-        scrollbarTrackStart = array[1];
+        var cV = connectionViewLength();
+        packetNumber = cV.length;
+        scrollbarTrackStart = cV.anchor;
     }
     
     scrollbarTrackStart = Math.min(scrollbarTrackStart * scrollbarTrack.offsetHeight / packetNumber, MAX_SCROLLTHUMB_OFFSET);
@@ -59,8 +59,10 @@ function calculateScrollbarSize() {
 } 
 
 function processMouseWheel(event) {
+    var wheelDelta;
+    
     event = window.event || event;
-    var wheelDelta = event.deltaY ? event.deltaY * 2 : event.wheelDelta / -20;
+    wheelDelta = event.deltaY ? event.deltaY * 2 : event.wheelDelta/ -20;
     scroll(wheelDelta);
     return false;
 }
@@ -76,24 +78,6 @@ function scroll(direction) {
         scrollPacketView(direction);
     else
         scrollConnectionView(direction);
-}
-
-function scrollPacketView(direction) {
-    if (packets.length === 0)
-        return;
-    
-    autoscroll = false;
-    renderNextTime = true;
-    
-    packetViewAnchor += direction;
-    
-    if (packetViewAnchor < 0)
-        packetViewAnchor = 0
-    else if (packetViewAnchor >= packets.length - maxRows) {
-        // we don't want a negative anchor
-        packetViewAnchor = Math.max(packets.length - maxRows, 0);
-        autoscroll = true;
-    }
 }
 
 function startTrackScrolling(init) {
@@ -146,21 +130,23 @@ function processMouseMove(event) {
     moveScrollThumb(event);
 }
 
-function moveScrollThumb(event) {   
+//
+function moveScrollThumb(event) {
+    var newPos;
+    
     if (!scrollThumbSelected)
         return true;
     
-    autoscroll = false;
-    
-    var newPos = (event.pageY + initScrollThumbY)
-                    / scrollbarTrack.offsetHeight;
+    autoscroll = false;    
+    newPos = (event.pageY + initScrollThumbY) / scrollbarTrack.offsetHeight;
     
     if (packetView) {
-        newPos = (packets.length * newPos) | 0;
+        newPos = (packets.length * newPos) | 0; // | 0 makes it an integer
         
-        if (newPos < 0)
-            newPos = 0;
-        else if (newPos >= packets.length - maxRows) {
+        if (newPos < 0) {
+            newPos = 0;            
+        }
+        else if (newPos >= packets.length - maxRows) { // anchor at very bottom
             newPos = packets.length - maxRows;
             autoscroll = true;
         }
@@ -169,19 +155,13 @@ function moveScrollThumb(event) {
         renderNextTime = true;
     }
     
-    else { // FIXME FIXME FIXME
-        var length = 0;
-        
-        for (var i = 0; i < conns.length; i ++) {
-            length += conns[i].packets.length * conns[i].visible;            
-        } 
-        length += conns.length;
-    
-        newPos = (length * newPos) | 0;
+    else {    
+        newPos = (connectionViewLength().length * newPos) | 0;
 
+        // scroll down from the beginning to newPos
+        // NOTE: find a more elegant way
         connAnchor = 0;
         pktAnchor = -1;        
         scrollConnectionView(newPos);
-    }        
-  
+    }  
 }

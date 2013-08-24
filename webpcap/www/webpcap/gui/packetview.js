@@ -6,43 +6,53 @@ function printPacketDetails(packetNum) {
     var packet = dissector.getDissectedPacket(packetNum);
     if (!packet) return;
 
-    
-    detailsOutput.innerHTML = '';
+    doubleBuffer.innerHTML = '';
     
     while (packet) { // print details for each header
-        detailsOutput.appendChild(packet.printDetails(packetNum));
+        doubleBuffer.appendChild(packet.printDetails(packetNum));
         packet = packet.next_header;        
     }
+    
+    detailsOutput.innerHTML = '';
+    detailsOutput.appendChild(doubleBuffer);
 }
 
-function printPayload(packetNum) {   
+function printBytes(packetNum) {
     var bytes = dissector.getRawPacket(packetNum);
-    if (!bytes) return;
-    
-    bytes = new Uint8Array(bytes);
-                
     var output = '';
     
-    var i, j;
+    if (!bytes) {
+        throw 'No packet data available for number ' + packetNum;
+    }
     
-    for (i = 0; i < bytes.length; i += 16) { // each line -> 16 bytes
-        output += printNum(i, 16, 4) + '  '; // enumerate the lines
+    bytes = new Uint8Array(bytes);
+    
+    // show the bytes in lines of 16 bytes
+    for (var line = 0; line < bytes.length; line += 16) {
+        output += printNum(line, 16, 4) + '  '; // enumerate the lines
         
-        for (j = 0; j < 16; j++) { // print bytes as hex
-            if (i + j >= bytes.length)
-                output += '   '; // keep correct indentation for acii printing
-            else
-                output += printNum(bytes[i + j], 16, 2) + ' ';
-            if (j === 7)
-                output += ' '; // double space in the middle
+        // print bytes as hex
+        for (var lineOff = 0; lineOff < 16; lineOff++) { 
+            if (line + lineOff >= bytes.length) {
+                output += '   '; // keep correct indentation for acii printing                
+            }
+            else {
+                output += printNum(bytes[line + lineOff], 16, 2) + ' ';
+            }
+            
+            if (lineOff === 7) {
+                output += ' '; // double space in the middle, looks nicer                
+            }
         }
         
-        output += ' ';
+        output += ' '; // separator between hex and ascii
         
-        for (j = 0; j < 16; j++) {// print bytes as ascii
-            if (i + j >= bytes.length)
-                break;
-            output += printASCIINoLF(bytes[i + j]);            
+        // print bytes as ascii
+        for (var lineOff = 0; lineOff < 16; lineOff++) {
+            if (line + lineOff >= bytes.length) { // we're done
+                break;                
+            }
+            output += printASCIINoLF(bytes[line + lineOff]);            
         }
         
         output += '\n';
@@ -61,14 +71,22 @@ function printRow(packet, customClass) { // customClass is additional
     var len  = document.createElement('div');
     var info = document.createElement('div');
         
-    row.setAttribute('onclick','processClick(this, ' + packet.num + ')');
-    if (packet.id)
-        row.setAttribute('oncontextmenu','processRightClick(this, ' + packet.num + ', event, "' + packet.id + '")');
-    else
-        row.setAttribute('oncontextmenu','processRightClick(this, ' + packet.num + ', event)');
-    row.setAttribute('class','row ' + (customClass || '') + ' ' + (packet.class || packet.prot));
+    row.addEventListener('click', function () {
+        processClick(packet.num);        
+    });
+    if (packet.id) {
+        row.addEventListener('contextmenu', function (event) {
+            processRightClick(packet.num, event, packet.id);            
+        });        
+    }
+    else {
+        row.addEventListener('contextmenu', function (event) {
+            processRightClick(packet.num, event);            
+        });        
+    }
+    row.setAttribute('class','row ' + (customClass || '') + ' ' + packet.class);
         
-    num.setAttribute('class', 'col 10p tr');    
+    num.setAttribute('class', 'col 10p tr');
     src.setAttribute('class', 'col 20p'); 
     dst.setAttribute('class', 'col 20p'); 
     prot.setAttribute('class', 'col 10p');    
@@ -103,10 +121,12 @@ function renderPacketView() {
     for (var i = packetViewAnchor; i <= packetViewAnchor + maxRows; i++) {
         if (i >= packets.length)
             break;
-        row = printRow(packets[i]);
+        
+        if (packets[i].num === selectedPacketRow)
+            row = printRow(packets[i], 'selected');
+        else
+            row = printRow(packets[i]);
         doubleBuffer.appendChild(row);
-        if (packets[i].num === selectedPacketRow.num)
-            selectRow(row, packets[i].num);
     }
     
     mainOutputTable.innerHTML = '';
@@ -118,4 +138,23 @@ function renderPacketView() {
         mainOutput.scrollTop = 0;
     
     renderNextTime = false;
+}
+
+function scrollPacketView(direction) {
+    if (packets.length === 0)
+        return;
+    
+    autoscroll = false;
+    renderNextTime = true;
+    
+    packetViewAnchor += direction;
+    
+    if (packetViewAnchor < 0) {
+        packetViewAnchor = 0;
+    }
+    else if (packetViewAnchor >= packets.length - maxRows) {
+        // we don't want a negative anchor (happens when main output not 'full')
+        packetViewAnchor = Math.max(packets.length - maxRows, 0);
+        autoscroll = true;
+    }
 }

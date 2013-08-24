@@ -58,9 +58,9 @@ Packet.prototype.printDetails = function () {
     nodes.push(document.createTextNode(
         [
         'Arrival Time: ' + this.printTime(),
-        'Frame Length: ' + this.incl_len + ' bytes (' + (this.incl_len * 8) + 
+        'Frame Length: ' + this.orig_len + ' bytes (' + (this.orig_len * 8) + 
             ' bits)',
-        'Captured Length: ' + this.orig_len + ' bytes (' + (this.orig_len * 8) +
+        'Captured Length: ' + this.incl_len + ' bytes (' + (this.incl_len * 8) +
             ' bits)'
         ].join('\n')
     ));

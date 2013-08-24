@@ -9,10 +9,12 @@ if (typeof require !== 'undefined') {
     var Ethernet = require('./ethernet').Ethernet;
     Ethernet.TYPES = require('./ethernet').TYPES;
     Ethernet.printMAC = require('./ethernet').printMAC;
+    var printNum = require('../formattedoutput').printNum;
 }
 
 function DNS(littleEndian, packet, dataView, offset, parent) {
     this.success = true; // indicator for successful dissection
+    packet.class = 'DNS';
     
     this.id = dataView.getUint16(offset, littleEndian);
     this.flags = dataView.getUint16(offset + 2, littleEndian);
@@ -43,7 +45,7 @@ function DNS(littleEndian, packet, dataView, offset, parent) {
                                 offset + DNS.MIN_HEADER_LENGTH);
     
     // set general information
-    packet.class = packet.prot = 'DNS';
+    packet.prot = 'DNS';
     packet.info = this.toString();
     
     this.next_header = null;
@@ -105,7 +107,7 @@ DNS.prototype.printDetails = function () {
                     'Data: ' + this.otherRecords[j][i].rData
                 ].join('\n'));
             
-            nestedNodes.push(createDetails(this.questions[i].name, 
+            nestedNodes.push(createDetails(this.otherRecords[j][i].name, 
                                             [nestedNode]));
         }
         

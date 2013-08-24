@@ -14,23 +14,24 @@ var createURI;
 var pcapGlobalHeader = null;
 
 function initFileIO() {
-    if (typeof window !== 'undefined') {
-        if (Blob && window.URL && URL.createObjectURL) {
-            createURI = createBlobURI;
-        }
-        else {
-            createURI = createDataURI;
-            console.log('Warning: Using data URIs to download files (slow!).');
-        }
-    }    
+    if (typeof window !== 'undefined' && Blob && window.URL && 
+        URL.createObjectURL) 
+    {
+        createURI = createBlobURI;
+    }
+    else {
+        createURI = createDataURI;
+        console.log('Warning: Using data URIs to download files (slow!).');        
+    }
 }
 
+// FIXME: does not work 100% correct, for instance for "quoted" tokens
 function readCSVFile(fileURL, numIndex, nameIndex) {
     var req;
     var array = [];
     
     if (typeof window === 'undefined' || !window.XMLHttpRequest) {
-        console.log('Warning: Empty array returned.');
+        console.log('Warning: Empty array returned (readCSVFile)');
         return array;
     }
     
@@ -44,9 +45,12 @@ function readCSVFile(fileURL, numIndex, nameIndex) {
         for (var i = 0; i < lines.length; i++) {
             tokens = lines[i].split(','); // comma separated
             
-            // skip empty lines/comments/and so forth
-            if (!tokens[nameIndex] || isNaN(index = Number(tokens[numIndex])))
-                continue;
+            // skip empty lines/comments/and so forth, also duplicate entries
+            if (!tokens[nameIndex] || isNaN(index = Number(tokens[numIndex])) ||
+                array[index])
+            {
+                continue;                
+            }
             
             array[index] = tokens[nameIndex];
         }
@@ -103,12 +107,22 @@ function readPcapGlobalHeader(data, dissector) {
     
     switch (magicNumber) {
     case MAGIC_NUMBER_BIG_ENDIAN_MS:
+        dissector.setNanoSecondAccuracy(false);
+        dissector.setLittleEndian(false);
+        littleEndian = false;
+        break;
     case MAGIC_NUMBER_BIG_ENDIAN_NS:
+        dissector.setNanoSecondAccuracy(true);
         dissector.setLittleEndian(false);
         littleEndian = false;
         break;
     case MAGIC_NUMBER_LITTLE_ENDIAN_MS:
+        dissector.setNanoSecondAccuracy(false);
+        dissector.setLittleEndian(true);
+        littleEndian = true;
+        break;
     case MAGIC_NUMBER_LITTLE_ENDIAN_NS:
+        dissector.setNanoSecondAccuracy(true);
         dissector.setLittleEndian(true);
         littleEndian = true;
         break;

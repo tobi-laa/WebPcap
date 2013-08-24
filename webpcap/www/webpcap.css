@@ -137,6 +137,10 @@ body {
     left: 0.2%;
 }
 
+.textfield {
+    float: left;
+}
+
 .buttonicon {
     width: 100%; /* we're mostly using svg's, so this is crucial */
     float: left; /* fit it in nicely */
@@ -200,6 +204,7 @@ input[type="checkbox"]:checked ~ div { /* if clicked: show */
     /* % does not work nicely for shadows, but rem will be relative.. */
     box-shadow: 0.15rem 0.15rem 0.3rem 0rem black;    
     font-size: 0.8rem; /* a bit smaller than usual text */
+    cursor: default;
 }
 /* this is the style for entries of the context menu */
 .contextentry {

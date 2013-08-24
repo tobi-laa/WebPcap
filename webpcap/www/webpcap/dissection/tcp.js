@@ -118,36 +118,37 @@ function buildPseudoHeader(littleEndian, dataView, offset, parent) {
     }
 }
 
-TCP.prototype = {
-    getHeaderLength: function () {
-        return 4 * (this.off_rsd >>> 4);
-    },
-    printPorts: function() {
-        return (TCP.PORT_NAMES[this.sport] || this.sport) + ' ⊳ ' +
-               (TCP.PORT_NAMES[this.dport] || this.dport);
-    },
-    printFlags: function() {
-        if (!this.flags)
-            return '';
-        
-        var toReturn = [];
-        
-        if (this.NS)  toReturn.push('NS');
-        if (this.CWR) toReturn.push('CWR');
-        if (this.ECE) toReturn.push('ECE');
-        if (this.URG) toReturn.push('URG');
-        if (this.ACK) toReturn.push('ACK');
-        if (this.PSH) toReturn.push('PSH');
-        if (this.RST) toReturn.push('RST');
-        if (this.SYN) toReturn.push('SYN');
-        if (this.FIN) toReturn.push('FIN');
-        
-        return '[' + toReturn.join(', ') + ']';
-    },
-    toString: function () {
-        return this.printPorts() + ' ' + this.printFlags();
-    }
-};
+TCP.prototype.getHeaderLength =  function () {
+    return 4 * (this.off_rsd >>> 4);
+}
+
+TCP.prototype.printPorts = function() {
+    return (TCP.PORT_NAMES[this.sport] || this.sport) + ' ⊳ ' +
+            (TCP.PORT_NAMES[this.dport] || this.dport);
+}
+
+TCP.prototype.printFlags = function() {
+    if (!this.flags)
+        return '';
+    
+    var flagNames = [];
+    
+    if (this.NS)  flagNames.push('NS');
+    if (this.CWR) flagNames.push('CWR');
+    if (this.ECE) flagNames.push('ECE');
+    if (this.URG) flagNames.push('URG');
+    if (this.ACK) flagNames.push('ACK');
+    if (this.PSH) flagNames.push('PSH');
+    if (this.RST) flagNames.push('RST');
+    if (this.SYN) flagNames.push('SYN');
+    if (this.FIN) flagNames.push('FIN');
+    
+    return flagNames.join(', ');
+}
+    
+TCP.prototype.toString = function () {
+    return this.printPorts() + ' [' + this.printFlags() + ']';
+}
 
 TCP.prototype.printDetails = function () {
     var title = 'Transmission Control Protocol';
@@ -160,7 +161,8 @@ TCP.prototype.printDetails = function () {
         'Sequence number: ' + this.seqn,
         'Acknowledgment number: ' + this.ackn,
         'Header length: ' + this.getHeaderLength(),
-        'Flags: 0x' + printNum(this.flags, 16, 3) + ' ' + this.printFlags(),
+        'Flags: 0x' + printNum(this.flags, 16, 3) + ' (' + this.printFlags() 
+            + ')',
         'Window size value: ' + this.wsize,                         
         'Checksum: 0x' + printNum(this.csum, 16, 4) + 
             TCP.CHECKSUM_VALUES[this.val]

@@ -1,11 +1,15 @@
 'use strict';
 
 function HTTP(littleEndian, packet, data, offset, parent) {
+    packet.class = 'HTTP';
+    
     data = data.buffer; // FIXME not working with DataView, change that later
     this.success = true; // indicator for successful dissection
     
-    if (data.byteLength - offset < 4)
-        return;
+    if (data.byteLength - offset < 4) {
+        this.success = false;
+        return; // stop right here
+    }
     
     var stringView = String.fromCharCode.apply(null, 
                                                new Uint8Array(data, offset, 4));
@@ -27,7 +31,7 @@ function HTTP(littleEndian, packet, data, offset, parent) {
     }
     
     // set some general information
-    packet.class = packet.prot = 'HTTP';
+    packet.prot = 'HTTP';
     packet.info = this.toString();
     
     this.next_header = null;
@@ -51,6 +55,8 @@ HTTP.prototype = {
             this.hlen += tokens[i].length + 2;
             this.headers.push(tokens[i]);
         }
+        
+        this.success = false;
     },
     printDetails: function (pkt_num) {
         var details = document.createElement('div');

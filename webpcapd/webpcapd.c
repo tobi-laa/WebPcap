@@ -8,7 +8,14 @@
 #include <ifaddrs.h>
 #include <pcap.h>
 
-#define SNAP_LEN 65535  /* should be enough to hold any packet */
+/* 
+ * Concerning SNAP_LEN: The common value 65535 was chosen before, but did cause
+ * data loss in VERY rare situations; I suspect that is because the SLL header
+ * is 2 bytes bigger than the Ethernet header (as that was the amount of data
+ * that was lost). Thus SNAP_LEN is now 65535 + 2. Should this still prove
+ * too small a value, I will increase it again.
+ */
+#define SNAP_LEN 65537  /* should be enough to hold any packet */
 #define PROMISC 0       /* capture in promiscuous mode or not? */
 #define TO_MS 1024      /* based on the value tcpdump uses... */
 
@@ -37,6 +44,8 @@ char *read_user_filter(char * buffer);
 char *create_default_filter(char * user_filter, int port, int ws_port);
 int close_session(int exit_code);
 void *increase_buffer_size(void *old_buffer);
+void pcap_dump_and_flush(u_char *user, const struct pcap_pkthdr *h, 
+                         const u_char *sp);
 
 /* everything to be closed and freed is global */
 char *buffer; /* arbitrary buffer */
@@ -182,9 +191,17 @@ int main(int argc, char *argv[]) {
     write(client, OKAY, 1);
    
     /* this is basically an infinte loop atm */
-    pcap_loop(cap_handle, -1, pcap_dump, (u_char *) client_dumper);
+    pcap_loop(cap_handle, -1, pcap_dump_and_flush, (u_char *) client_dumper);
     
     return close_session(-1);
+}
+
+/* don't forget to flush! ;-) otherwise buffered packets may not be sent */
+void pcap_dump_and_flush(u_char *user, const struct pcap_pkthdr *h, 
+                         const u_char *sp) 
+{
+    pcap_dump(user, h, sp);
+    pcap_dump_flush(client_dumper);
 }
 
 char* read_user_filter(char * buffer) {

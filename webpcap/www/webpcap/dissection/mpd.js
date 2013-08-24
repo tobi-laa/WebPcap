@@ -9,10 +9,14 @@
 
 function MPD(littleEndian, packet, data, offset, parent) {
     data = data.buffer;
+    
+    packet.class = 'MPD';
     this.success = true; // indicator for successful dissection
     
-    if (data.byteLength - offset < 2)
-        return;
+    if (data.byteLength - offset < 2) {
+        this.success = false;
+        return; // stop right here
+    }
     
     var cmds = String.fromCharCode.apply(null, new Uint8Array(data, offset));
 
@@ -32,7 +36,7 @@ function MPD(littleEndian, packet, data, offset, parent) {
     }
     
     // set general information
-    packet.prot = packet.class = 'MPD';
+    packet.prot = 'MPD';
     packet.info = this.toString();
     
     this.next_header = null;

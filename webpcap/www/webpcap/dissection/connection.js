@@ -24,6 +24,7 @@ function Connection(num, packet, data, tlHeader) {
     this.dport = tlHeader.dport;
     this.len = packet.orig_len;
     this.prot = packet.prot;
+    this.class = packet.prot; // use prot to avoid special packet colors (SYN..)
     this.visible = 0;
     this.info = tlHeader.printPorts();
     
@@ -35,13 +36,17 @@ function Connection(num, packet, data, tlHeader) {
     // this.seqn = []; // sequence numbers of next expected segments
 }
 
+Connection.prototype.getEffectiveLength = function () {
+    return this.visible * this.packets.length; // if not visible, length is 0
+}
+
 Connection.prototype.update = function (newPacket) {
     this.packets.push(newPacket);
     this.len += newPacket.orig_len;
 };
 
 Connection.prototype.processSegment = function (packet, data, offset, parent, tlHeader) {
-    if (tlHeader.SYN) // skip syn packages; there's no payload
+    if (tlHeader.SYN && !tlHeader.ACK) // skip syn packages; there's no payload
         return;
     
     var seqn;     // packet's sequence number 
@@ -55,8 +60,9 @@ Connection.prototype.processSegment = function (packet, data, offset, parent, tl
         nextSeqn += parent.tlen - tlHeader.getHeaderLength() - parent.getHeaderLength();
     else if (parent.plen) // IPv6, payload length
         nextSeqn += parent.plen - tlHeader.getHeaderLength();
-    else // as a last resort, calculate it like this
+    else {// as a last resort, calculate it like this
         nextSeqn += packet.orig_len + Pcaph.HLEN - offset;
+    }
     
     if (seqn === nextSeqn) // no payload, we're done
         return;
@@ -89,6 +95,7 @@ Connection.prototype.addSegment = function (srcOrDst, data, ackn, seqn, nextSeqn
         data: data,
         ackn: ackn,
         seqn: seqn,
+        nextSeqn: nextSeqn,
         offset: offset
     };
     
@@ -148,18 +155,24 @@ Connection.prototype.bufferSegment = function (srcOrDst, data, ackn, seqn, nextS
         buffer.splice(start, 0, segment);
     // else: this is a duplicate
     
-    if (buffer.length > 20) // keep the buffer small
+    if (buffer.length > 128) // keep the buffer small
         buffer.shift();
 }
 
 Connection.prototype.getContent = function (srcOrDst) {
+    var segments = this.contents[srcOrDst];
+    var segmentEnd;
     var data = [];
     
-    for (var i = 0; i < this.contents[srcOrDst].length; i++)
-        data[i] = this.contents[srcOrDst][i].data.slice(
-                    this.contents[srcOrDst][i].offset);
+    for (var i = 0; i < segments.length; i++) {
+        // some packets can have trailing bytes not belonging to the TCP segment
+        // that is why segmentEnd must be calculated
+        segmentEnd = segments[i].offset + segments[i].nextSeqn 
+                     - segments[i].seqn;
+        data[i] = segments[i].data.slice(segments[i].offset, segmentEnd);        
+    }
     
-    return mergeBuffers(data);
+    return data;
 }
 
 Connection.prototype.mergeContent = function () {

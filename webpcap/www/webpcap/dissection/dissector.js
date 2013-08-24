@@ -20,11 +20,7 @@ if (typeof require !== 'undefined') {
 
 function Dissector() {
     this.cache = null; // cache for previously received data
-    this.init();
-}
-
-Dissector.prototype.init = function () {
-    // don't touch this.cache, that might break everything
+    
     this.dissectedPackets = [];
     this.rawPackets = [];
     
@@ -37,6 +33,16 @@ Dissector.prototype.init = function () {
     this.littleEndian = true;
     this.nanoSecondAccuracy = false; // default is microseconds
     this.validateChecksums = false; // avoid offloading bugs...
+}
+
+Dissector.prototype.reset = function () {
+    // don't touch this.cache, that might break everything
+    
+    this.dissectedPackets = [];
+    this.rawPackets = [];
+    this.connectionsById = {};
+    this.connectionsByArrival = [];
+    this.counter = 1;
 }
 
 Dissector.prototype.setLinkLayerType = function (newType) {
@@ -229,6 +235,7 @@ Dissector.prototype.handleConnection = function (packet, dataView, offset,
                                     packet,
                                     dataView.buffer,
                                     transportLayerHeader);
+        
         this.connectionsById[packet.id] = connection;
         this.connectionsByArrival.push(connection);
     }
@@ -300,6 +307,8 @@ function (packet, dataView, offset, parent) {
             return applicationLayer;
         }
     }
+    applicationLayer = null; // FIXME return no header when nothing works
+    
     return applicationLayer;
 } 
 

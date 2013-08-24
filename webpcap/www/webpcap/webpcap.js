@@ -8,9 +8,7 @@ var webSocket = null;
 
 var startCapture = document.getElementById('startcap');
 
-var serverFilter;
-
-var cache = null;
+var cache = new ArrayBuffer(0);
 
 var dissector = null;
 
@@ -18,6 +16,7 @@ var mainOutput = document.getElementById('output');
 var mainOutputTable  = document.getElementById('table');
 var detailsOutput = document.getElementById('details');
 var bytesOutput = document.getElementById('raw');
+var filterField = document.getElementById('filterfield');
 
 var packetView = false; // connection view as default
 var contextMenu = document.getElementById('contextmenu');
@@ -42,7 +41,7 @@ function initWebPcapJS () {
     dissector = new Dissector();
     initJSEvents();    
     startRendering();
-    switchConnection();
+    // these refs are used by packet and connection view
     packets = dissector.getDissectedPackets();
     conns = dissector.getConnectionsByArrival();
 }
@@ -52,106 +51,224 @@ function initJSEvents() {
     document.addEventListener('click', closeContextMenu);
     document.addEventListener('mouseup', processMouseUp);
     document.addEventListener('mousemove', processMouseMove);    
-    document.getElementById('startcap').addEventListener('click', switchConnection);
-    document.getElementById('clearcap').addEventListener('click', dissector.init());
+    document.getElementById('startcap').addEventListener(
+        'click', openWebSocket);
+    document.getElementById('clearcap').addEventListener('click',
+        function () {
+            dissector.reset();
+            packets = dissector.getDissectedPackets();
+            conns = dissector.getConnectionsByArrival();
+            table.innerHTML = '';
+            autoscroll = true;
+            renderNextTime = true;
+        });
     document.getElementById('savecap').addEventListener('click', saveCapture);
-    document.getElementById('loadcap').addEventListener('click', function () {simulateClickOn(document.getElementById('fileinput'));});
-    document.getElementById('fileinput').addEventListener('change', function () {readPcapFile(this.files[0], dissector);});
+    document.getElementById('loadcap').addEventListener('click', 
+        function () {
+            simulateClickOn(document.getElementById('fileinput'));            
+        });
+    
+    document.getElementById('fileinput').addEventListener('change', 
+        function () {
+            readPcapFile(this.files[0], dissector);
+            this.files = [];            
+        });
+    
     document.getElementById('switchview').addEventListener('click', switchView);
-    document.getElementById('filterform').addEventListener('submit', processFilter);
-    document.getElementById('output').addEventListener('contextmenu', function (event) {event.preventDefault();}, false);
-    document.getElementById('output').addEventListener('mousewheel', processMouseWheel);
-    document.getElementById('output').addEventListener('wheel', processMouseWheel);
-    document.getElementById('table').addEventListener('contextmenu', function (event) {event.preventDefault();}, false);
-    document.getElementById('scrollbar-track').addEventListener('mousedown', function () {startTrackScrolling(true);});
-    document.getElementById('scroll-thumb').addEventListener('mousedown', selectScrollThumb);
-    document.getElementById('scrollbar-button-up').addEventListener('mousedown', function () {startScrolling(-1)});
-    document.getElementById('scrollbar-button-down').addEventListener('mousedown', function () {startScrolling(1)});
-    document.getElementById('contextmenu').addEventListener('selectstart', function (event) {event.preventDefault();}, false);
+    document.getElementById('filterfield').addEventListener('keydown', 
+        function (event) {
+            if (event.keyCode === 13) { // ENTER
+                if (webSocket)
+                    closeWebSocket();
+                openWebSocket();
+            }
+        }, false);
+    
+    document.getElementById('output').addEventListener('contextmenu', 
+        function (event) {
+            event.preventDefault();            
+        }, false);
+    
+    document.getElementById('output').addEventListener(
+        'mousewheel', processMouseWheel);
+    document.getElementById('output').addEventListener(
+        'wheel', processMouseWheel);
+    document.getElementById('table').addEventListener('contextmenu', 
+        function (event) {
+            event.preventDefault();            
+        }, false);
+    
+    document.getElementById('scrollbar-track').addEventListener('mousedown', 
+        function () {
+            startTrackScrolling(true);
+        });
+    
+    document.getElementById('scroll-thumb').addEventListener(
+        'mousedown', selectScrollThumb);
+    document.getElementById('scrollbar-button-up').addEventListener('mousedown', 
+        function () {
+            startScrolling(-1);            
+        });
+    
+    document.getElementById('scrollbar-button-down').addEventListener(
+        'mousedown', function () {
+            startScrolling(1);            
+        });
+    document.getElementById('contextmenu').addEventListener('selectstart', 
+        function (event) {
+            event.preventDefault();            
+        }, false);
 }
 
+function openWebSocket() {
+    if (webSocket) {
+        closeWebSocket();
+        console.log('Warning: WebSocket appears to still have been open.');
+    }
+    webSocket = new WebSocket(webSocketURL);
+    webSocket.binaryType = 'arraybuffer';
+    webSocket.onopen = onWebSocketOpen;
+    webSocket.onclose = onWebSocketClose;
+    webSocket.onerror = onWebSocketClose;
+    webSocket.onmessage = onFirstMessage;   
+}
+
+function closeWebSocket() {
+    if (!webSocket) {
+        console.log('Warning: WebSocket has already been closed.');
+        return;
+    }
+    webSocket.close(); 
+    webSocket = null;    
+}
+
+// there are three onMessage methods to avoid having an if(...) for each packet
+
+// onFirstMessage: process filter response code
+// onSecondMessage: read pcap global header
+// onMessage: dissect packets
+
 function onFirstMessage(msg) {
-    switch (String.fromCharCode(new Uint8Array(msg.data, 0, 1)[0])) {
-    case 'O':  
-        if (serverFilter)
-            filterField.style.backgroundColor = '#afffaf';
-        webSocket.onmessage = onSecondMessage;
-        onSecondMessage({data: msg.data.slice(1)});
+    var serverResponse;
+    
+    if (msg.data.byteLength <= 0) {// that's wrong.. but next pkt might be fine
+        console.log('Warning: Empty message received.');
+        return;
+    }
+    
+    serverResponse = printASCII(new DataView(msg.data).getUint8(0));
+    // see how the server responded
+    switch (serverResponse) {
+    case 'O':
+        try {
+            if (filterField.value)
+                filterField.style.backgroundColor = '#afffaf';
+            onSecondMessage({data: msg.data.slice(1)});
+            webSocket.onmessage = onSecondMessage;
+        }
+        catch (exception) {
+            throw exception;
+        }
         return;
     case 'E':
-    default:
-        if (serverFilter)
+        if (filterField.value)
             filterField.style.backgroundColor = '#ffafaf';
-        switchConnection();
+        closeWebSocket();
         return;
+    default:
+        closeWebSocket();
+        throw 'Invalid server response.';
     }
 }
 
-function onSecondMessage(msg) {    
+function onSecondMessage(msg) {
+    // unlikely, but we may need to wait until 24 bytes were received
     cache = mergeBuffers([cache, msg.data]);
+    
     if (cache.byteLength < 24)
         return;
     
-    readPcapGlobalHeader(cache, dissector);
-    webSocket.onmessage = onWebSocketMessage;
-    dissectMessage(cache.slice(24));
+    try {
+        readPcapGlobalHeader(cache, dissector);
+        dissectMessage(cache.slice(24));
+        webSocket.onmessage = onMessage;    
+    }
+    catch (exception) {
+        throw exception;        
+    }
 }
 
-function onWebSocketMessage(msg) {
+function onMessage(msg) {
     dissectMessage(msg.data);
 }
 
 function dissectMessage(data) {
-    var oldLength, oldAnchor, length, anchor;
+    var oldLength, oldAnchor;
+    var newLength, newAnchor;
     
-    if (packetView) oldLength = packets.length;
+    // get current values for length and anchor
+    if (packetView) {
+        oldLength = packets.length;
+    }
     else {
-        var tuple = connectionViewLength();
-        oldLength = tuple[0];
-        oldAnchor = tuple[1];
+        var cV = connectionViewLength();
+        oldLength = cV.length;
+        oldAnchor = cV.length;
     }
     
+    // do some dissecting... this may no complete packet, but also several
     dissector.dissect(data);
     
+    // get new values for length and anchor
     if (packetView)
-        length = packets.length;
+        newLength = packets.length;
     else {
-        var tuple = connectionViewLength();
-        length = tuple[0];
-        anchor = tuple[1];
+        var cV = connectionViewLength();
+        newLength = cV.length;
+        newAnchor = cV.anchor;
     }
     
-    if (oldLength === length)
+    // take old and new values and decide if a visual update is necessary
+    if (oldLength === newLength) // no new packets, no update needed
         return;
+    
     if (autoscroll) {
         if (packetView) {
             // we don't want a negative anchor     
-            packetViewAnchor = Math.max(0, packets.length - maxRows);
+            packetViewAnchor = Math.max(0, newLength - maxRows);
             renderNextTime = true;
         }
         else {
-            connectionViewSeek(Math.max(0, length - anchor - maxRows));
+            seekConnectionView(Math.max(0, newLength - newAnchor - maxRows));
             renderNextTime = true;
         }
     }
+    // no autoscroll + packetView --> no visual update
     else if (!packetView) {
         // FIXME: what happens if connection is extended BELOW anchor...
-        if (oldAnchor === anchor && oldLength - oldAnchor >= maxRows)
-            return;
+        if (oldAnchor === newAnchor && oldLength - oldAnchor >= maxRows) {
+            return;            
+        }
         renderNextTime = true;
     }
 }  
 
 function onWebSocketOpen() {
-    webSocket.send(serverFilter || 'none\0');
+    webSocket.send((filterField.value ? filterField.value : 'none') + '\0');
+    
     startCapture.setAttribute('title', 'Stop the running live capture');
+    startCapture.removeEventListener('click', openWebSocket);
+    startCapture.addEventListener('click', closeWebSocket);
     startCapture.innerHTML = '<img class="glow buttonicon" src="img/media-' + 
                              'playback-stop.svgz" alt="Stop capture">';
-}
     
-function onWebSocketClose() {
-    webSocket = null;
+    startCapture.addEventListener
+}
+
+function onWebSocketClose() {    
     startCapture.setAttribute('title', 'Start a new live capture');
+    startCapture.removeEventListener('click', closeWebSocket);
+    startCapture.addEventListener('click', openWebSocket);
     startCapture.innerHTML = '<img class="glow buttonicon" src="img/media-' +
                              'record.svgz" alt="Start capture">';
     cache = null;
@@ -194,23 +311,18 @@ function processResize() {
     renderNextTime = true;    
 }
 
-function processFilter() {
-    serverFilter = filterField.value + '\0';
-    return false;
-}
-
 function simulateClickOn(node) {
     var mouseClick; // event to 'click' with
     
-    mouseClick = new MouseEvent('click'); 
+    mouseClick = document.createEvent('MouseEvent');
+    mouseClick.initMouseEvent(
+        'click', false, false, null, 0, 0, 0, 0, 0, false, false, false, false, 
+        1, null);    
     
     node.dispatchEvent(mouseClick);    
 }
 
 function downloadFileFromURI(resource, filename) {
-    if (!resource)
-        throw 'No resource specified to download from.';
-    
     var tmpLink = document.createElement('a'); // link to be 'clicked' on
     
     if (filename)
@@ -218,20 +330,6 @@ function downloadFileFromURI(resource, filename) {
     tmpLink.href = resource;
     
     simulateClickOn(tmpLink); //'click' on the link
-}
-
-function switchConnection() {
-    if(webSocket) {
-        webSocket.close();
-        webSocket = null;
-        return;
-    }
-    webSocket = new WebSocket(webSocketURL);
-    webSocket.binaryType = 'arraybuffer';
-    webSocket.onopen = onWebSocketOpen;
-    webSocket.onclose = onWebSocketClose;
-    webSocket.onerror = onWebSocketClose;
-    webSocket.onmessage = onFirstMessage;        
 }
 
 function followStream(id) {  
@@ -260,17 +358,14 @@ function initGUI() {
     window.cancelAnimationFrame =  window.cancelAnimationFrame ||
                                    window.cancelTimeout;
 
+    // create a pseudo-requestAnimationFrame method
     if (!window.requestAnimationFrame) {
-        // create a pseudo-requestAnimationFrame method
-        window.requestAnimationFrame = 
+        window.requestAnimationFrame = (
             function (callback) {
                 return setTimeout(callback, 40); // roundabout 25 FPS
-            }
+            });
             
-        alert('Hi there!\n' +
-            'Your browser does not support the nifty method ' +
-            'requestAnimationFrame, so I will render your session ' +
-            'via setTimeout.');
+        console.log('Warning: Using setTimeout for rendering.');
     }
 }
 
@@ -282,70 +377,32 @@ function startRendering() {
     renderThread = window.requestAnimationFrame(render);
 }
 
-function closeContextMenu() {
-    contextMenu.className = 'hidden';
-}
-
-function selectRow(row, num) {
-    var selectedRow;
-    if (packetView)
-        selectedRow = selectedPacketRow;
-    else
-        selectedRow = selectedConnectionRow;
-    
-    if (selectedRow.row)
-        selectedRow.row.setAttribute('class', selectedRow.class);
-    selectedRow.class = row.className;    
-    selectedRow.row = row;
-    selectedRow.num = num;
-    
-    row.setAttribute('class','row selected');
-}
-
-function processClick(row, num) {
-    console.log(event);
-    selectRow(row, num);
-    
-    if (packetView) {
-        printPacketDetails(num);
-        printPayload(num);
-        return;
-    }
-    
-    if (dissector.getConnectionById(num)) {
-        printConnectionDetails(num);
-        bytesOutput.innerHTML = '';
-        return;
-    }
-    
-    printPacketDetails(num);
-    printPayload(num);
-}
-
-function processRightClick(row, num, event, id) {
-    processClick(row, num);
-    
+function openContextMenu(id, xPos, yPos) {
     // skip non-UDP, non-TCP packets
     if (!id || !dissector.getConnectionsById()[id])
-        return false;
+        return;
     
-    var follow, showContent, downloadSrcContent, downloadDstContent;
+    // the rows of the context menu    
+    var followStream;
+    var showContent;
+    var downloadSrcContent, downloadDstContent;
     
-
-    
-    follow = document.createElement('div');
-    follow.setAttribute('onclick','followStream("' + id + '")');
-    follow.setAttribute('class', 'contextentry');
+    followStream = document.createElement('div');
+    followStream.setAttribute('onclick','followStream("' + id + '")');
+    followStream.setAttribute('class', 'contextentry');
     
     if (followID === id)
-        follow.innerHTML = 'Unfollow';
+        followStream.innerHTML = 'Unfollow';
     else
-        follow.innerHTML = 'Follow this stream';
+        followStream.innerHTML = 'Follow this stream';
     
     doubleBuffer.innerHTML = '';
-    doubleBuffer.appendChild(follow);
+    doubleBuffer.appendChild(followStream);
     
-    if (dissector.getConnectionsById()[id].contents) {
+    if (dissector.getConnectionsById()[id].contents && 
+        (dissector.getConnectionsById()[id].contents[0].length || 
+         dissector.getConnectionsById()[id].contents[1].length))
+    {
         showContent = document.createElement('div');
         
         showContent.setAttribute('onclick','showContent("' + id + '")');
@@ -377,24 +434,51 @@ function processRightClick(row, num, event, id) {
 
     contextMenu.className = '';
     contextMenu.innerHTML = '';
-    contextMenu.style.left = event.pageX + 'px';
-    contextMenu.style.top = event.pageY + 'px';
+    contextMenu.style.left = xPos + 'px';
+    contextMenu.style.top = yPos + 'px';
     contextMenu.appendChild(doubleBuffer);
     
+    
+    return;
+}
+
+function closeContextMenu() {
+    contextMenu.className = 'hidden'; // it's there, you just dont see it! ;-)
+}
+
+function selectRow(num) {
+    var selectedRow;
+    
+    if (packetView)
+        selectedPacketRow = num;
+    else
+        selectedConnectionRow = num;
+    
+    renderNextTime = true;
+}
+
+function processClick(num) {
+    selectRow(num);
+    
+    // which means: this is a packet
+    if (packetView || !dissector.getConnectionById(num)) {
+        printPacketDetails(num);
+        printBytes(num);
+        return;
+    }
+    
+    printConnectionDetails(num);
+    bytesOutput.innerHTML = '';
+}
+
+function processRightClick(num, event, id) {
+    processClick(num);
+    openContextMenu(id, event.pageX, event.pageY);
     return false;
 }
 
 function downloadContent(id, srcOrDst) {
-    var contents = dissector.getConnectionsById()[id].contents[srcOrDst];
-    
-    if (contents.length === 0)
-        return;
-    
-    var data = [];
-    
-    for (var i = 0; i < contents.length; i++)
-        data[i] = contents[i].data.slice(contents[i].offset);
-        
+    var data = dissector.getConnectionById(id).getContent(srcOrDst);       
     downloadFileFromURI(createURI('application/x-download', data), id);
 }
 
@@ -405,6 +489,7 @@ function showContent(id) {
         return;
     
     var data = [];
+    var mergedContent;
     var srcOrDst = contents[0].srcOrDst;
         
     var box = document.createElement('div');
@@ -412,11 +497,11 @@ function showContent(id) {
     
     for (var i = 0; i < contents.length; i++) {
         if (srcOrDst !== contents[i].srcOrDst) {
-            data = new Uint8Array(mergeBuffers(data));
+            mergedContent = new Uint8Array(mergeBuffers(data));
             
             var text = '';
-            for (var j = 0; j < data.length; j++)
-                text += printASCII(data[j]);
+            for (var j = 0; j < mergedContent.length; j++)
+                text += printASCII(mergedContent[j]);
 
             var span = document.createElement('span');
             span.className = ((srcOrDst && 'src') || 'dst') + 'content';
@@ -429,11 +514,11 @@ function showContent(id) {
         }
         data.push(contents[i].data.slice(contents[i].offset));
     }
-    data = new Uint8Array(mergeBuffers(data));
+    mergedContent = new Uint8Array(mergeBuffers(data));
     
     var text = '';
-    for (var j = 0; j < data.length; j++)
-        text += printASCII(data[j]);
+    for (var j = 0; j < mergedContent.length; j++)
+        text += printASCII(mergedContent[j]);
 
     var span = document.createElement('span');
     span.className = ((srcOrDst && 'src') || 'dst') + 'content';
@@ -453,7 +538,7 @@ function render() {
     }
     calculateScrollbarSize();
     
-    window.requestAnimationFrame(render);
+    renderThread = window.requestAnimationFrame(render);
 }
 
 function switchView() {
