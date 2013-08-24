@@ -1,8 +1,12 @@
 'use strict';
-if (typeof require !== 'undefined')
-    var printNum = require('../formattedoutput').printNum;
 
-function IPv6(littleEndian, dataView, offset) {    
+if (typeof require !== 'undefined') {
+    var printNum = require('../formattedoutput').printNum;
+    var IPv4 = require('./ipv4').IPv4;
+    IPv4.PROTOCOLS = require('./ipv4').PROTOCOLS;
+}
+
+function IPv6(littleEndian, packet, dataView, offset) {    
     this.v = (dataView.getUint8(offset) & 0xF0) >> 4; // version
     // this.v_tc_fl = ;        // version, traffic class, flow label
     this.plen = dataView.getUint16(offset + 4, littleEndian); // payload length
@@ -13,17 +17,21 @@ function IPv6(littleEndian, dataView, offset) {
         
     this.littleEndian = littleEndian; // store for IP printing method
     
+    // update general information
+    packet.src = IPv6.printIP(this.src);
+    packet.dst = IPv6.printIP(this.dst);
+    packet.prot = IPv6.PROTOCOLS[this.nh];
+    
     this.next_header = null;
 }
 
-IPv6.prototype = {
-    getHeaderLength: function () {
-        return IPv6.HEADER_LENGTH;
-    },
-    toString: function() {
-        return '';
-    }
-};
+IPv6.prototype.getHeaderLength = function () {
+    return IPv6.HEADER_LENGTH;
+}
+
+IPv6.prototype.toString = function() {
+    return '';
+}
 
 IPv6.prototype.printDetails = function () {
     var title = 'Internet Protocol Version ' + this.v;
@@ -36,8 +44,8 @@ IPv6.prototype.printDetails = function () {
         'Payload length: ' + this.plen,
         'Next header: ' + this.nh,
         'Hop limit ' + this.hlim,
-        'Source: ' + printIPv6(this.src, this.littleEndian),
-        'Destination: ' + printIPv6(this.dst, this.littleEndian)
+        'Source: ' + IPv6.printIP(this.src, this.littleEndian),
+        'Destination: ' + IPv6.printIP(this.dst, this.littleEndian)
         ].join('\n')
     ));
     
@@ -46,8 +54,9 @@ IPv6.prototype.printDetails = function () {
 
 IPv6.HEADER_LENGTH = 40; // IPv6 header length in bytes
 IPv6.ADDRESS_LENGTH = 16;  // IPv6 address length in bytes
+IPv6.PROTOCOLS = IPv4.PROTOCOLS;
 
-function printIPv6(ip, littleEndian) {
+IPv6.printIP = function (ip, littleEndian) {
     var start, tempStart;
     var end, tempEnd;
     var ipFragments;
@@ -93,7 +102,7 @@ function printIPv6(ip, littleEndian) {
 }
 
 if (typeof module !== 'undefined') {
-    module.exports.printIPv6 = printIPv6;
+    module.exports.printIP = IPv6.printIP;
     module.exports.IPv6 = IPv6;
     module.exports.HEADER_LENGTH = IPv6.MIN_HEADER_LENGTH;
     module.exports.ADDRESS_LENGTH = IPv6.ADDRESS_LENGTH;

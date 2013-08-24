@@ -48,14 +48,14 @@ function initWebPcapJS () {
 }
 
 function initJSEvents() {
+    window.addEventListener('resize', processResize);
     document.addEventListener('click', closeContextMenu);
     document.addEventListener('mouseup', processMouseUp);
-    document.addEventListener('mousemove', processMouseMove);
-    document.addEventListener('resize', processResize);
+    document.addEventListener('mousemove', processMouseMove);    
     document.getElementById('startcap').addEventListener('click', switchConnection);
     document.getElementById('clearcap').addEventListener('click', dissector.init());
     document.getElementById('savecap').addEventListener('click', saveCapture);
-    document.getElementById('loadcap').addEventListener('click', fileinput.click);
+    document.getElementById('loadcap').addEventListener('click', function () {simulateClickOn(document.getElementById('fileinput'));});
     document.getElementById('fileinput').addEventListener('change', function () {readPcapFile(this.files[0], dissector);});
     document.getElementById('switchview').addEventListener('click', switchView);
     document.getElementById('filterform').addEventListener('submit', processFilter);
@@ -199,23 +199,25 @@ function processFilter() {
     return false;
 }
 
+function simulateClickOn(node) {
+    var mouseClick; // event to 'click' with
+    
+    mouseClick = new MouseEvent('click'); 
+    
+    node.dispatchEvent(mouseClick);    
+}
+
 function downloadFileFromURI(resource, filename) {
-    if (!resource || !resource.URI)
-        return;
+    if (!resource)
+        throw 'No resource specified to download from.';
     
     var tmpLink = document.createElement('a'); // link to be 'clicked' on
-    var mc = document.createEvent('MouseEvents'); // event to 'click' on it
-    
-    mc.initEvent('click', true, false);
     
     if (filename)
         tmpLink.download = filename;    
-    tmpLink.href = resource.URI;
+    tmpLink.href = resource;
     
-    tmpLink.dispatchEvent(mc); //'click' on the link
-    
-    if (resource.blob && resource.blob.close) // if we're using blobs, close the blob
-        resource.blob.close();
+    simulateClickOn(tmpLink); //'click' on the link
 }
 
 function switchConnection() {
@@ -301,6 +303,7 @@ function selectRow(row, num) {
 }
 
 function processClick(row, num) {
+    console.log(event);
     selectRow(row, num);
     
     if (packetView) {

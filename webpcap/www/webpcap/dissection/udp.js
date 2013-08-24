@@ -5,23 +5,36 @@ if (typeof require !== 'undefined') {
     var createID = require('./tcp').createID;
     var buildPseudoHeader = require('./tcp').buildPseudoHeader;
     var validateChecksum = require('./ipv4').validateChecksum;
+    var IPv4 = require('./ipv4').IPv4;
+    IPv4.CHECKSUM_VALUES = require('./ipv4').CHECKSUM_VALUES;
 }
 
-function UDP(littleEndian, dataView, offset, parent) {    
+function UDP(littleEndian, packet, dataView, offset, parent, validateChecksums)
+{    
     this.sport = dataView.getUint16(offset, littleEndian); // source port
     this.dport = dataView.getUint16(offset + 2, littleEndian); // destination port
     this.len   = dataView.getUint16(offset + 4, littleEndian); // length of payload incl. UDP header
     this.csum  = dataView.getUint16(offset + 6, littleEndian); // header checksum
-      
-    this.id = createID(parent.src, this.sport, parent.dst, this.dport, 'u');
     
-    if (offset + this.getHeaderLength() > dataView.length)
-        this.val = false;
+    this.val = 2; // valid by default unless...
+    if (offset + this.getHeaderLength() > dataView.length) { // bogus...
+        packet.val = false;
+    }
     else if (!this.csum) // UDP checksum is optional...
-        this.val = true;
-    else {
+        this.val = 4; // i.e. not specified
+    else if (validateChecksums) {
         var ph = buildPseudoHeader(littleEndian, dataView, offset, parent);
         this.val = validateChecksum(littleEndian, ph);
+    }
+
+    // set general information
+    packet.class = packet.prot = 'UDP';
+    packet.info = this.toString();
+    packet.id = createID(parent.src, this.sport, parent.dst, this.dport, 'u');
+    
+    if (!this.val) {
+        packet.val = false;
+        packet.class = 'malformed';        
     }
         
     this.next_header = null;
@@ -49,8 +62,8 @@ UDP.prototype.printDetails = function () {
         'Source port: ' + this.sport,
         'Destination port: ' + this.dport,
         'Length: ' + this.len,                    
-        'Checksum: 0x' + printNum(this.csum, 16, 4) + ' [' + 
-            (this.val ? 'correct' : 'incorrect') + ']'
+        'Checksum: 0x' + printNum(this.csum, 16, 4) + 
+            UDP.CHECKSUM_VALUES[this.val]
         ].join('\n')
     ));
     
@@ -59,7 +72,8 @@ UDP.prototype.printDetails = function () {
 
 UDP.HEADER_LENGTH = 8; // UDP header length in bytes  
 UDP.PORT_NAMES = readCSVFile(
-    'webpcap/dissection/service-names-port-numbers-udp.csv', 1, 0);
+    'webpcap/dissection/resources/service-names-port-numbers-udp.csv', 1, 0);
+UDP.CHECKSUM_VALUES = IPv4.CHECKSUM_VALUES ;
 
 if (typeof module !== 'undefined') {
     module.exports.UDP = UDP;

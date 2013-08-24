@@ -79,7 +79,7 @@ function createBlobURI(mimetype, data) {
 
 function readPcapFile(file, dissector) {
     if (file.size < 24)
-        return;
+        throw 'Cannot read pcap file: Less than 24 bytes!'
     
     var fr = new FileReader();
     fr.readAsArrayBuffer(file.slice(0, 24));

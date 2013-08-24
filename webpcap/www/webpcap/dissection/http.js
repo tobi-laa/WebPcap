@@ -1,7 +1,9 @@
 'use strict';
 
-function HTTP(littleEndian, data, offset, parent) {
-    data = data.buffer; // FIXME ?
+function HTTP(littleEndian, packet, data, offset, parent) {
+    data = data.buffer; // FIXME not working with DataView, change that later
+    this.success = true; // indicator for successful dissection
+    
     if (data.byteLength - offset < 4)
         return;
     
@@ -19,7 +21,14 @@ function HTTP(littleEndian, data, offset, parent) {
         this.type = 'Response';
         this.processHeaders(String.fromCharCode.apply(null, new Uint8Array(data, offset)));
         break;
+    default:
+        this.success = false;
+        return; // stop right here
     }
+    
+    // set some general information
+    packet.class = packet.prot = 'HTTP';
+    packet.info = this.toString();
     
     this.next_header = null;
 }
@@ -29,7 +38,7 @@ HTTP.prototype = {
         return this.hlen;
     },
     processHeaders: function (stringView, parent) {
-        var tokens = stringView.split('\r\n');
+        var tokens = stringView.split('\n'); // accept \n alone instead of CLRF
         
         this.hlen = 0
         this.headers = [];

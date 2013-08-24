@@ -3,28 +3,18 @@
 if (typeof require !== 'undefined') {
     var readCSVFile = require('../fileio').readCSVFile;
     var validateChecksum = require('./ipv4').validateChecksum;
+    var IPv4 = require('./ipv4').IPv4;
+    IPv4.CHECKSUM_VALUES = require('./ipv4').CHECKSUM_VALUES;
 }
 
-function TCP(littleEndian, dataView, offset, parent) {    
+function TCP(littleEndian, packet, dataView, offset, parent, validateChecksums) 
+{    
     this.sport    = dataView.getUint16(offset, littleEndian); // source port
     this.dport    = dataView.getUint16(offset + 2, littleEndian); // destination port
     this.seqn     = dataView.getUint32(offset + 4, littleEndian); // sequence number
     this.ackn     = dataView.getUint32(offset + 8, littleEndian); // ACK number
     this.off_rsd  = dataView.getUint8(offset + 12) & 0xfe; // data offset, reserved portion
     this.flags    = dataView.getUint16(offset + 12, littleEndian) & 0x1ff; // various flags
-    this.wsize    = dataView.getUint16(offset + 14, littleEndian);     // window size
-    this.csum     = dataView.getUint16(offset + 16, littleEndian);     // header checksum
-    this.urg      = dataView.getUint16(offset + 18, littleEndian);     // urgent pointer
-    /* various options may follow */
-    
-    if (offset + this.getHeaderLength() > dataView.byteLength)
-        this.val = false; // already bogus
-    else { // calculate checksum
-        var ph = buildPseudoHeader(littleEndian, dataView, offset, parent);
-        this.val = validateChecksum(littleEndian, ph);
-    }
-
-    this.id = createID(parent.src, this.sport, parent.dst, this.dport, 't');
     
     this.NS       = this.flags & 0x100 && 1;
     this.CWR      = this.flags & 0x080 && 1;
@@ -36,6 +26,36 @@ function TCP(littleEndian, dataView, offset, parent) {
     this.SYN      = this.flags & 0x002 && 1;
     this.FIN      = this.flags & 0x001 && 1;
     
+    this.wsize    = dataView.getUint16(offset + 14, littleEndian);     // window size
+    this.csum     = dataView.getUint16(offset + 16, littleEndian);     // header checksum
+    this.urg      = dataView.getUint16(offset + 18, littleEndian);     // urgent pointer
+    
+    /* various options may follow */
+    
+    this.val = 2; // valid by default, unless...
+    if (offset + this.getHeaderLength() > dataView.byteLength) {// already bogus          
+        packet.val = false; 
+    }
+    else if (validateChecksums) { // calculate checksum
+        var ph = buildPseudoHeader(littleEndian, dataView, offset, parent);
+        this.val = validateChecksum(littleEndian, ph);
+    }
+
+    // set general information
+    packet.id = createID(parent.src, this.sport, parent.dst, this.dport, 't');
+    packet.class = packet.prot = 'TCP';
+    packet.info = this.toString();
+    
+    if (!this.val) {
+        packet.val = false;
+        packet.class = 'malformed';        
+    }
+    // special coloring for... 
+    else if (this.RST)
+        packet.class = 'RST';        
+    else if (this.SYN || this.FIN)
+        packet.class = 'SYNFIN';
+        
     this.next_header = null;
 }
 
@@ -142,8 +162,8 @@ TCP.prototype.printDetails = function () {
         'Header length: ' + this.getHeaderLength(),
         'Flags: 0x' + printNum(this.flags, 16, 3) + ' ' + this.printFlags(),
         'Window size value: ' + this.wsize,                         
-        'Checksum: 0x' + printNum(this.csum, 16, 4) + ' [' + 
-            (this.val ? 'correct' : 'incorrect') + ']'
+        'Checksum: 0x' + printNum(this.csum, 16, 4) + 
+            TCP.CHECKSUM_VALUES[this.val]
         ].join('\n')
     ));
     
@@ -152,8 +172,9 @@ TCP.prototype.printDetails = function () {
 
 TCP.MIN_HEADER_LENGTH = 20; // TCP minimum header length in bytes
 TCP.PORT_NAMES = readCSVFile(
-    'webpcap/dissection/service-names-port-numbers-tcp.csv', 1, 0);
+    'webpcap/dissection/resources/service-names-port-numbers-tcp.csv', 1, 0);
 TCP.PORT_NAMES[6600] = 'mpd'; // specifying mpd manually
+TCP.CHECKSUM_VALUES = IPv4.CHECKSUM_VALUES ;
 
 if (typeof module !== 'undefined') {
     module.exports.TCP = TCP;

@@ -2,17 +2,18 @@
 
 if (typeof require !== 'undefined') {
     var readCSVFile = require('../fileio').readCSVFile;
-    var printMAC = require('./ethernet').printMAC;
-    var printIPv4 = require('./ipv4').printIPv4;
-    var printIPv6 = require('./ipv6').printIPv6;
+    var IPv4 = require('./ipv4').IPv4;
+    var IPv6 = require('./ipv6').IPv6;
+    IPv4.printIP = require('./ipv4').printIP;
+    IPv6.printIP = require('./ipv6').printIP;
+    var Ethernet = require('./ethernet').Ethernet;
+    Ethernet.TYPES = require('./ethernet').TYPES;
+    Ethernet.printMAC = require('./ethernet').printMAC;
 }
-/*
- ******************************************************************
- ************************** DNS HEADER ****************************
- ******************************************************************
- */
 
-function DNS(littleEndian, dataView, offset, parent) {
+function DNS(littleEndian, packet, dataView, offset, parent) {
+    this.success = true; // indicator for successful dissection
+    
     this.id = dataView.getUint16(offset, littleEndian);
     this.flags = dataView.getUint16(offset + 2, littleEndian);
     this.questionCount = dataView.getUint16(offset + 4, littleEndian);
@@ -31,6 +32,7 @@ function DNS(littleEndian, dataView, offset, parent) {
     this.CD     = this.flags & 0x0010 && 1;
     this.rCode  = this.flags & 0x000F;
     
+    // initialize objects for rr dissection    
     this.offset = offset; // for pointers
     this.questions = [];
     this.otherRecords = [[], [], []]; // answers, authorities, additions
@@ -39,6 +41,10 @@ function DNS(littleEndian, dataView, offset, parent) {
     
     this.dissectResourceRecords(littleEndian, dataView, 
                                 offset + DNS.MIN_HEADER_LENGTH);
+    
+    // set general information
+    packet.class = packet.prot = 'DNS';
+    packet.info = this.toString();
     
     this.next_header = null;
 }
@@ -183,10 +189,12 @@ DNS.prototype.nextResourceRecord = function (littleEndian, dataView, offset,
     // FIXME: only A, AAAA and CNAME supported as yet
     switch (resourceRecord.type) {
     case DNS.A:
-        resourceRecord.rData = printIPv4(new DataView(dataView.buffer, offset, 4));
+        resourceRecord.rData = IPv4.printIP(new DataView(dataView.buffer, 
+                                                         offset, 4));
         break;
     case DNS.AAAA:
-        resourceRecord.rData = printIPv6(new DataView(dataView.buffer, offset, 16));
+        resourceRecord.rData = IPv6.printIP(new DataView(dataView.buffer, 
+                                                         offset, 16));
         break;
     case DNS.CNAME:
         resourceRecord.rData = this.getName(littleEndian, dataView, offset).name;
@@ -231,9 +239,9 @@ DNS.MIN_HEADER_LENGTH = 12; // initial dns header size in bytes
 DNS.A     = 0x0001;
 DNS.AAAA  = 0x001c;
 DNS.CNAME = 0x0005;
-DNS.OPCODES = readCSVFile('webpcap/dissection/dns-parameters-5.csv', 0, 1);
-DNS.TYPES = readCSVFile('webpcap/dissection/dns-parameters-4.csv', 1, 0);
-DNS.CLASSES = readCSVFile('webpcap/dissection/dns-parameters-2.csv', 0, 2);
+DNS.OPCODES = readCSVFile('webpcap/dissection/resources/dns-parameters-5.csv', 0, 1);
+DNS.TYPES = readCSVFile('webpcap/dissection/resources/dns-parameters-4.csv', 1, 0);
+DNS.CLASSES = readCSVFile('webpcap/dissection/resources/dns-parameters-2.csv', 0, 2);
 DNS.OTHER_RECORD_NAMES = ['Answers', 'Authorities', 'Additions'];
 
 if (typeof module !== 'undefined') {

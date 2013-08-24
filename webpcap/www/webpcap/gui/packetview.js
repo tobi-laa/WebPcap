@@ -52,7 +52,7 @@ function printPayload(packetNum) {
     bytesOutput.appendChild(document.createTextNode(output));
 } 
 
-function printRow(packet, customClass) {
+function printRow(packet, customClass) { // customClass is additional
     var row  = document.createElement('div');
     var num  = document.createElement('div');
     var src  = document.createElement('div');
@@ -80,10 +80,7 @@ function printRow(packet, customClass) {
     src.innerHTML  = packet.src;
     dst.innerHTML  = packet.dst;
     prot.innerHTML = packet.prot;
-    
-    while (packet.next_header) packet = packet.next_header;
-    
-    info.innerHTML = packet;
+    info.innerHTML = packet.info;
     
     row.appendChild(num);
     row.appendChild(src);
