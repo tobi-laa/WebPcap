@@ -1,5 +1,5 @@
-webpcapd/webpcapd
-webpcap/webpcap_dissection_c/webpcap_dissection_test
+WebPcap/webpcapd/webpcapd
+WebPcap/WebPcapJS/webpcap_dissection_c/webpcap_dissection_test
 *~
 thesis/sources
 thesis/*.aux
