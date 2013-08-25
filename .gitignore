@@ -1,12 +1,3 @@
-WebPcap/webpcapd/webpcapd
-WebPcap/WebPcapJS/webpcap_dissection_c/webpcap_dissection_test
+webpcapd/webpcapd
+WebPcapJS/webpcap_dissection_c/webpcap_dissection_test
 *~
-thesis/sources
-thesis/*.aux
-thesis/*.bbl
-thesis/*.blg
-thesis/*.lof
-thesis/*.log
-thesis/*.lot
-thesis/*.out
-thesis/*.toc
