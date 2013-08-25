@@ -39,8 +39,7 @@ function initWebPcapJS () {
     initGUI();
     processResize();
     dissector = new Dissector();
-    initJSEvents();    
-    startRendering();
+    initJSEvents();
     // these refs are used by packet and connection view
     packets = dissector.getDissectedPackets();
     conns = dissector.getConnectionsByArrival();
@@ -275,40 +274,47 @@ function onWebSocketClose() {
 }
 
 function processResize() {
-    document.body.style.fontSize = '0.9vw';
+    var tableHeader = document.getElementById('tableheader');
+    var testRow, testCol;
     
-    mainOutput.style.width = '100%';
-    tableheader.style.width = '100%';
+    // NOTE make that something more like (offsetWidth - padding)
+    // set output width to 100% - 0.2% padding - 15px for scrollbar
+    tableHeader.style.width = (document.body.offsetWidth * 0.998 - 15) + 'px';
+    mainOutput.style.width = tableHeader.offsetWidth + 'px';
     
-    tableheader.style.width = (tableheader.offsetWidth - 15) + 'px';
-    mainOutput.style.width = (mainOutput.offsetWidth - 15) + 'px';
-    
+    // set height and position of scrollbar
     scrollbar.style.height = mainOutput.offsetHeight + 'px';
-    scrollbar.style.top =  mainOutput.offsetTop + 'px';
+    scrollbar.style.top = mainOutput.offsetTop + 'px';
     scrollbar.style.left = mainOutput.offsetLeft + mainOutput.offsetWidth + 'px';
         
-    scrollbarTrack.style.height = '100%';
-    
-    scrollbarTrack.style.height = (scrollbarTrack.offsetHeight - 30) + 'px';
+    // the track needs 15px space above and below for the buttons
+    scrollbarTrack.style.height = mainOutput.offsetHeight - 15 + 'px';
     
     MAX_SCROLLTHUMB_OFFSET = scrollbarTrack.offsetHeight - MIN_SCROLLTHUMB_SIZE;
     
-    maxRows = 0;
-    mainOutputTable.innerHTML = '';
+    // calculate how many rows mainOutput can hold now
+    // NOTE this is done by creating a test row and measuring its height; there
+    // might be a more elegant way to do this
+    stopRendering();
     
-    while (mainOutput.scrollHeight <= mainOutput.clientHeight) {
-        var row = document.createElement('div');
-        var col = document.createElement('div');
-        row.setAttribute('class','row');        
-        col.setAttribute('class', 'col 5p');
-        col.innerHTML = 'test';
-        row.appendChild(col);
-        mainOutputTable.appendChild(row);
-        maxRows++;
-    }
+    testRow = document.createElement('div');
+    testCol = document.createElement('div');
+    testRow.className = 'row';
+    testCol.className = 'col';
+    
+    testCol.innerHTML = 'Height test';
+    
+    testRow.appendChild(testCol);
     
     mainOutputTable.innerHTML = '';
-    renderNextTime = true;    
+    mainOutputTable.appendChild(testRow);
+    
+    maxRows = Math.ceil(mainOutput.offsetHeight/ testRow.offsetHeight);
+    
+    // cleanup
+    mainOutputTable.innerHTML = '';    
+    renderNextTime = true;
+    startRendering();
 }
 
 function simulateClickOn(node) {
