@@ -42,7 +42,7 @@ HTTP.prototype = {
         return this.hlen;
     },
     processHeaders: function (stringView, parent) {
-        var tokens = stringView.split('\n'); // accept \n alone instead of CLRF
+        var tokens = stringView.split(/\n|\r\n/); // accept \n alone as well
         
         this.hlen = 0
         this.headers = [];
