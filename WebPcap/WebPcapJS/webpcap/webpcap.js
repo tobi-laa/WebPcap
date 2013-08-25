@@ -288,9 +288,7 @@ function processResize() {
     scrollbar.style.left = mainOutput.offsetLeft + mainOutput.offsetWidth + 'px';
         
     // the track needs 15px space above and below for the buttons
-    scrollbarTrack.style.height = mainOutput.offsetHeight - 15 + 'px';
-    
-    MAX_SCROLLTHUMB_OFFSET = scrollbarTrack.offsetHeight - MIN_SCROLLTHUMB_SIZE;
+    scrollbarTrack.style.height = mainOutput.offsetHeight - 30 + 'px';
     
     // calculate how many rows mainOutput can hold now
     // NOTE this is done by creating a test row and measuring its height; there

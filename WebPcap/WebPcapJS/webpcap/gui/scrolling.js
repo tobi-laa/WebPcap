@@ -15,7 +15,6 @@ var mouseX;
 var mouseY;
 
 var MIN_SCROLLTHUMB_SIZE = 32; // in pixels
-var MAX_SCROLLTHUMB_OFFSET; // calculated on resize
 
 function calculateScrollbarSize() {
     var packetNumber = 0;
@@ -32,8 +31,9 @@ function calculateScrollbarSize() {
         scrollbarTrackStart = cV.anchor;
     }
     
-    scrollbarTrackStart = Math.min(scrollbarTrackStart * scrollbarTrack.offsetHeight / packetNumber, MAX_SCROLLTHUMB_OFFSET);
     scrollbarTrackSize = Math.max(maxRows * scrollbarTrack.offsetHeight / packetNumber, MIN_SCROLLTHUMB_SIZE);
+    scrollbarTrackStart = Math.min(scrollbarTrackStart * scrollbarTrack.offsetHeight / packetNumber, scrollbarTrack.offsetHeight - MIN_SCROLLTHUMB_SIZE);
+    
     if (scrollbarTrackSize >= scrollbarTrack.offsetHeight || packetNumber === 0) {
         scrollThumb.className = 'hidden';
         scrollbarButtonUp.className = 'scrollbar-button-up-inactive';

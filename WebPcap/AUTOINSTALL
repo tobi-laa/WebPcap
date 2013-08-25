@@ -1,0 +1,44 @@
+#!/bin/sh
+# A quick and dirty script to download & compile lighttpd with mod_websocket,
+# compile webpcapd and start both of them. This does not put anything in your
+# /usr/bin folder, all the binaries will remain within this folder.
+
+set -e
+
+# build webpcapd
+cd ./webpcapd
+make webpcapd
+
+cd ..
+
+# get or update lighttpd and mod_websocket sources
+(test -d ./mod_websocket/.git && (cd ./mod_websocket && git pull && cd ..) || git clone git://github.com/nori0428/mod_websocket.git)
+
+wget -c http://download.lighttpd.net/lighttpd/releases-1.4.x/lighttpd-1.4.32.tar.gz
+tar xvf ./lighttpd-1.4.32.tar.gz
+
+# build lighttpd with mod_websocket
+cd ./mod_websocket
+./bootstrap
+./configure --with-websocket=RFC-6455 --with-test
+make clean check
+
+./bootstrap
+./configure --with-lighttpd=../lighttpd-1.4.32
+echo y | make install
+ 
+cd ../lighttpd-1.4.32
+./autogen.sh
+./configure --with-websocket=RFC-6455
+make
+
+# put lighttpd binary in lighttpd folder
+mv ./src/lighttpd ../lighttpd/
+
+cd ..
+
+# start capture server as root
+su -c "./webpcapd/webpcapd &"
+
+# start lighttpd
+(./lighttpd/lighttpd -D -f ./lighttpd/lighttpd.conf) &
