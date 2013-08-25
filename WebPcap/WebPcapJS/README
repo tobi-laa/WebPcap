@@ -15,7 +15,7 @@ works!
 ################################################################################
 
 There are a some tests that belong to WebPcapJS. If you have nodejs and mocha
-installed, you can run them like this:
+installed, you can run them from the ./webpcap directory like this:
 
 $ mocha
 
