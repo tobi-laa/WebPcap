@@ -25,7 +25,8 @@ function initFileIO() {
     }
 }
 
-// FIXME: does not work 100% correct, for instance for "quoted" tokens
+var CSV_TOKEN = /(?:"([^"]*(?:""[^"]*)*)"|([^",]+))/g;
+
 function readCSVFile(fileURL, numIndex, nameIndex) {
     var req;
     var array = [];
@@ -39,14 +40,19 @@ function readCSVFile(fileURL, numIndex, nameIndex) {
     req.open('get', fileURL, true);
     req.send();    
     req.onload = function () {
+        var arrMatches;
+                     
         var lines = this.responseText.split('\n');
-        var tokens, index;
+        var tokens = [];
+        var index;
+        var tempToken;
         
-        for (var i = 0; i < lines.length; i++) {
-            tokens = lines[i].split(','); // comma separated
+        for (var i = 0; i < lines.length; i++) {            
+            // NOTE: remove "...." at a later point
+            tokens = lines[i].match(CSV_TOKEN);
             
             // skip empty lines/comments/and so forth, also duplicate entries
-            if (!tokens[nameIndex] || isNaN(index = Number(tokens[numIndex])) ||
+            if (!tokens || !tokens[nameIndex] || isNaN(index = Number(tokens[numIndex])) ||
                 array[index])
             {
                 continue;                

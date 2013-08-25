@@ -18,8 +18,7 @@ CSL-79-10, July 1979; also in IEEE Transactions on
 Communication, Volume COM-28, Number 4, April 1980.][[XEROX]]"
 13,ARGUS,ARGUS,[Robert_W_Scheifler]
 14,EMCON,EMCON,[<mystery contact>]
-15,XNET,Cross Net Debugger,"[Haverty, J., ""XNET Formats for Internet Protocol Version 4"",
-IEN 158, October 1980.][Jack_Haverty]"
+15,XNET,Cross Net Debugger,"[Haverty, J., ""XNET Formats for Internet Protocol Version 4"",IEN 158, October 1980.][Jack_Haverty]"
 16,CHAOS,Chaos,[J_Noel_Chiappa]
 17,UDP,User Datagram,[RFC768][Jon_Postel]
 18,MUX,Multiplexing,"[Cohen, D. and J. Postel, ""Multiplexing Protocol"", IEN 90,

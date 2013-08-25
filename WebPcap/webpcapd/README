@@ -1,16 +1,28 @@
-Requirements:
+################################################################################
+#                     webpcapd - a packet capturing server                     #
+#                        README and build instructions                         #
+################################################################################
 
-- gcc
-- libpcap
-- make
+webpcapd is (together with a lighttpd instance) the server-part of the WebPcap
+packet analyzer. It is used to capture packets on a host and send them to a
+client for dissection.
 
-For instance, if you're using Debian or Ubuntu, run the following command (as root):
+################################################################################
+#                                Requirements                                  #
+################################################################################
 
-# apt-get install build-essential libpcap
+To build webpcad, you will need at least gcc, libpcap and make. So for instance,
+if you're using Debian or Ubuntu, run the following command (as root):
 
-Build instructions:
+# apt-get install build-essential libpcap0.8-dev
 
-Just execute the following command and you should have a working binary:
+################################################################################
+#                            Building instructions                             #
+################################################################################
+
+Building webpcapd is as simple as running
 
 $ make
+
+inside this directory.
 

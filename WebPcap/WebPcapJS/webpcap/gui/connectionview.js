@@ -6,55 +6,69 @@ var pktAnchor = -1;
 
 function seekConnectionView(direction) {
     var cV = connectionViewLength();
-    var currentConnection = conns[connAnchor];
+    var currConn = conns[connAnchor];
+    var anchorTuple = 
+    {
+        connAnchor: connAnchor,
+        pktAnchor: pktAnchor, 
+        autoscroll: autoscroll
+    };
     
     // seeking down to the very bottom
     if (direction > 0 && direction + cV.anchor >= cV.length - maxRows) {
-        autoscroll = true;
+        anchorTuple.autoscroll = true; // indicator for scroll function
         // may be negative when main output is not full.. dont want that
         direction = Math.max(cV.length - cV.anchor - maxRows, 0);
         // we dont know the connAnchor/pktAnchor of the last row, so continue
     }
     // seeking to the top
     else if (direction + cV.anchor < 0) {
-        connAnchor = 0;
-        pktAnchor = -1;
-        return;
+        anchorTuple.autoscroll = false;
+        anchorTuple.connAnchor = 0;
+        anchorTuple.pktAnchor = -1;
+        return anchorTuple;
     }
-    
-    // nothing to do
-    if (direction === 0)
-        return;
-    
-    while (direction !== 0) {
-        pktAnchor += direction;
+    // other scroll operation
+    else if (direction !== 0) {
+        anchorTuple.autoscroll = false;
+    }
         
-        if (pktAnchor < -1) { // scrolling up
+    while (direction !== 0) {
+        anchorTuple.pktAnchor += direction;
+        
+        if (anchorTuple.pktAnchor < -1) { // scrolling up
             direction = (pktAnchor + 2);
-            connAnchor--;            
-            currentConnection = conns[connAnchor];
-            pktAnchor = currentConnection.getEffectiveLength() - 1;
+            anchorTuple.connAnchor--;            
+            currConn = conns[anchorTuple.connAnchor];
+            anchorTuple.pktAnchor = currConn.getEffectiveLength() - 1;
         }
         // scrolling down
-        else if (pktAnchor >= currentConnection.getEffectiveLength()) {
-            direction = (pktAnchor - currentConnection.getEffectiveLength());
-            connAnchor++;
-            currentConnection = conns[connAnchor];
-            pktAnchor = -1;
+        else if (anchorTuple.pktAnchor >= currConn.getEffectiveLength()) {
+            direction = (anchorTuple.pktAnchor - currConn.getEffectiveLength());
+            anchorTuple.connAnchor++;
+            currConn = conns[anchorTuple.connAnchor];
+            anchorTuple.pktAnchor = -1;
         }
         else // changing the pktAnchor was sufficient
             direction = 0;
     }
+    
+    return anchorTuple;
 }
 
 function scrollConnectionView(direction) {
+    var anchorTuple;
+    
     if (conns.length === 0)
         return;
     
-    autoscroll = false;
-    renderNextTime = true;
+    anchorTuple = seekConnectionView(direction);
     
-    seekConnectionView(direction);
+    connAnchor = anchorTuple.connAnchor;
+    pktAnchor = anchorTuple.pktAnchor;
+    autoscroll = anchorTuple.autoscroll;
+    
+    renderNextTime = true;
 }
 
 function updateConnectionView() {        

@@ -47,6 +47,10 @@ function initWebPcapJS () {
 
 function initJSEvents() {
     window.addEventListener('resize', processResize);
+    window.addEventListener('keydown', 
+        function (event) {
+            processKeyDown(event);
+        }, false);
     document.addEventListener('click', closeContextMenu);
     document.addEventListener('mouseup', processMouseUp);
     document.addEventListener('mousemove', processMouseMove);    
@@ -238,7 +242,7 @@ function dissectMessage(data) {
             renderNextTime = true;
         }
         else {
-            seekConnectionView(Math.max(0, newLength - newAnchor - maxRows));
+            scrollConnectionView(Math.max(0, newLength - newAnchor - maxRows));
             renderNextTime = true;
         }
     }
@@ -459,6 +463,39 @@ function selectRow(num) {
         selectedConnectionRow = num;
     
     renderNextTime = true;
+}
+
+function processKeyDown(event) {
+    var direction;
+    var newSelectedRow;
+    
+    switch (event.keyCode) {
+    case 38: // UP
+        direction = -1;
+        break;
+    case 40: // DOWN
+        direction = 1;
+        break;
+    case 33: // PGUP
+        direction = -maxRows;
+        break;
+    case 34: // PGDOWN
+        direction = maxRows;
+        break;
+    case 72: // 'H'
+        // CTRL + ALT + H.... 
+        if (event.altKey && event.ctrlKey) {
+            alert('Hodor!'); // isn't that fun? :-D
+        }
+    default:
+        return; // no movement
+    }
+    
+    if (packetView && selectedPacketRow) {
+        newSelectedRow = Math.max(selectedPacketRow + direction, 0);
+        newSelectedRow = Math.min(packets.length, newSelectedRow);        
+        processClick(newSelectedRow);
+    }
 }
 
 function processClick(num) {
