@@ -1,0 +1,64 @@
+################################################################################
+#                     WebPcap - a web-based packet analyzer                    #
+#                     README and installation instructions                     #
+################################################################################
+
+WebPcap is a software suite for doing web-based packet analysis. Put the server
+program on your router and see your network's packets in your browser!
+
+################################################################################
+#                             Structure of WebPcap                             #
+################################################################################
+
+There is three programs involved in this software suite, namely:
+
+    (1) webpcapd
+    (2) lighttpd
+    (3) the browser of your choice (Chrome is recommended)
+    
+webpcapd collects the packets, lighttpd tunnels them through a WebSocket and
+your browser will dissect and show them to you.
+
+################################################################################
+#                                Requirements                                  #
+################################################################################
+
+Here is the full list of prerequired packages (Debian package names):
+
+webpcapd:
+    build-essential libpcap0.8-dev
+    
+lighttpd & mod_websocket:
+    wget git autoconf libev-dev libcunit1-dev libicu-dev libpre3-dev zlib1g-dev 
+    libbz2-dev
+
+So if you're on Debian/Ubuntu, you can try running:
+
+# apt-get install build-essential libpcap0.8-dev wget git autoconf libev-dev libcunit1-dev libicu-dev libpre3-dev zlib1g-dev libbz2-dev
+    
+Please note that you have to compile lighttpd yourself; the package provided by
+your distribution vendor does not include mod_websocket, which is crucial for
+running WebPcap.
+
+################################################################################
+#                            Building instructions                             #
+################################################################################
+
+Once you successfully installed all the dependencies, you have two options. You
+can either build webpcapd and lighttpd with mod_websocket on your own. If you do
+so, please note that you can find a lighttpd.conf template in the lighttpd
+folder. I highly recommend you to make use of it. If you start lighttpd and
+webpcapd with the default settings, you should be able to access the web
+interface by opening [http://localhost:8080]
+
+You probably want to use the install script that I provided, though. It is as
+simple as running
+
+$ ./AUTOINSTALL
+
+from this folder (tested on Debian and Arch Linux). This will build webpcapd
+and lighttpd and run them, so at some point you will be asked for your root 
+password (libpcapd needs root permissions). If there was no error, try opening
+[http://localhost:8080] in a browser. Click on the red 'record' button on the
+top left; if it changes to a black 'stop' button, everything went well and you
+should soon see some dissected packets!
